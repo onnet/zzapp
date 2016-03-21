@@ -10,7 +10,8 @@
 
                  , whistle_apps
                  , whistle_amqp
-                 , kazoo_data
+                 , whistle_couch         % Kazoo 3.22
+            %    , kazoo_data            % Kazoo 4.00
 
                  , lager
                  ]},
