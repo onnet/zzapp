@@ -1,0 +1,18 @@
+{application, onbill,
+ [
+  {description, "Skel - A onbilleton application useful for quickly creating services"},
+  {vsn, "4.0.0"},
+  {modules, []},
+  {registered, [onbill_sup]},
+  {applications, [ kernel
+                 , stdlib
+                 , crypto
+
+                 , whistle_apps
+                 , whistle_amqp
+                 , kazoo_data
+
+                 , lager
+                 ]},
+  {mod, {onbill_app, []}}
+ ]}.
