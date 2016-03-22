@@ -213,9 +213,12 @@ create_dailyfee_doc(Amount, Items, AccountId) ->
     Doc = wh_json:set_values(Updates, wh_json:new()),
     kazoo_modb:save_doc(AccountId, Doc).
  
-maybe_update_dailyfee_doc(Amount, DFDoc, _Items, AccountId) ->
-    case (Amount > wh_json:get_float_value(<<"amount">>, DFDoc, 0.0)) of
-        'true' -> update_dailyfee_doc(Amount, DFDoc, _Items, AccountId);
+maybe_update_dailyfee_doc(Amount, DFDoc, Items, AccountId) ->
+    {Y,M,_} = erlang:date(),
+    case (wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Y, M) >
+          wh_json:get_number_value(<<"pvt_amount">>, DFDoc, 0)
+         ) of
+        'true' -> update_dailyfee_doc(Amount, DFDoc, Items, AccountId);
         'false' -> 'ok'
     end.
 
