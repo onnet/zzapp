@@ -6,5 +6,7 @@
 -define(APP_NAME, <<"onbill">>).
 -define(APP_VERSION, <<"4.0.0">> ).
 
+-define(ONBILL_ACCOUNTS_DB, <<"onbill_accounts">>).
+
 -define(ONBILL_HRL, 'true').
 -endif.

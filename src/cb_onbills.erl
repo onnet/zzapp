@@ -1,14 +1,3 @@
-%%%-------------------------------------------------------------------
-%%% @copyright (C) 2011-2014, 2600Hz INC
-%%% @doc
-%%%
-%%% Listing of all expected v1 callbacks
-%%%
-%%% @end
-%%% @contributors:
-%%%   Karl Anderson
-%%%   James Aimonetti
-%%%-------------------------------------------------------------------
 -module(cb_onbills).
 
 -export([init/0
@@ -32,7 +21,7 @@
          ,finish_request/1
         ]).
 
--include("crossbar.hrl").
+-include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
 
 -define(CB_LIST, <<"onbills/crossbar_listing">>).
 

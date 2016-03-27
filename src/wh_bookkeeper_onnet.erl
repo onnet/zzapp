@@ -9,8 +9,8 @@
 -export([already_charged/2]).
 
 
--include_lib("braintree/include/braintree.hrl").
--include("../whistle_services.hrl").
+-include_lib("/opt/kazoo/core/braintree-1.0.0/include/braintree.hrl").
+-include("/opt/kazoo/core/whistle_services-1.0.0/src/whistle_services.hrl").
 
 -define(TR_DESCRIPTION, <<"braintree transaction">>).
 

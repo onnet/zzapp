@@ -1,12 +1,4 @@
-%%%-------------------------------------------------------------------
-%%% @copyright (C) 2013-2015, 2600Hz INC
-%%% @doc
-%%%
-%%% @end
-%%% @contributors:
-%%%     Peter Defebvre
-%%%-------------------------------------------------------------------
--module(cb_transactions).
+-module(cb_onbill_transactions).
 
 -export([init/0
          ,allowed_methods/0, allowed_methods/1
@@ -17,8 +9,8 @@
          ,delete/2
         ]).
 
--include("../crossbar.hrl").
--include_lib("whistle_transactions/include/whistle_transactions.hrl").
+-include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
+-include_lib("/opt/kazoo/core/whistle_transactions-1.0.0/include/whistle_transactions.hrl").
 
 -define(CURRENT_BALANCE, <<"current_balance">>).
 -define(MONTHLY, <<"monthly_recurring">>).
@@ -40,12 +32,12 @@
 %%--------------------------------------------------------------------
 -spec init() -> 'ok'.
 init() ->
-    _ = crossbar_bindings:bind(<<"*.allowed_methods.transactions">>, ?MODULE, 'allowed_methods'),
-    _ = crossbar_bindings:bind(<<"*.resource_exists.transactions">>, ?MODULE, 'resource_exists'),
-    _ = crossbar_bindings:bind(<<"*.validate.transactions">>, ?MODULE, 'validate'),
-    _ = crossbar_bindings:bind(<<"*.execute.put.transactions">>, ?MODULE, 'put'),
-    _ = crossbar_bindings:bind(<<"*.execute.delete.transactions">>, ?MODULE, 'delete'),
-    _ = crossbar_bindings:bind(<<"*.to_csv.get.transactions">>, ?MODULE, 'to_csv').
+    _ = crossbar_bindings:bind(<<"*.allowed_methods.onbill_transactions">>, ?MODULE, 'allowed_methods'),
+    _ = crossbar_bindings:bind(<<"*.resource_exists.onbill_transactions">>, ?MODULE, 'resource_exists'),
+    _ = crossbar_bindings:bind(<<"*.validate.onbill_transactions">>, ?MODULE, 'validate'),
+    _ = crossbar_bindings:bind(<<"*.execute.put.onbill_transactions">>, ?MODULE, 'put'),
+    _ = crossbar_bindings:bind(<<"*.execute.delete.onbill_transactions">>, ?MODULE, 'delete'),
+    _ = crossbar_bindings:bind(<<"*.to_csv.get.onbill_transactions">>, ?MODULE, 'to_csv').
 
 -spec to_csv(payload()) -> payload().
 to_csv({Req, Context}) ->
