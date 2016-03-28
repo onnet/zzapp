@@ -12,11 +12,7 @@
         ]).
 
 -include("onbill.hrl").
-
 -include_lib("whistle/include/wh_databases.hrl").
-
--define(MOD_CONFIG_CAT, <<(?APP_NAME)/binary, ".account_crawler">>).
-
 
 -record(state, {}).
 
@@ -42,7 +38,7 @@ handle_cast(_Msg, State) ->
     {'noreply', State}.
 
 handle_info('next_account', []) ->
-    NextDay = calendar:datetime_to_gregorian_seconds({erlang:date(),{0,15,0}}) + ?SECONDS_IN_DAY,
+    NextDay = calendar:datetime_to_gregorian_seconds({erlang:date(),{0,45,0}}) + ?SECONDS_IN_DAY,
     Cycle = NextDay - calendar:datetime_to_gregorian_seconds(erlang:localtime()),
     erlang:send_after(Cycle, self(), 'crawl_accounts'),
     {'noreply', [], 'hibernate'};
@@ -53,7 +49,7 @@ handle_info('next_account', [Account|Accounts]) ->
                 OpenResult = couch_mgr:open_doc(?WH_ACCOUNTS_DB, AccountId),
                 check_then_process_account(AccountId, OpenResult)
         end,
-    Cycle = whapps_config:get_integer(?MOD_CONFIG_CAT, <<"interaccount_delay">>, 10 * ?MILLISECONDS_IN_SECOND),
+    Cycle = whapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"interaccount_delay">>, 10 * ?MILLISECONDS_IN_SECOND),
     erlang:send_after(Cycle, self(), 'next_account'),
     {'noreply', Accounts, 'hibernate'};
 handle_info('crawl_accounts', _) ->

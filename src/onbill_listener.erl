@@ -26,8 +26,9 @@
 -record(state, {}).
 
 %% By convention, we put the options here in macros, but not required.
--define(BINDINGS, [{'route', []}
-                   ,{'self', []}
+-define(BINDINGS, [%% {'route', []}
+                   %% ,{'self', []}
+                   {'self', []}
                   ]).
 -define(RESPONDERS, [
                      %% Received because of our route binding

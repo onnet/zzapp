@@ -21,7 +21,7 @@
          ,finish_request/1
         ]).
 
--include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
+-include("../../crossbar/src/crossbar.hrl").
 
 -define(CB_LIST, <<"onbills/crossbar_listing">>).
 
