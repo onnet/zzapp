@@ -2,6 +2,7 @@
 
 -export([check_db/1
          ,create_pdf/3
+         ,save_pdf/5
         ]).
 
 -include("onbill.hrl").
@@ -64,5 +65,12 @@ create_pdf(TemplateId, Vars, AccountId) ->
             {'error', _R}
     end.
 
-
-
+save_pdf(TemplateId, Vars, AccountId, Year, Month) ->
+    {'ok', PDF_Data} = create_pdf(TemplateId, Vars, AccountId),
+    MoDB = kazoo_modb:get_modb(AccountId, Year, Month),
+    couch_mgr:put_attachment(MoDB
+                             ,wh_util:to_binary(TemplateId)
+                             ,<<(wh_util:to_binary(TemplateId))/binary, ".pdf">>
+                             ,PDF_Data
+                             ,[{'content_type', <<"application/pdf">>}]
+                            ).
