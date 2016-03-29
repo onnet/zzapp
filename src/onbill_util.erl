@@ -3,6 +3,7 @@
 -export([check_db/1
          ,create_pdf/3
          ,save_pdf/5
+         ,maybe_add_design_doc/1
         ]).
 
 -include("onbill.hrl").
@@ -77,3 +78,18 @@ save_pdf(TemplateId, Vars, AccountId, Year, Month) ->
     {ok, Doc} = couch_mgr:open_doc(Modb, <<"invoice">>),
     NewDoc = wh_json:set_values(Vars, Doc),
     couch_mgr:ensure_saved(Modb, NewDoc).
+
+-spec maybe_add_design_doc(ne_binary()) ->
+                                  'ok' |
+                                  {'error', 'not_found'}.
+maybe_add_design_doc(Db) ->
+    case couch_mgr:lookup_doc_rev(Db, <<"_design/onbill">>) of
+        {'error', 'not_found'} ->
+            lager:warning("adding onbill views to modb: ~s", [Db]),
+            couch_mgr:revise_doc_from_file(Db
+                                           ,'onbill'
+                                           ,<<"views/onbill.json">>
+                                          );
+        {'ok', _ } -> 'ok'
+    end.
+
