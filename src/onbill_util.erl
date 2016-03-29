@@ -67,10 +67,13 @@ create_pdf(TemplateId, Vars, AccountId) ->
 
 save_pdf(TemplateId, Vars, AccountId, Year, Month) ->
     {'ok', PDF_Data} = create_pdf(TemplateId, Vars, AccountId),
-    MoDB = kazoo_modb:get_modb(AccountId, Year, Month),
-    couch_mgr:put_attachment(MoDB
+    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
+    couch_mgr:put_attachment(Modb
                              ,wh_util:to_binary(TemplateId)
                              ,<<(wh_util:to_binary(TemplateId))/binary, ".pdf">>
                              ,PDF_Data
                              ,[{'content_type', <<"application/pdf">>}]
-                            ).
+                            ),
+    {ok, Doc} = couch_mgr:open_doc(Modb, <<"invoice">>),
+    NewDoc = wh_json:set_values(Vars, Doc),
+    couch_mgr:ensure_saved(Modb, NewDoc).
