@@ -1,4 +1,4 @@
--module(onbill_crawler).
+-module(onbill_daily_sync).
 
 -behaviour(gen_server).
 
@@ -88,6 +88,6 @@ check_then_process_account(AccountId, {'error', _R}) ->
 
 -spec process_account (ne_binary()) -> 'ok'.
 process_account(AccountId) ->
-    lager:debug("onbill crawler processing account ~s", [AccountId]),
+    lager:debug("onbill crawler syncing account ~s", [AccountId]),
     wh_service_sync:sync(AccountId),
     'ok'.
