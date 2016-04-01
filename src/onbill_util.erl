@@ -4,6 +4,7 @@
          ,create_pdf/3
          ,save_pdf/5
          ,maybe_add_design_doc/1
+         ,get_attachment/2
         ]).
 
 -include("onbill.hrl").
@@ -29,6 +30,12 @@ get_template(TemplateId) ->
                                      ,[{'content_type', <<"text/html">>}]
                                     ),
             ?DEFAULT_TEMPLATE(TemplateId)
+    end.
+
+get_attachment(AttachmentId, Db) ->
+    case couch_mgr:fetch_attachment(Db, AttachmentId, <<(wh_util:to_binary(AttachmentId))/binary, ".pdf">>) of
+        {'ok', _} = OK -> OK;
+        E -> E
     end.
 
 prepare_tpl(TemplateId, Vars) ->
@@ -83,12 +90,12 @@ save_pdf(TemplateId, Vars, AccountId, Year, Month) ->
                                   'ok' |
                                   {'error', 'not_found'}.
 maybe_add_design_doc(Db) ->
-    case couch_mgr:lookup_doc_rev(Db, <<"_design/onbill">>) of
+    case couch_mgr:lookup_doc_rev(Db, <<"_design/onbills">>) of
         {'error', 'not_found'} ->
             lager:warning("adding onbill views to modb: ~s", [Db]),
             couch_mgr:revise_doc_from_file(Db
                                            ,'onbill'
-                                           ,<<"views/onbill.json">>
+                                           ,<<"views/onbills.json">>
                                           );
         {'ok', _ } -> 'ok'
     end.

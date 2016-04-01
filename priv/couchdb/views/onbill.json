@@ -1,9 +1,0 @@
-{
-    "_id": "_design/onbill",
-    "language": "javascript",
-    "views": {
-        "all_docs": {
-            "map": "function(doc) { if (doc.pvt_type != 'onbill_doc' || doc.pvt_deleted) return; emit(doc._id, doc.name); }"
-        }
-    }
-}
