@@ -59,7 +59,7 @@ validate_onbill(Context, Id, ?HTTP_GET) ->
     read(Id, Context).
 
 validate_onbill(Context, Id, ?ATTACHMENT, ?HTTP_GET) ->
-    load_attachment(Id, cb_context:set_account_modb(Context, wh_util:to_integer(2016), wh_util:to_integer(3))).
+    load_attachment(Context, Id).
 
 -spec read(ne_binary(), cb_context:context()) -> cb_context:context().
 read(Id, Context) ->
@@ -67,8 +67,19 @@ read(Id, Context) ->
 
 -spec summary(cb_context:context()) -> cb_context:context().
 summary(Context) ->
+    QueryString = cb_context:query_string(Context),
+    {Year, Month} = case (wh_json:get_value(<<"year">>,QueryString) == 'undefined')
+                          orelse
+                          (wh_json:get_value(<<"month">>,QueryString) == 'undefined')
+                    of
+                        'true' ->
+                            {{Y,M,_},_} = calendar:universal_time(),
+                            {Y,M};
+                        'false' ->
+                            {wh_json:get_value(<<"year">>,QueryString), wh_json:get_value(<<"month">>,QueryString)}
+                    end,
     AccountId = cb_context:account_id(Context),
-    Modb = kazoo_modb:get_modb(AccountId, wh_util:to_integer(2016), wh_util:to_integer(3)),
+    Modb = kazoo_modb:get_modb(AccountId, wh_util:to_integer(Year), wh_util:to_integer(Month)),
     onbill_util:maybe_add_design_doc(Modb),
     Context1 = cb_context:set_account_db(Context, Modb),
     crossbar_doc:load_view(?CB_LIST, [], Context1, fun normalize_view_results/2).
@@ -77,17 +88,25 @@ summary(Context) ->
 normalize_view_results(JObj, Acc) ->
     [wh_json:get_value(<<"value">>, JObj)|Acc].
 
-load_attachment(Id, Context0) ->
-    Context = crossbar_doc:load(Id, Context0),
+load_attachment(Context0, Id) ->
+    QueryString = cb_context:query_string(Context0),
+    Year = wh_json:get_value(<<"year">>,QueryString),
+    Month = wh_json:get_value(<<"month">>,QueryString),
+    Context = crossbar_doc:load(Id, cb_context:set_account_modb(Context0, wh_util:to_integer(Year), wh_util:to_integer(Month))),
     AccountId = cb_context:account_id(Context),
-    Modb = kazoo_modb:get_modb(AccountId, wh_util:to_integer(2016), wh_util:to_integer(3)),
+    Modb = kazoo_modb:get_modb(AccountId, wh_util:to_integer(Year), wh_util:to_integer(Month)),
     {'ok', Attachment} = onbill_util:get_attachment(Id, Modb),
     cb_context:set_resp_etag(
         cb_context:set_resp_headers(cb_context:setters(Context,[{fun cb_context:set_resp_data/2, Attachment},{fun cb_context:set_resp_etag/2, 'undefined'}])
-                            %        ,[{<<"Content-Disposition">>, <<"attachment; filename=", MediaName/binary>>}
-                                    ,[{<<"Content-Disposition">>, <<"attachment; filename=iam.pdf">>}
-                                    ,{<<"Content-Type">>, <<"application/pdf">>}
-                                    | cb_context:resp_headers(Context)
+                                    ,[{<<"Content-Disposition">>, <<"attachment; filename="
+                                                                    ,(wh_util:to_binary(Id))/binary
+                                                                    ,"-"
+                                                                    ,(wh_util:to_binary(Id))/binary
+                                                                    ,"-"
+                                                                    ,(wh_util:to_binary(Id))/binary>>
+                                      }
+                                     ,{<<"Content-Type">>, <<"application/pdf">>}
+                                     |cb_context:resp_headers(Context)
                                    ])
         ,'undefined'
     ).
