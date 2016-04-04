@@ -95,18 +95,23 @@ load_attachment(Context0, Id) ->
     Context = crossbar_doc:load(Id, cb_context:set_account_modb(Context0, wh_util:to_integer(Year), wh_util:to_integer(Month))),
     AccountId = cb_context:account_id(Context),
     Modb = kazoo_modb:get_modb(AccountId, wh_util:to_integer(Year), wh_util:to_integer(Month)),
-    {'ok', Attachment} = onbill_util:get_attachment(Id, Modb),
-    cb_context:set_resp_etag(
-        cb_context:set_resp_headers(cb_context:setters(Context,[{fun cb_context:set_resp_data/2, Attachment},{fun cb_context:set_resp_etag/2, 'undefined'}])
-                                    ,[{<<"Content-Disposition">>, <<"attachment; filename="
-                                                                    ,(wh_util:to_binary(Id))/binary
-                                                                    ,"-"
-                                                                    ,(wh_util:to_binary(Id))/binary
-                                                                    ,"-"
-                                                                    ,(wh_util:to_binary(Id))/binary>>
-                                      }
-                                     ,{<<"Content-Type">>, <<"application/pdf">>}
-                                     |cb_context:resp_headers(Context)
-                                   ])
-        ,'undefined'
-    ).
+    case onbill_util:get_attachment(Id, Modb) of
+        {'ok', Attachment} ->
+            cb_context:set_resp_etag(
+                cb_context:set_resp_headers(cb_context:setters(Context,[{fun cb_context:set_resp_data/2, Attachment},{fun cb_context:set_resp_etag/2, 'undefined'}])
+                                            ,[{<<"Content-Disposition">>, <<"attachment; filename="
+                                                                            ,(wh_util:to_binary(Id))/binary
+                                                                            ,"-"
+                                                                            ,(wh_util:to_binary(Id))/binary
+                                                                            ,"-"
+                                                                            ,(wh_util:to_binary(Id))/binary>>
+                                              }
+                                             ,{<<"Content-Type">>, <<"application/pdf">>}
+                                             |cb_context:resp_headers(Context)
+                                           ])
+                ,'undefined'
+            );
+        _ ->
+         %   crossbar_util:response('error', <<"could not find cdr with supplied id">>, 404, Context)
+            cb_context:add_system_error('faulty_request', Context0)
+    end.

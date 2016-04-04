@@ -23,14 +23,20 @@ get_template(TemplateId) ->
     case couch_mgr:fetch_attachment(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES, <<(wh_util:to_binary(TemplateId))/binary, ".tpl">>) of
         {'ok', Template} -> Template;
         {error, not_found} ->
+            Template = default_template(TemplateId),
             couch_mgr:put_attachment(?SYSTEM_CONFIG_DB
                                      ,?MOD_CONFIG_TEMLATES
                                      ,<<(wh_util:to_binary(TemplateId))/binary, ".tpl">>
-                                     ,?DEFAULT_TEMPLATE(TemplateId)
+                                     ,Template
                                      ,[{'content_type', <<"text/html">>}]
                                     ),
-            ?DEFAULT_TEMPLATE(TemplateId)
+            Template
     end.
+
+default_template(TemplateId) ->
+    FilePath = <<"applications/onbill/priv/templates/ru/", (wh_util:to_binary(TemplateId))/binary, ".html">>,
+    {'ok', Data} = file:read_file(FilePath),
+    Data.
 
 get_attachment(AttachmentId, Db) ->
     case couch_mgr:fetch_attachment(Db, AttachmentId, <<(wh_util:to_binary(AttachmentId))/binary, ".pdf">>) of
@@ -65,8 +71,9 @@ create_pdf(TemplateId, Vars, AccountId) ->
     PDFFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".pdf">>]),
     HTMLTpl = prepare_tpl(TemplateId, Vars),
     file:write_file(HTMLFile, HTMLTpl),
-    Cmd = <<(?HTML_TO_PDF)/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
+    Cmd = <<(?HTML_TO_PDF(TemplateId))/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
     case os:cmd(wh_util:to_list(Cmd)) of
+        [] -> file:read_file(PDFFile);
         "\n" -> file:read_file(PDFFile);
         _R ->
             lager:error("failed to exec ~s: ~s", [Cmd, _R]),
@@ -82,8 +89,8 @@ save_pdf(TemplateId, Vars, AccountId, Year, Month) ->
                              ,PDF_Data
                              ,[{'content_type', <<"application/pdf">>}]
                             ),
-    {ok, Doc} = couch_mgr:open_doc(Modb, <<"invoice">>),
-    NewDoc = wh_json:set_values(Vars, Doc),
+    {ok, Doc} = couch_mgr:open_doc(Modb, wh_util:to_binary(TemplateId)),
+    NewDoc = wh_json:set_values(Vars ++ [{<<"pvt_type">>,<<"onbill_doc">>}], Doc),
     couch_mgr:ensure_saved(Modb, NewDoc).
 
 -spec maybe_add_design_doc(ne_binary()) ->

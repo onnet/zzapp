@@ -1,0 +1,60 @@
+<br />
+<h1 ALIGN=CENTER>АКТ оказания услуг </h1>
+<h4 ALIGN=CENTER>по Договору № %agrm% от %agrmdate% <br />
+за оказанные услуги электросвязи за период: %start_date% — %end_date%</h4>
+<br />
+<table>
+	<tr>
+		<td width="50%" align="left">Санкт-Петербург</td>
+		<td width="49%" align="right">%date%</td>
+	</tr>
+</table>
+<br />
+<h4 align=justify>%opername_head%, с одной стороны, и %name%, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том, что в соответствии с Договором об оказании услуг связи № %agrm% от %agrmdate%, заключенным между Сторонами (далее — «Договор»), %opername_sh% в указанный период оказал Клиенту Услуги:
+</h4><br />
+<table border="1">
+	<tr>
+		<td width="5%"><h4 align="center">№</h4></td>
+		<TD WIDTH=44%><h4 align="center">Наименование услуги</h4></td>
+		<TD WIDTH=8%><h4 align="center">Ед. Изм.</h4></td>
+		<TD WIDTH=14%><h4 align="center">Кол-во</h4></td>
+		<TD WIDTH=14%><h4 align="center">Цена %curr%.</h4></td>
+		<TD WIDTH=14%><h4 align="center">Сумма %curr%.</h4></td>
+	</tr>
+</table>
+<table border="1">
+<!-- begin_services -->
+<!-- begin_item -->
+        <tr>
+                <td width="5%"><h4 align="center">%N%</h4></td>
+                <TD WIDTH="44%">%item%</td>
+                <TD WIDTH="8%"><h4 align="center">%ed%</h4></td>
+                <TD WIDTH="14%"><h4 align="center">%vol%</h4></td>
+                <TD WIDTH="14%"><h4 align="center">%price%</h4></td>
+                <TD WIDTH="14%"><h4 align="center">%amount%</h4></td>
+        </tr>
+<!-- end_item -->
+<!-- end_services -->
+        <tr>
+               <td colspan="4" align="right" width="85%">Итого:</td>
+                <td width="14%"><h4 align="center">%total_summ%</h4></td>
+        </tr>
+	<tr>
+                <td colspan="4" align="right" width="85%">%ndstitle%НДС(%ndsper%%):</td>
+                <td width="14%"><h4 align="center">%totalnds%</h4></td>
+        </tr>
+ </table>
+<br />Всего оказано услуг на сумму: %totalstr%, в т.ч. НДС(%ndsper%%) — %ndsstr%
+<br /><br />
+<h4 align="center">Указанные услуги полностью соответствуют условиям Договора. <br />
+Клиент претензий к объему оказанных услуг и их качеству не имеет.</h4><br /><br />
+<table>
+	<TR>
+		<TD WIDTH=50%>
+			<h4 align="center">КЛИЕНТ<br /><br /><br />________________________<br /><br /><br />МП</h4>
+		</TD>
+		<TD WIDTH=49%>
+			<h4 align="center">%opername_dov%<br /><br /><br />________________________<br />(%operdir%)<br /><br />МП</h4><p align="center">%vkagent%<br />%vkdover%</p>
+		</TD>
+	</TR>
+</TABLE>
