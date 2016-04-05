@@ -5,6 +5,7 @@
          ,save_pdf/5
          ,maybe_add_design_doc/1
          ,get_attachment/2
+         ,monthly_fee/1
         ]).
 
 -include("onbill.hrl").
@@ -107,3 +108,40 @@ maybe_add_design_doc(Db) ->
         {'ok', _ } -> 'ok'
     end.
 
+monthly_fee(Db) ->
+    TableId = ets:new(erlang:binary_to_atom(wh_util:format_account_modb(Db, 'raw'), 'latin1'), [duplicate_bag]),
+    case couch_mgr:get_results(Db, <<"onbills/daily_fees">>) of
+        {'error', 'not_found'} -> lager:warning("unable process monthly fee calculaton for Db: ~s", [Db]);
+        {'ok', JObjs } -> [process_daily_fee(JObj, Db, TableId) || JObj <- JObjs] 
+    end,
+    lager:info("ETS Tab: ~p",[ets:tab2list(TableId)]),
+    lager:info("ETS phone_numbers: ~p",[ets:match(TableId,{<<"phone_numbers">>,'$2','$3','$4','$5'})]),
+    lager:info("ETS monthly_services: ~p",[ets:match(TableId,{<<"monthly_services">>,'$2','$3','$4','$5'})]),
+    lager:info("ETS limits: ~p",[ets:match(TableId,{<<"limits">>,'$2','$3','$4','$5'})]).
+    
+
+process_daily_fee(JObj, Db, TableId) ->
+    case couch_mgr:open_doc(Db, wh_json:get_value(<<"id">>, JObj)) of
+        {'error', 'not_found'} -> 'ok';
+        {'ok', DFDoc} -> upload_daily_fee_to_ets(DFDoc, TableId)
+    end.
+
+upload_daily_fee_to_ets(DFDoc, TableId) ->
+    ItemsList = wh_json:get_value([<<"pvt_metadata">>, <<"items_history">>],DFDoc),
+    [ItemTs|_] = lists:reverse(lists:sort(wh_json:get_keys(ItemsList))),
+    Item = wh_json:get_value(ItemTs, ItemsList),
+    [process_class(wh_json:get_value(ClassKey, Item), TableId, ItemTs) || ClassKey <- wh_json:get_keys(Item)
+     ,wh_json:is_json_object(wh_json:get_value(ClassKey, Item)) == 'true'
+    ].
+
+process_class(Class, TableId, ItemTs) ->
+    lager:info("IAM Class: ~p",[Class]),
+    [process_item(Element, TableId, ItemTs) || {_, Element} <- wh_json:to_proplist(Class)].
+process_item(Element, TableId, ItemTs) ->
+    lager:info("IAM Element: ~p",[Element]),
+    ets:insert(TableId, {category(Element), item(Element), rate(Element), quantity(Element), ItemTs}).
+
+category(Element) -> wh_json:get_value(<<"category">>, Element).
+item(Element) -> wh_json:get_value(<<"item">>, Element).
+rate(Element) -> wh_json:get_value(<<"rate">>, Element).
+quantity(Element) -> wh_json:get_value(<<"quantity">>, Element).
