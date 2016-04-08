@@ -169,7 +169,7 @@ handle_ets_item_price(TableId, ServiceType, Item, Price) ->
 
 handle_ets_item_quantity(TableId, ServiceType, Item, Price, Quantity) ->
     Days = [Day || [Day] <- lists:usort(ets:match(TableId,{ServiceType,Item,Price,Quantity,'$5'}))],
-    lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Days: ~p",[ServiceType, Item, Price, Quantity, Days]).
+    lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Days: ~p",[ServiceType, Item, Price, Quantity, days_sequence_reduce(Days)]).
 
 days_sequence_reduce([Digit]) ->
     days_sequence_reduce([Digit], []);
