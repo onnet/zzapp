@@ -6,6 +6,7 @@
          ,maybe_add_design_doc/1
          ,get_attachment/2
          ,monthly_fee/1
+         ,days_sequence_reduce/1
         ]).
 
 -include("onbill.hrl").
@@ -169,3 +170,36 @@ handle_ets_item_price(TableId, ServiceType, Item, Price) ->
 handle_ets_item_quantity(TableId, ServiceType, Item, Price, Quantity) ->
     Days = [Day || [Day] <- lists:usort(ets:match(TableId,{ServiceType,Item,Price,Quantity,'$5'}))],
     lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Days: ~p",[ServiceType, Item, Price, Quantity, Days]).
+
+days_sequence_reduce([Digit]) ->
+    days_sequence_reduce([Digit], []);
+days_sequence_reduce([First,Last]) ->
+    days_sequence_reduce([First,Last], []);
+days_sequence_reduce(LongList) ->
+    days_glue(days_sequence_reduce(LongList, [])).
+
+days_sequence_reduce([Digit], Acc) ->
+    Acc ++ [wh_util:to_binary(Digit)];
+days_sequence_reduce([First,Last], Acc) ->
+    case First+1 == Last of
+        'true' -> Acc ++ [<<(wh_util:to_binary(First))/binary,"-", (wh_util:to_binary(Last))/binary>>];
+        'false' -> Acc ++ [<<(wh_util:to_binary(First))/binary,",", (wh_util:to_binary(Last))/binary>>]
+    end;
+days_sequence_reduce([First,Next|T], Acc) ->
+    case First+1 == Next of
+        'false' -> days_sequence_reduce([Next] ++ T, Acc ++ [wh_util:to_binary(First)]);
+        'true' -> days_sequence_reduce(First, [Next] ++ T, Acc)
+    end.
+    
+days_sequence_reduce(Prev, [], Acc) ->
+    days_sequence_reduce([Prev], Acc);
+days_sequence_reduce(Prev, [Digit], Acc) ->
+    Acc ++ [<<(wh_util:to_binary(Prev))/binary,"-", (wh_util:to_binary(Digit))/binary>>];
+days_sequence_reduce(Prev, [First,Next|T], Acc) ->
+    case First+1 == Next of
+        'false' -> days_sequence_reduce([Next] ++ T, Acc ++ [<<(wh_util:to_binary(Prev))/binary,"-", (wh_util:to_binary(First))/binary>>]);
+        'true' -> days_sequence_reduce(Prev, [Next] ++ T, Acc)
+    end.
+
+days_glue(L) ->
+    lists:foldl(fun(X,Acc) -> case Acc of <<>> -> X; _ -> <<Acc/binary, ",", X/binary>> end end, <<>>, L).
