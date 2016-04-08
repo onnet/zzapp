@@ -46,14 +46,14 @@ handle_info('next_account', [Account|Accounts]) ->
     _ = case wh_doc:id(Account) of
             <<"_design", _/binary>> -> 'ok';
             AccountId ->
-                OpenResult = couch_mgr:open_doc(?WH_ACCOUNTS_DB, AccountId),
+                OpenResult = kz_datamgr:open_doc(?WH_ACCOUNTS_DB, AccountId),
                 check_then_process_account(AccountId, OpenResult)
         end,
     Cycle = whapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"interaccount_delay">>, 10 * ?MILLISECONDS_IN_SECOND),
     erlang:send_after(Cycle, self(), 'next_account'),
     {'noreply', Accounts, 'hibernate'};
 handle_info('crawl_accounts', _) ->
-    _ = case couch_mgr:all_docs(?WH_ACCOUNTS_DB) of
+    _ = case kz_datamgr:all_docs(?WH_ACCOUNTS_DB) of
             {'ok', JObjs} ->
                 self() ! 'next_account',
                 {'noreply', wh_util:shuffle_list(JObjs)};

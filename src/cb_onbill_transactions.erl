@@ -10,7 +10,7 @@
         ]).
 
 -include("../../crossbar/src/crossbar.hrl").
--include_lib("../../../core/whistle_transactions-1.0.0/include/whistle_transactions.hrl").
+-include_lib("../../../core/whistle_transactions/include/whistle_transactions.hrl").
 
 -define(CURRENT_BALANCE, <<"current_balance">>).
 -define(MONTHLY, <<"monthly_recurring">>).

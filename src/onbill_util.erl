@@ -12,20 +12,20 @@
 
 -spec check_db(ne_binary()) -> 'ok'.
 check_db(Db) when is_binary(Db) ->
-    do_check_db(Db, couch_mgr:db_exists(Db)).
+    do_check_db(Db, kz_datamgr:db_exists(Db)).
 
 -spec do_check_db(ne_binary(), boolean()) -> 'ok'.
 do_check_db(_Db, 'true') -> 'ok';
 do_check_db(Db, 'false') ->
     lager:debug("create Db ~p", [Db]),
-    _ = couch_mgr:db_create(Db).
+    _ = kz_datamgr:db_create(Db).
 
 get_template(TemplateId) ->
-    case couch_mgr:fetch_attachment(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES, <<(wh_util:to_binary(TemplateId))/binary, ".tpl">>) of
+    case kz_datamgr:fetch_attachment(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES, <<(wh_util:to_binary(TemplateId))/binary, ".tpl">>) of
         {'ok', Template} -> Template;
         {error, not_found} ->
             Template = default_template(TemplateId),
-            couch_mgr:put_attachment(?SYSTEM_CONFIG_DB
+            kz_datamgr:put_attachment(?SYSTEM_CONFIG_DB
                                      ,?MOD_CONFIG_TEMLATES
                                      ,<<(wh_util:to_binary(TemplateId))/binary, ".tpl">>
                                      ,Template
@@ -40,7 +40,7 @@ default_template(TemplateId) ->
     Data.
 
 get_attachment(AttachmentId, Db) ->
-    case couch_mgr:fetch_attachment(Db, AttachmentId, <<(wh_util:to_binary(AttachmentId))/binary, ".pdf">>) of
+    case kz_datamgr:fetch_attachment(Db, AttachmentId, <<(wh_util:to_binary(AttachmentId))/binary, ".pdf">>) of
         {'ok', _} = OK -> OK;
         E -> E
     end.
@@ -84,24 +84,24 @@ create_pdf(TemplateId, Vars, AccountId) ->
 save_pdf(TemplateId, Vars, AccountId, Year, Month) ->
     {'ok', PDF_Data} = create_pdf(TemplateId, Vars, AccountId),
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-    couch_mgr:put_attachment(Modb
+    kz_datamgr:put_attachment(Modb
                              ,wh_util:to_binary(TemplateId)
                              ,<<(wh_util:to_binary(TemplateId))/binary, ".pdf">>
                              ,PDF_Data
                              ,[{'content_type', <<"application/pdf">>}]
                             ),
-    {ok, Doc} = couch_mgr:open_doc(Modb, wh_util:to_binary(TemplateId)),
+    {ok, Doc} = kz_datamgr:open_doc(Modb, wh_util:to_binary(TemplateId)),
     NewDoc = wh_json:set_values(Vars ++ [{<<"pvt_type">>,<<"onbill_doc">>}], Doc),
-    couch_mgr:ensure_saved(Modb, NewDoc).
+    kz_datamgr:ensure_saved(Modb, NewDoc).
 
 -spec maybe_add_design_doc(ne_binary()) ->
                                   'ok' |
                                   {'error', 'not_found'}.
 maybe_add_design_doc(Db) ->
-    case couch_mgr:lookup_doc_rev(Db, <<"_design/onbills">>) of
+    case kz_datamgr:lookup_doc_rev(Db, <<"_design/onbills">>) of
         {'error', 'not_found'} ->
             lager:warning("adding onbill views to modb: ~s", [Db]),
-            couch_mgr:revise_doc_from_file(Db
+            kz_datamgr:revise_doc_from_file(Db
                                            ,'onbill'
                                            ,<<"views/onbills.json">>
                                           );
@@ -110,7 +110,7 @@ maybe_add_design_doc(Db) ->
 
 monthly_fee(Db) ->
     TableId = ets:new(erlang:binary_to_atom(wh_util:format_account_modb(Db, 'raw'), 'latin1'), [duplicate_bag]),
-    case couch_mgr:get_results(Db, <<"onbills/daily_fees">>) of
+    case kz_datamgr:get_results(Db, <<"onbills/daily_fees">>) of
         {'error', 'not_found'} -> lager:warning("unable process monthly fee calculaton for Db: ~s", [Db]);
         {'ok', JObjs } -> [process_daily_fee(JObj, Db, TableId) || JObj <- JObjs] 
     end,
@@ -121,7 +121,7 @@ monthly_fee(Db) ->
     
 
 process_daily_fee(JObj, Db, TableId) ->
-    case couch_mgr:open_doc(Db, wh_json:get_value(<<"id">>, JObj)) of
+    case kz_datamgr:open_doc(Db, wh_json:get_value(<<"id">>, JObj)) of
         {'error', 'not_found'} -> 'ok';
         {'ok', DFDoc} -> upload_daily_fee_to_ets(DFDoc, TableId)
     end.

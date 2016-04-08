@@ -9,9 +9,9 @@
 -export([already_charged/2]).
 
 -include("onbill.hrl").
--include_lib("/opt/kazoo/core/braintree-1.0.0/include/braintree.hrl").
--include_lib("/opt/kazoo/core/whistle-1.0.0/include/wh_databases.hrl").
--include_lib("/opt/kazoo/core/whistle_transactions-1.0.0/include/whistle_transactions.hrl").
+-include_lib("/opt/kazoo/core/braintree/include/braintree.hrl").
+-include_lib("/opt/kazoo/core/whistle/include/wh_databases.hrl").
+-include_lib("/opt/kazoo/core/whistle_transactions/include/whistle_transactions.hrl").
 
 -define(TR_DESCRIPTION, <<"braintree transaction">>).
 
@@ -90,7 +90,7 @@ commit_transactions(BillingId, Transactions) ->
     commit_transactions(BillingId, Transactions, 3).
 
 commit_transactions(BillingId, Transactions, Try) when Try > 0 ->
-    case couch_mgr:open_doc(?WH_SERVICES_DB, BillingId) of
+    case kz_datamgr:open_doc(?WH_SERVICES_DB, BillingId) of
         {'error', _E} ->
             lager:error("could not open services for ~p : ~p retrying...", [BillingId, _E]),
             commit_transactions(BillingId, Transactions, Try-1);
@@ -101,7 +101,7 @@ commit_transactions(BillingId, Transactions, Try) when Try > 0 ->
                                         ,{<<"pvt_modified">>, wh_util:current_tstamp()}
                                         ,{<<"transactions">>, NewTransactions}
                                        ], JObj),
-            case couch_mgr:save_doc(?WH_SERVICES_DB, JObj1) of
+            case kz_datamgr:save_doc(?WH_SERVICES_DB, JObj1) of
                 {'error', _E} ->
                     lager:error("could not save services for ~p : ~p retrying...", [BillingId, _E]),
                     commit_transactions(BillingId, Transactions, Try-1);
