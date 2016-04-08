@@ -109,16 +109,13 @@ maybe_add_design_doc(Db) ->
     end.
 
 monthly_fee(Db) ->
+    _ = maybe_add_design_doc(Db),
     TableId = ets:new(erlang:binary_to_atom(wh_util:format_account_modb(Db, 'raw'), 'latin1'), [duplicate_bag]),
     case kz_datamgr:get_results(Db, <<"onbills/daily_fees">>) of
         {'error', 'not_found'} -> lager:warning("unable process monthly fee calculaton for Db: ~s", [Db]);
         {'ok', JObjs } -> [process_daily_fee(JObj, Db, TableId) || JObj <- JObjs] 
     end,
-    lager:info("ETS Tab: ~p",[ets:tab2list(TableId)]),
-    lager:info("ETS phone_numbers: ~p",[ets:match(TableId,{<<"phone_numbers">>,'$2','$3','$4','$5'})]),
-    lager:info("ETS monthly_services: ~p",[ets:match(TableId,{<<"monthly_services">>,'$2','$3','$4','$5'})]),
-    lager:info("ETS limits: ~p",[ets:match(TableId,{<<"limits">>,'$2','$3','$4','$5'})]).
-    
+    process_ets(TableId).
 
 process_daily_fee(JObj, Db, TableId) ->
     case kz_datamgr:open_doc(Db, wh_json:get_value(<<"id">>, JObj)) of
@@ -130,18 +127,45 @@ upload_daily_fee_to_ets(DFDoc, TableId) ->
     ItemsList = wh_json:get_value([<<"pvt_metadata">>, <<"items_history">>],DFDoc),
     [ItemTs|_] = lists:reverse(lists:sort(wh_json:get_keys(ItemsList))),
     Item = wh_json:get_value(ItemTs, ItemsList),
-    [process_class(wh_json:get_value(ClassKey, Item), TableId, ItemTs) || ClassKey <- wh_json:get_keys(Item)
-     ,wh_json:is_json_object(wh_json:get_value(ClassKey, Item)) == 'true'
+    {{_,_,Day},_} = calendar:gregorian_seconds_to_datetime(wh_util:to_integer(ItemTs)),
+    [process_element(wh_json:get_value(ElementKey, Item), TableId, Day) || ElementKey <- wh_json:get_keys(Item)
+     ,wh_json:is_json_object(wh_json:get_value(ElementKey, Item)) == 'true'
     ].
 
-process_class(Class, TableId, ItemTs) ->
-    lager:info("IAM Class: ~p",[Class]),
-    [process_item(Element, TableId, ItemTs) || {_, Element} <- wh_json:to_proplist(Class)].
-process_item(Element, TableId, ItemTs) ->
-    lager:info("IAM Element: ~p",[Element]),
-    ets:insert(TableId, {category(Element), item(Element), rate(Element), quantity(Element), ItemTs}).
+process_element(Element, TableId, Day) ->
+    [ets:insert(TableId, {category(Unit), item(Unit), rate(Unit), quantity(Unit), Day})
+     || {_, Unit} <- wh_json:to_proplist(Element)
+     , quantity(Unit) =/= 0.0
+    ].
 
-category(Element) -> wh_json:get_value(<<"category">>, Element).
-item(Element) -> wh_json:get_value(<<"item">>, Element).
-rate(Element) -> wh_json:get_value(<<"rate">>, Element).
-quantity(Element) -> wh_json:get_value(<<"quantity">>, Element).
+category(Unit) ->
+    wh_json:get_value(<<"category">>, Unit).
+
+item(Unit) ->
+    wh_json:get_value(<<"item">>, Unit).
+
+rate(Unit) ->
+    wh_util:to_float(wh_json:get_value(<<"rate">>, Unit)).
+
+quantity(Unit) ->
+    wh_util:to_float(wh_json:get_value(<<"quantity">>, Unit)).
+
+process_ets(TableId) ->
+    ServiceTypesList = lists:usort(ets:match(TableId,{'$1','_','_','_','_'})),
+    [show_items(ServiceType, TableId) || [ServiceType] <- ServiceTypesList].
+    
+show_items(ServiceType, TableId) ->
+    Items = lists:usort(ets:match(TableId,{ServiceType,'$2','_','_','_'})),
+    [process_ets_item(TableId, ServiceType, Item) || [Item] <- Items].
+
+process_ets_item(TableId, ServiceType, Item) ->
+    Prices = lists:usort(ets:match(TableId,{ServiceType,Item,'$3','_','_'})),
+    [handle_ets_item_price(TableId, ServiceType, Item, Price) || [Price] <- Prices].
+
+handle_ets_item_price(TableId, ServiceType, Item, Price) ->
+    Quantities = lists:usort(ets:match(TableId,{ServiceType,Item,Price,'$4','_'})),
+    [handle_ets_item_quantity(TableId, ServiceType, Item, Price, Quantity) || [Quantity] <- Quantities].
+
+handle_ets_item_quantity(TableId, ServiceType, Item, Price, Quantity) ->
+    Days = [Day || [Day] <- lists:usort(ets:match(TableId,{ServiceType,Item,Price,Quantity,'$5'}))],
+    lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Days: ~p",[ServiceType, Item, Price, Quantity, Days]).
