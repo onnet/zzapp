@@ -7,6 +7,8 @@
          ,get_attachment/2
          ,monthly_fee/1
          ,days_sequence_reduce/1
+         ,services_to_jobj/1
+         ,service_to_jobj/2
         ]).
 
 -include("onbill.hrl").
@@ -86,7 +88,7 @@ save_pdf(TemplateId, Vars, AccountId, Year, Month) ->
     {'ok', PDF_Data} = create_pdf(TemplateId, Vars, AccountId),
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     kz_datamgr:put_attachment(Modb
-                             ,wh_util:to_binary(TemplateId)
+                             ,{<<"onbill_doc">>, wh_util:to_binary(TemplateId)}
                              ,<<(wh_util:to_binary(TemplateId))/binary, ".pdf">>
                              ,PDF_Data
                              ,[{'content_type', <<"application/pdf">>}]
@@ -111,30 +113,35 @@ maybe_add_design_doc(Db) ->
 
 monthly_fee(Db) ->
     _ = maybe_add_design_doc(Db),
-    TableId = ets:new(erlang:binary_to_atom(wh_util:format_account_modb(Db, 'raw'), 'latin1'), [duplicate_bag]),
+    RawTableId = ets:new(erlang:binary_to_atom(<<(wh_util:format_account_modb(Db, 'raw'))/binary,"-raw">>, 'latin1'), [duplicate_bag]),
+    ResultTableId = ets:new(erlang:binary_to_atom(<<(wh_util:format_account_modb(Db, 'raw'))/binary,"-result">>, 'latin1'), [bag]),
     case kz_datamgr:get_results(Db, <<"onbills/daily_fees">>) of
         {'error', 'not_found'} -> lager:warning("unable process monthly fee calculaton for Db: ~s", [Db]);
-        {'ok', JObjs } -> [process_daily_fee(JObj, Db, TableId) || JObj <- JObjs] 
+        {'ok', JObjs } -> [process_daily_fee(JObj, Db, RawTableId) || JObj <- JObjs] 
     end,
-    process_ets(TableId).
+    _ = process_ets(RawTableId, ResultTableId),
+    ServicesList = ets:tab2list(ResultTableId),
+    [lager:info("Result Table Line: ~p",[Service]) || Service <- ServicesList],
+    {_, JObj} = services_to_jobj(ServicesList),
+    JObj.
 
-process_daily_fee(JObj, Db, TableId) ->
+process_daily_fee(JObj, Db, RawTableId) ->
     case kz_datamgr:open_doc(Db, wh_json:get_value(<<"id">>, JObj)) of
         {'error', 'not_found'} -> 'ok';
-        {'ok', DFDoc} -> upload_daily_fee_to_ets(DFDoc, TableId)
+        {'ok', DFDoc} -> upload_daily_fee_to_ets(DFDoc, RawTableId)
     end.
 
-upload_daily_fee_to_ets(DFDoc, TableId) ->
+upload_daily_fee_to_ets(DFDoc, RawTableId) ->
     ItemsList = wh_json:get_value([<<"pvt_metadata">>, <<"items_history">>],DFDoc),
     [ItemTs|_] = lists:reverse(lists:sort(wh_json:get_keys(ItemsList))),
     Item = wh_json:get_value(ItemTs, ItemsList),
     {{_,_,Day},_} = calendar:gregorian_seconds_to_datetime(wh_util:to_integer(ItemTs)),
-    [process_element(wh_json:get_value(ElementKey, Item), TableId, Day) || ElementKey <- wh_json:get_keys(Item)
+    [process_element(wh_json:get_value(ElementKey, Item), RawTableId, Day) || ElementKey <- wh_json:get_keys(Item)
      ,wh_json:is_json_object(wh_json:get_value(ElementKey, Item)) == 'true'
     ].
 
-process_element(Element, TableId, Day) ->
-    [ets:insert(TableId, {category(Unit), item(Unit), rate(Unit), quantity(Unit), Day})
+process_element(Element, RawTableId, Day) ->
+    [ets:insert(RawTableId, {category(Unit), item(Unit), rate(Unit), quantity(Unit), Day})
      || {_, Unit} <- wh_json:to_proplist(Element)
      , quantity(Unit) =/= 0.0
     ].
@@ -151,25 +158,26 @@ rate(Unit) ->
 quantity(Unit) ->
     wh_util:to_float(wh_json:get_value(<<"quantity">>, Unit)).
 
-process_ets(TableId) ->
-    ServiceTypesList = lists:usort(ets:match(TableId,{'$1','_','_','_','_'})),
-    [show_items(ServiceType, TableId) || [ServiceType] <- ServiceTypesList].
+process_ets(RawTableId, ResultTableId) ->
+    ServiceTypesList = lists:usort(ets:match(RawTableId,{'$1','_','_','_','_'})),
+    [show_items(ServiceType, RawTableId, ResultTableId) || [ServiceType] <- ServiceTypesList].
     
-show_items(ServiceType, TableId) ->
-    Items = lists:usort(ets:match(TableId,{ServiceType,'$2','_','_','_'})),
-    [process_ets_item(TableId, ServiceType, Item) || [Item] <- Items].
+show_items(ServiceType, RawTableId, ResultTableId) ->
+    Items = lists:usort(ets:match(RawTableId,{ServiceType,'$2','_','_','_'})),
+    [process_ets_item(RawTableId, ResultTableId, ServiceType, Item) || [Item] <- Items].
 
-process_ets_item(TableId, ServiceType, Item) ->
-    Prices = lists:usort(ets:match(TableId,{ServiceType,Item,'$3','_','_'})),
-    [handle_ets_item_price(TableId, ServiceType, Item, Price) || [Price] <- Prices].
+process_ets_item(RawTableId, ResultTableId, ServiceType, Item) ->
+    Prices = lists:usort(ets:match(RawTableId,{ServiceType,Item,'$3','_','_'})),
+    [handle_ets_item_price(RawTableId, ResultTableId, ServiceType, Item, Price) || [Price] <- Prices].
 
-handle_ets_item_price(TableId, ServiceType, Item, Price) ->
-    Quantities = lists:usort(ets:match(TableId,{ServiceType,Item,Price,'$4','_'})),
-    [handle_ets_item_quantity(TableId, ServiceType, Item, Price, Quantity) || [Quantity] <- Quantities].
+handle_ets_item_price(RawTableId, ResultTableId, ServiceType, Item, Price) ->
+    Quantities = lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,'$4','_'})),
+    [handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Quantity) || [Quantity] <- Quantities].
 
-handle_ets_item_quantity(TableId, ServiceType, Item, Price, Quantity) ->
-    Days = [Day || [Day] <- lists:usort(ets:match(TableId,{ServiceType,Item,Price,Quantity,'$5'}))],
-    lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Days: ~p",[ServiceType, Item, Price, Quantity, days_sequence_reduce(Days)]).
+handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Quantity) ->
+    Days = [Day || [Day] <- lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'$5'}))],
+    lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Days: ~p",[ServiceType, Item, Price, Quantity, days_sequence_reduce(Days)]),
+    ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, days_sequence_reduce(Days)}).
 
 days_sequence_reduce([Digit]) ->
     days_sequence_reduce([Digit], []);
@@ -203,3 +211,12 @@ days_sequence_reduce(Prev, [First,Next|T], Acc) ->
 
 days_glue(L) ->
     lists:foldl(fun(X,Acc) -> case Acc of <<>> -> X; _ -> <<Acc/binary, ",", X/binary>> end end, <<>>, L).
+
+services_to_jobj(ServicesList) ->
+    lists:foldl(fun(ServiceLine, Acc) -> service_to_jobj(ServiceLine, Acc) end, {0, {[]}}, ServicesList).
+
+service_to_jobj({ServiceType, Item, Price, Quantity, Period}, {Num, JObj}) ->
+    JLine = wh_json:set_values([{'category', ServiceType}, {'item',Item}, {'rate', Price}, {'quantity', Quantity}, {'period', Period}],{[]}),
+    JObjNew = wh_json:set_value(wh_util:to_binary(Num), JLine, JObj),
+    {Num+1, JObjNew}. 
+
