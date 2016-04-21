@@ -25,9 +25,9 @@ handle_route_req(JObj, Props) ->
     %% Do some logic to see if your app should respond
     %% If so, send a route_resp
 
-     lager:info("IAM onbill Number: ~p", [wnm_util:normalize_number(whapps_call:request_user(Call))]),
+     lager:info("IAM onbill Number: ~p", [knm_util:normalize_number(whapps_call:request_user(Call))]),
 
- %   case wnm_util:normalize_number(whapps_call:request_user(Call)) of
+ %   case knm_util:normalize_number(whapps_call:request_user(Call)) of
  %       CB_Number -> park_call(JObj, Props, Call);
  %       CC_Number -> park_call(JObj, Props, Call);
  %       _ -> 'ok'
