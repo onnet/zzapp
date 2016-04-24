@@ -87,15 +87,17 @@ create_pdf(TemplateId, Vars, AccountId) ->
 save_pdf(TemplateId, Vars, AccountId, Year, Month) ->
     {'ok', PDF_Data} = create_pdf(TemplateId, Vars, AccountId),
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
+    NewDoc = case kz_datamgr:open_doc(Modb, wh_util:to_binary(TemplateId)) of
+        {ok, Doc} -> wh_json:set_values(Vars, Doc);
+        {'error', 'not_found'} -> wh_json:set_values(Vars ++ [{<<"_id">>, wh_util:to_binary(TemplateId)}, {<<"pvt_type">>,<<"onbill_doc">>}], wh_json:new()) 
+    end,
+    kz_datamgr:ensure_saved(Modb, NewDoc),
     kz_datamgr:put_attachment(Modb
-                             ,{<<"onbill_doc">>, wh_util:to_binary(TemplateId)}
+                             ,wh_util:to_binary(TemplateId)
                              ,<<(wh_util:to_binary(TemplateId))/binary, ".pdf">>
                              ,PDF_Data
                              ,[{'content_type', <<"application/pdf">>}]
-                            ),
-    {ok, Doc} = kz_datamgr:open_doc(Modb, wh_util:to_binary(TemplateId)),
-    NewDoc = wh_json:set_values(Vars ++ [{<<"pvt_type">>,<<"onbill_doc">>}], Doc),
-    kz_datamgr:ensure_saved(Modb, NewDoc).
+                            ).
 
 -spec maybe_add_design_doc(ne_binary()) ->
                                   'ok' |
