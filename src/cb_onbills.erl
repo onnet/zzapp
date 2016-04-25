@@ -11,6 +11,7 @@
 
 -define(CB_LIST, <<"onbills/crossbar_listing">>).
 -define(ATTACHMENT, <<"attachment">>).
+-define(GENERATE, <<"generate">>).
 
 -spec init() -> 'ok'.
 init() ->
