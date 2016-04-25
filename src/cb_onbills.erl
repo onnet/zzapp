@@ -24,6 +24,8 @@ init() ->
 -spec allowed_methods(path_token()) -> http_methods().
 allowed_methods() ->
     [?HTTP_GET].
+allowed_methods(?GENERATE) ->
+    [?HTTP_PUT];
 allowed_methods(_) ->
     [?HTTP_GET].
 allowed_methods(_,?ATTACHMENT) ->
@@ -33,23 +35,56 @@ allowed_methods(_,?ATTACHMENT) ->
 -spec resource_exists(path_token()) -> 'true'.
 resource_exists() -> 'true'.
 resource_exists(_) -> 'true'.
-resource_exists(_,?ATTACHMENT) -> 'true'.
+resource_exists(_,?ATTACHMENT) -> 'true';
+resource_exists(_,?GENERATE) -> 'true'.
 
 -spec content_types_provided(cb_context:context()) -> cb_context:context().
 content_types_provided(Context) ->
     Context.
 content_types_provided(Context,_,?ATTACHMENT) ->
     CTP = [{'to_binary', [{<<"application">>, <<"pdf">>}]}],
-    cb_context:set_content_types_provided(Context, CTP).
+    cb_context:set_content_types_provided(Context, CTP);
+content_types_provided(Context,_,?GENERATE) ->
+    Context.
 
 -spec validate(cb_context:context()) -> cb_context:context().
 -spec validate(cb_context:context(), path_token()) -> cb_context:context().
 validate(Context) ->
     validate_onbills(Context, cb_context:req_verb(Context)).
+validate(Context, ?GENERATE) ->
+    validate_generate(Context);
 validate(Context, Id) ->
     validate_onbill(Context, Id, cb_context:req_verb(Context)).
 validate(Context, Id, ?ATTACHMENT) ->
     validate_onbill(Context, Id, ?ATTACHMENT, cb_context:req_verb(Context)).
+
+-spec validate_generate(cb_context:context()) -> cb_context:context().
+validate_generate(Context) ->
+    Year = wh_json:get_float_value(<<"year">>, cb_context:req_data(Context)),
+    Month = wh_json:get_float_value(<<"month">>, cb_context:req_data(Context)),
+
+    case cb_modules_util:is_superduper_admin(Context) of
+        'true' -> validate_generate(Context, Year, Month);
+        'false' ->
+            case wh_services:is_reseller(cb_context:auth_account_id(Context)) of
+                'true' -> validate_generate(Context, Year, Month);
+                'false' -> cb_context:add_system_error('forbidden', Context)
+            end
+    end.
+
+validate_generate(Context, Year, Month) when Year == 'undefined' orelse Month == 'undefined' ->
+    Message = <<"Year and Month required">>,
+    cb_context:add_validation_error(
+      <<"Year and month">>
+      ,<<"required">>
+      ,wh_json:from_list([{<<"message">>, Message}])
+      ,Context
+     );
+
+validate_generate(Context, Year, Month) ->
+    AccountId = cb_context:account_id(Context),
+    onbill_util:generate_docs(AccountId, Year, Month),
+    cb_context:set_resp_status(Context, 'success').
 
 -spec validate_onbills(cb_context:context(), http_method()) -> cb_context:context().
 validate_onbills(Context, ?HTTP_GET) ->

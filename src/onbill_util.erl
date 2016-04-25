@@ -9,6 +9,7 @@
          ,days_sequence_reduce/1
          ,services_to_jobj/1
          ,service_to_jobj/2
+         ,generate_docs/3
         ]).
 
 -include("onbill.hrl").
@@ -97,7 +98,8 @@ save_pdf(TemplateId, Vars, AccountId, Year, Month) ->
                              ,<<(wh_util:to_binary(TemplateId))/binary, ".pdf">>
                              ,PDF_Data
                              ,[{'content_type', <<"application/pdf">>}]
-                            ).
+                            ),
+    kz_datamgr:flush_cache_doc(Modb, NewDoc).
 
 -spec maybe_add_design_doc(ne_binary()) ->
                                   'ok' |
@@ -114,12 +116,14 @@ maybe_add_design_doc(Db) ->
     end.
 
 monthly_fee(Db) ->
-    _ = maybe_add_design_doc(Db),
-    RawTableId = ets:new(erlang:binary_to_atom(<<(wh_util:format_account_modb(Db, 'raw'))/binary,"-raw">>, 'latin1'), [duplicate_bag]),
-    ResultTableId = ets:new(erlang:binary_to_atom(<<(wh_util:format_account_modb(Db, 'raw'))/binary,"-result">>, 'latin1'), [bag]),
-    case kz_datamgr:get_results(Db, <<"onbills/daily_fees">>) of
-        {'error', 'not_found'} -> lager:warning("unable process monthly fee calculaton for Db: ~s", [Db]);
-        {'ok', JObjs } -> [process_daily_fee(JObj, Db, RawTableId) || JObj <- JObjs] 
+    Modb = wh_util:format_account_modb(Db, 'encoded'),
+    RawModb = wh_util:format_account_modb(Db, 'raw'),
+    _ = maybe_add_design_doc(Modb),
+    RawTableId = ets:new(erlang:binary_to_atom(<<RawModb/binary,"-raw">>, 'latin1'), [duplicate_bag]),
+    ResultTableId = ets:new(erlang:binary_to_atom(<<RawModb/binary,"-result">>, 'latin1'), [bag]),
+    case kazoo_modb:get_results(Modb, <<"onbills/daily_fees">>, []) of
+        {'error', 'not_found'} -> lager:warning("unable to process monthly fee calculaton for Db: ~s", [Db]);
+        {'ok', JObjs } -> [process_daily_fee(JObj, Modb, RawTableId) || JObj <- JObjs] 
     end,
     _ = process_ets(RawTableId, ResultTableId),
     ServicesList = ets:tab2list(ResultTableId),
@@ -128,7 +132,7 @@ monthly_fee(Db) ->
     JObj.
 
 process_daily_fee(JObj, Db, RawTableId) ->
-    case kz_datamgr:open_doc(Db, wh_json:get_value(<<"id">>, JObj)) of
+    case kazoo_modb:open_doc(Db, wh_json:get_value(<<"id">>, JObj)) of
         {'error', 'not_found'} -> 'ok';
         {'ok', DFDoc} -> upload_daily_fee_to_ets(DFDoc, RawTableId)
     end.
@@ -222,3 +226,8 @@ service_to_jobj({ServiceType, Item, Price, Quantity, Period}, {Num, JObj}) ->
     JObjNew = wh_json:set_value(wh_util:to_binary(Num), JLine, JObj),
     {Num+1, JObjNew}. 
 
+generate_docs(AccountId, Year, Month) ->
+    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
+    Docs = ['invoice', 'act'],
+    Vars = [{<<"monthly_fee">>, onbill_util:monthly_fee(Modb)}],
+    [save_pdf(TemplateId, Vars, AccountId, Year, Month) || TemplateId <- Docs].
