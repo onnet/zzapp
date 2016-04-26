@@ -197,17 +197,20 @@ prepare_dailyfee_doc_name() ->
     <<"dailyfee-", Month/binary, Day/binary>>.
 
 create_dailyfee_doc(Amount, Items, AccountId) ->
-    Now = wh_util:current_tstamp(),
-    {Y,M,_} = erlang:date(),
+    Timestamp = wh_util:current_tstamp(),
+    {Year, Month, _} = erlang:date(),
+    create_dailyfee_doc(Timestamp, Year, Month, Amount, Items, AccountId).
+
+create_dailyfee_doc(Timestamp, Year, Month, Amount, Items, AccountId) ->
     Updates = [{<<"_id">>, prepare_dailyfee_doc_name()}
                ,{<<"pvt_type">>, <<"debit">>}
                ,{<<"description">>, <<"daily_fee ", (prepare_dailyfee_doc_name())/binary>>}
                ,{<<"pvt_reason">>, <<"daily_fee">>}
-               ,{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Y, M)}
-               ,{[<<"pvt_metadata">>,<<"items_history">>,wh_util:to_binary(Now),<<"monthly_amount">>], wht_util:dollars_to_units(Amount)}
-               ,{[<<"pvt_metadata">>,<<"items_history">>,wh_util:to_binary(Now)], wh_service_items:public_json(Items)}
-               ,{<<"pvt_created">>, Now}
-               ,{<<"pvt_modified">>, Now}
+               ,{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
+               ,{[<<"pvt_metadata">>,<<"items_history">>,wh_util:to_binary(Timestamp),<<"monthly_amount">>], wht_util:dollars_to_units(Amount)}
+               ,{[<<"pvt_metadata">>,<<"items_history">>,wh_util:to_binary(Timestamp)], wh_service_items:public_json(Items)}
+               ,{<<"pvt_created">>, Timestamp}
+               ,{<<"pvt_modified">>, Timestamp}
                ,{<<"pvt_account_id">>, AccountId}
                ,{<<"pvt_account_db">>, kazoo_modb:get_modb(AccountId)}
               ],
