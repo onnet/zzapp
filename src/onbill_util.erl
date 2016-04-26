@@ -104,11 +104,11 @@ save_pdf(TemplateId, Vars, AccountId, Year, Month) ->
 -spec maybe_add_design_doc(ne_binary()) ->
                                   'ok' |
                                   {'error', 'not_found'}.
-maybe_add_design_doc(Db) ->
-    case kz_datamgr:lookup_doc_rev(Db, <<"_design/onbills">>) of
+maybe_add_design_doc(Modb) ->
+    case kz_datamgr:lookup_doc_rev(Modb, <<"_design/onbills">>) of
         {'error', 'not_found'} ->
-            lager:warning("adding onbill views to modb: ~s", [Db]),
-            kz_datamgr:revise_doc_from_file(Db
+            lager:warning("adding onbill views to modb: ~s", [Modb]),
+            kz_datamgr:revise_doc_from_file(Modb
                                            ,'onbill'
                                            ,<<"views/onbills.json">>
                                           );
@@ -121,8 +121,8 @@ monthly_fee(Db) ->
     _ = maybe_add_design_doc(Modb),
     RawTableId = ets:new(erlang:binary_to_atom(<<RawModb/binary,"-raw">>, 'latin1'), [duplicate_bag]),
     ResultTableId = ets:new(erlang:binary_to_atom(<<RawModb/binary,"-result">>, 'latin1'), [bag]),
-    case kazoo_modb:get_results(Modb, <<"onbills/daily_fees">>, []) of
-        {'error', 'not_found'} -> lager:warning("unable to process monthly fee calculaton for Db: ~s", [Db]);
+    case kz_datamgr:get_results(Modb, <<"onbills/daily_fees">>, []) of
+        {'error', 'not_found'} -> lager:warning("unable to process monthly fee calculaton for Modb: ~s", [Modb]);
         {'ok', JObjs } -> [process_daily_fee(JObj, Modb, RawTableId) || JObj <- JObjs] 
     end,
     _ = process_ets(RawTableId, ResultTableId),
@@ -131,8 +131,8 @@ monthly_fee(Db) ->
     {_, JObj} = services_to_jobj(ServicesList),
     JObj.
 
-process_daily_fee(JObj, Db, RawTableId) ->
-    case kazoo_modb:open_doc(Db, wh_json:get_value(<<"id">>, JObj)) of
+process_daily_fee(JObj, Modb, RawTableId) ->
+    case kz_datamgr:open_doc(Modb, wh_json:get_value(<<"id">>, JObj)) of
         {'error', 'not_found'} -> 'ok';
         {'ok', DFDoc} -> upload_daily_fee_to_ets(DFDoc, RawTableId)
     end.
