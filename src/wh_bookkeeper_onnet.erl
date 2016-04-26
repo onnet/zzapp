@@ -8,6 +8,11 @@
 -export([charge_transactions/2]).
 -export([already_charged/2]).
 
+
+-export([populate_modb_day_with_fee/4
+         ,populate_modb_with_fees/3
+       ]).
+
 -include("onbill.hrl").
 -include_lib("/opt/kazoo/core/braintree/include/braintree.hrl").
 -include_lib("/opt/kazoo/core/whistle/include/wh_databases.hrl").
@@ -17,29 +22,32 @@
 
 -spec sync(wh_service_item:items(), ne_binary()) -> 'ok'.
 sync(Items, AccountId) ->
+lager:info("IAM2 stock Items: ~p",[Items]),
+    Timestamp = wh_util:current_tstamp(),
+    {Year, Month, Day} = erlang:date(),
     ItemList = wh_service_items:to_list(Items),
-    sync(ItemList, AccountId, 0.0, Items).
+    sync(Timestamp, Year, Month, Day, ItemList, AccountId, 0.0, Items).
 
-sync([], _AccountId, Acc, _Items) when Acc == 0.0 ->
+sync(_Timestamp, _Year, _Month, _Day, [], _AccountId, Acc, _Items) when Acc == 0.0 ->
     lager:debug("sync Daily fee check NOT NEEDED. Total: ~p",[Acc]),
     'ok';
-sync([], AccountId, Acc, Items) ->
+sync(Timestamp, Year, Month, Day, [], AccountId, Acc, Items) ->
     lager:debug("sync Daily fee check NEEDED. Total: ~p",[Acc]),
-    DailyFeeId = prepare_dailyfee_doc_name(),
-    case kazoo_modb:open_doc(AccountId, DailyFeeId) of
-        {'error', 'not_found'} -> create_dailyfee_doc(Acc, Items, AccountId);
-        {'ok', DFDoc} -> maybe_update_dailyfee_doc(Acc, DFDoc, Items, AccountId)
+    DailyFeeId = prepare_dailyfee_doc_name(Month, Day),
+    case kazoo_modb:open_doc(AccountId, DailyFeeId, Year, Month) of
+        {'error', 'not_found'} -> create_dailyfee_doc(Timestamp, Year, Month, Day, Acc, Items, AccountId);
+        {'ok', DFDoc} -> maybe_update_dailyfee_doc(Timestamp, Year, Month, Acc, DFDoc, Items, AccountId)
     end,
     'ok';
-sync([ServiceItem|ServiceItems], AccountId, Acc, Items) ->
+sync(Timestamp, Year, Month, Day, [ServiceItem|ServiceItems], AccountId, Acc, Items) ->
     JObj = wh_service_item:bookkeeper(<<"onnet">>, ServiceItem),
     case {wh_json:get_value(<<"plan">>, JObj), wh_json:get_value(<<"addon">>, JObj)} of
         {'undefined', _} ->
             lager:debug("sync service item had no plan id: ~p", [ServiceItem]),
-            sync(ServiceItems, AccountId, Acc, Items);
+            sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, Acc, Items);
         {_, 'undefined'} ->
             lager:debug("sync service item had no add on id: ~p", [ServiceItem]),
-            sync(ServiceItems, AccountId, Acc, Items);
+            sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, Acc, Items);
         {PlanId, AddOnId}->
             Quantity = wh_service_item:quantity(ServiceItem),
             Rate = wh_service_item:rate(ServiceItem),
@@ -62,7 +70,7 @@ sync([ServiceItem|ServiceItems], AccountId, Acc, Items) ->
             lager:debug("IAM sync full service item ItemCost: ~p", [ItemCost]),
             lager:debug("IAM sync full service item SubTotal: ~p", [SubTotal]),
 
-            sync(ServiceItems, AccountId, SubTotal, Items)
+            sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, SubTotal, Items)
     end.
 
 -spec is_good_standing(ne_binary()) -> boolean().
@@ -190,21 +198,15 @@ handle_quick_sale_response(BtTransaction) ->
     %% https://www.braintreepayments.com/docs/ruby/reference/processor_responses
     wh_util:to_integer(RespCode) < 2000.
 
-prepare_dailyfee_doc_name() ->
-    {_, M, D} = erlang:date(),
+prepare_dailyfee_doc_name(M, D) ->
     Month = wh_util:pad_month(M),
     Day = wh_util:pad_month(D),
     <<"dailyfee-", Month/binary, Day/binary>>.
 
-create_dailyfee_doc(Amount, Items, AccountId) ->
-    Timestamp = wh_util:current_tstamp(),
-    {Year, Month, _} = erlang:date(),
-    create_dailyfee_doc(Timestamp, Year, Month, Amount, Items, AccountId).
-
-create_dailyfee_doc(Timestamp, Year, Month, Amount, Items, AccountId) ->
-    Updates = [{<<"_id">>, prepare_dailyfee_doc_name()}
+create_dailyfee_doc(Timestamp, Year, Month, Day, Amount, Items, AccountId) ->
+    Updates = [{<<"_id">>, prepare_dailyfee_doc_name(Month, Day)}
                ,{<<"pvt_type">>, <<"debit">>}
-               ,{<<"description">>, <<"daily_fee ", (prepare_dailyfee_doc_name())/binary>>}
+               ,{<<"description">>, <<"daily_fee ", (prepare_dailyfee_doc_name(Month, Day))/binary>>}
                ,{<<"pvt_reason">>, <<"daily_fee">>}
                ,{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
                ,{[<<"pvt_metadata">>,<<"items_history">>,wh_util:to_binary(Timestamp),<<"monthly_amount">>], wht_util:dollars_to_units(Amount)}
@@ -212,27 +214,36 @@ create_dailyfee_doc(Timestamp, Year, Month, Amount, Items, AccountId) ->
                ,{<<"pvt_created">>, Timestamp}
                ,{<<"pvt_modified">>, Timestamp}
                ,{<<"pvt_account_id">>, AccountId}
-               ,{<<"pvt_account_db">>, kazoo_modb:get_modb(AccountId)}
+               ,{<<"pvt_account_db">>, kazoo_modb:get_modb(AccountId, Year, Month)}
               ],
     Doc = wh_json:set_values(Updates, wh_json:new()),
-    kazoo_modb:save_doc(AccountId, Doc).
+    kazoo_modb:save_doc(AccountId, Doc, Year, Month).
  
-maybe_update_dailyfee_doc(Amount, DFDoc, Items, AccountId) ->
-    {Y,M,_} = erlang:date(),
-    case (wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Y, M) >
+maybe_update_dailyfee_doc(Timestamp, Year, Month, Amount, DFDoc, Items, AccountId) ->
+    case (wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month) >
           wh_json:get_number_value(<<"pvt_amount">>, DFDoc, 0)
          ) of
-        'true' -> update_dailyfee_doc(Amount, DFDoc, Items, AccountId);
+        'true' -> update_dailyfee_doc(Timestamp, Year, Month, Amount, DFDoc, Items, AccountId);
         'false' -> 'ok'
     end.
 
-update_dailyfee_doc(Amount, DFDoc, Items, AccountId) ->
-    Now = wh_util:current_tstamp(),
-    {Y,M,_} = erlang:date(),
-    Updates = [{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Y, M)}
-               ,{[<<"pvt_metadata">>,<<"items_history">>,wh_util:to_binary(Now),<<"monthly_amount">>], wht_util:dollars_to_units(Amount)}
-               ,{[<<"pvt_metadata">>,<<"items_history">>,wh_util:to_binary(Now)], wh_service_items:public_json(Items)}
-               ,{<<"pvt_modified">>, Now}
+update_dailyfee_doc(Timestamp, Year, Month, Amount, DFDoc, Items, AccountId) ->
+    Updates = [{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
+               ,{[<<"pvt_metadata">>,<<"items_history">>,wh_util:to_binary(Timestamp),<<"monthly_amount">>], wht_util:dollars_to_units(Amount)}
+               ,{[<<"pvt_metadata">>,<<"items_history">>,wh_util:to_binary(Timestamp)], wh_service_items:public_json(Items)}
+               ,{<<"pvt_modified">>, Timestamp}
               ],
     NewDoc = wh_json:set_values(Updates, DFDoc),
-    kazoo_modb:save_doc(AccountId, NewDoc).
+    kazoo_modb:save_doc(AccountId, NewDoc, Year, Month).
+
+populate_modb_with_fees(AccountId, Year, Month) ->
+    LastMonthDay = calendar:last_day_of_the_month(Year, Month),
+    [populate_modb_day_with_fee(AccountId, Year, Month, Day) || Day <- lists:seq(1, LastMonthDay)].
+
+populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
+    Timestamp = calendar:datetime_to_gregorian_seconds({{Year, Month, Day},{3,0,0}}),
+    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
+    {'ok', ServicesJObj} = kazoo_modb:open_doc(Modb, <<"services_bom">>), 
+    {'ok', Items} = wh_service_plans:create_items(ServicesJObj),
+    ItemList = wh_service_items:to_list(Items),
+    sync(Timestamp, Year, Month, Day, ItemList, AccountId, 0.0, Items).
