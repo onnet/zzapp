@@ -183,7 +183,7 @@ handle_ets_item_price(RawTableId, ResultTableId, ServiceType, Item, Price) ->
 handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Quantity) ->
     Days = [Day || [Day] <- lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'$5'}))],
     lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Days: ~p",[ServiceType, Item, Price, Quantity, days_sequence_reduce(Days)]),
-    ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, days_sequence_reduce(Days)}).
+    ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, days_sequence_reduce(Days), length(Days)}).
 
 days_sequence_reduce([Digit]) ->
     days_sequence_reduce([Digit], []);
@@ -221,8 +221,8 @@ days_glue(L) ->
 services_to_jobj(ServicesList) ->
     lists:foldl(fun(ServiceLine, Acc) -> service_to_jobj(ServiceLine, Acc) end, {0, {[]}}, ServicesList).
 
-service_to_jobj({ServiceType, Item, Price, Quantity, Period}, {Num, JObj}) ->
-    JLine = wh_json:set_values([{'category', ServiceType}, {'item',Item}, {'rate', Price}, {'quantity', Quantity}, {'period', Period}],{[]}),
+service_to_jobj({ServiceType, Item, Price, Quantity, Period, DaysQty}, {Num, JObj}) ->
+    JLine = wh_json:set_values([{'category', ServiceType}, {'item',Item}, {'rate', Price}, {'quantity', Quantity}, {'period', Period}, {days_quantity, DaysQty}],{[]}),
     JObjNew = wh_json:set_value(wh_util:to_binary(Num), JLine, JObj),
     {Num+1, JObjNew}. 
 

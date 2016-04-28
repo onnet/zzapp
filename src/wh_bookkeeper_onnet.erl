@@ -11,7 +11,7 @@
 
 -export([populate_modb_day_with_fee/4
          ,populate_modb_with_fees/3
-       ]).
+        ]).
 
 -include("onbill.hrl").
 -include_lib("/opt/kazoo/core/braintree/include/braintree.hrl").
