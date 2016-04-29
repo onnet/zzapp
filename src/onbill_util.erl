@@ -222,7 +222,15 @@ services_to_jobj(ServicesList) ->
     lists:foldl(fun(ServiceLine, Acc) -> service_to_jobj(ServiceLine, Acc) end, {0, {[]}}, ServicesList).
 
 service_to_jobj({ServiceType, Item, Price, Quantity, Period, DaysQty}, {Num, JObj}) ->
-    JLine = wh_json:set_values([{'category', ServiceType}, {'item',Item}, {'rate', Price}, {'quantity', Quantity}, {'period', Period}, {days_quantity, DaysQty}],{[]}),
+    JLine = wh_json:set_values([{'category', ServiceType}
+                                ,{'item',Item}
+                                ,{'rate', Price}
+                                ,{'quantity', Quantity}
+                                ,{'period', Period}
+                                ,{days_quantity, DaysQty}
+                               ]
+                               ,{[]}
+                              ),
     JObjNew = wh_json:set_value(wh_util:to_binary(Num), JLine, JObj),
     {Num+1, JObjNew}. 
 
