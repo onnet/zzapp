@@ -7,8 +7,8 @@
          ,get_attachment/2
          ,monthly_fee/1
          ,days_sequence_reduce/1
-         ,services_to_jobj/1
-         ,service_to_jobj/2
+         ,services_to_jobj/4
+         ,service_to_jobj/5
          ,generate_docs/3
         ]).
 
@@ -116,6 +116,8 @@ maybe_add_design_doc(Modb) ->
     end.
 
 monthly_fee(Db) ->
+    {_, Year, Month} = kazoo_modb_util:split_account_mod(Db),
+    DaysInMonth = calendar:last_day_of_the_month(Year, Month),
     Modb = wh_util:format_account_modb(Db, 'encoded'),
     RawModb = wh_util:format_account_modb(Db, 'raw'),
     _ = maybe_add_design_doc(Modb),
@@ -128,7 +130,7 @@ monthly_fee(Db) ->
     _ = process_ets(RawTableId, ResultTableId),
     ServicesList = ets:tab2list(ResultTableId),
     [lager:info("Result Table Line: ~p",[Service]) || Service <- ServicesList],
-    {_, JObj} = services_to_jobj(ServicesList),
+    {_, JObj} = services_to_jobj(ServicesList, Year, Month, DaysInMonth),
     JObj.
 
 process_daily_fee(JObj, Modb, RawTableId) ->
@@ -218,16 +220,20 @@ days_sequence_reduce(Prev, [First,Next|T], Acc) ->
 days_glue(L) ->
     lists:foldl(fun(X,Acc) -> case Acc of <<>> -> X; _ -> <<Acc/binary, ",", X/binary>> end end, <<>>, L).
 
-services_to_jobj(ServicesList) ->
-    lists:foldl(fun(ServiceLine, Acc) -> service_to_jobj(ServiceLine, Acc) end, {0, {[]}}, ServicesList).
+services_to_jobj(ServicesList, Year, Month, DaysInMonth) ->
+    lists:foldl(fun(ServiceLine, Acc) -> service_to_jobj(ServiceLine, Year, Month, DaysInMonth, Acc) end, {0, {[]}}, ServicesList).
 
-service_to_jobj({ServiceType, Item, Price, Quantity, Period, DaysQty}, {Num, JObj}) ->
+service_to_jobj({ServiceType, Item, Price, Quantity, Period, DaysQty}, Year, Month, DaysInMonth, {Num, JObj}) ->
     JLine = wh_json:set_values([{'category', ServiceType}
                                 ,{'item',Item}
+                                ,{'cost', DaysQty/DaysInMonth*Price}
                                 ,{'rate', Price}
                                 ,{'quantity', Quantity}
                                 ,{'period', Period}
                                 ,{days_quantity, DaysQty}
+                                ,{days_in_month, DaysInMonth}
+                                ,{month, Month}
+                                ,{year, Year}
                                ]
                                ,{[]}
                               ),
