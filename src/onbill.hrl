@@ -8,7 +8,7 @@
 
 -define(ONBILL_ACCOUNTS_DB, <<"onbill_accounts">>).
 -define(ONBILL_DOC, <<"onbill_doc">>).
--define(MOD_CONFIG_TEMLATES, <<(?APP_NAME)/binary, ".templates">>).
+-define(MOD_CONFIG_TEMLATES(CarrierName), <<(?APP_NAME)/binary, ".", (wh_util:to_binary(CarrierName))/binary, ".templates">>).
 -define(MOD_CONFIG_CRAWLER, <<(?APP_NAME)/binary, ".account_crawler">>).
 -define(SYSTEM_CONFIG_DB, <<"system_config">>).
 -define(HTML_TO_PDF(TemplateId), <<"php applications/onbill/priv/templates/ru/", (wh_util:to_binary(TemplateId))/binary, ".php">>).

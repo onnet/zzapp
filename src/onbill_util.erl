@@ -1,8 +1,8 @@
 -module(onbill_util).
 
 -export([check_db/1
-         ,create_pdf/3
-         ,save_pdf/5
+         ,create_pdf/4
+         ,save_pdf/6
          ,maybe_add_design_doc/1
          ,get_attachment/2
          ,monthly_fee/1
@@ -24,13 +24,23 @@ do_check_db(Db, 'false') ->
     lager:debug("create Db ~p", [Db]),
     _ = kz_datamgr:db_create(Db).
 
-get_template(TemplateId) ->
-    case kz_datamgr:fetch_attachment(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES, <<(wh_util:to_binary(TemplateId))/binary, ".tpl">>) of
+get_template(TemplateId, Carrier) ->
+    case kz_datamgr:fetch_attachment(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES(Carrier), <<(wh_util:to_binary(TemplateId))/binary, ".tpl">>) of
         {'ok', Template} -> Template;
         {error, not_found} ->
             Template = default_template(TemplateId),
+            case kz_datamgr:open_doc(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES(Carrier)) of
+                {'ok', _} ->
+                    'ok';
+                {'error', 'not_found'} ->
+                    NewDoc = wh_json:set_values([{<<"_id">>, ?MOD_CONFIG_TEMLATES(Carrier)}
+                                                 ,{<<"carrier_name">>,<<"this_doc_carrier_Name">>}
+                                                ]
+                                                ,wh_json:new()),
+                    kz_datamgr:ensure_saved(?SYSTEM_CONFIG_DB, NewDoc)
+            end,
             kz_datamgr:put_attachment(?SYSTEM_CONFIG_DB
-                                     ,?MOD_CONFIG_TEMLATES
+                                     ,?MOD_CONFIG_TEMLATES(Carrier)
                                      ,<<(wh_util:to_binary(TemplateId))/binary, ".tpl">>
                                      ,Template
                                      ,[{'content_type', <<"text/html">>}]
@@ -49,9 +59,9 @@ get_attachment(AttachmentId, Db) ->
         E -> E
     end.
 
-prepare_tpl(TemplateId, Vars) ->
+prepare_tpl(Vars, TemplateId, Carrier) ->
     ErlyMod = wh_util:to_atom(TemplateId),
-    try erlydtl:compile_template(get_template(TemplateId), ErlyMod, [{'out_dir', 'false'},'return']) of
+    try erlydtl:compile_template(get_template(TemplateId, Carrier), ErlyMod, [{'out_dir', 'false'},'return']) of
         {ok, ErlyMod} -> render_tpl(ErlyMod, Vars);
         {ok, ErlyMod,[]} -> render_tpl(ErlyMod, Vars); 
         {'ok', ErlyMod, Warnings} ->
@@ -69,12 +79,12 @@ render_tpl(ErlyMod, Vars) ->
     code:delete(ErlyMod),
     erlang:iolist_to_binary(IoList).
 
-create_pdf(TemplateId, Vars, AccountId) ->
+create_pdf(Vars, TemplateId, Carrier, AccountId) ->
     Rand = wh_util:rand_hex_binary(5),
     Prefix = <<AccountId/binary, "-", (wh_util:to_binary(TemplateId))/binary, "-", Rand/binary>>,
     HTMLFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".html">>]),
     PDFFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".pdf">>]),
-    HTMLTpl = prepare_tpl(TemplateId, Vars),
+    HTMLTpl = prepare_tpl(Vars, TemplateId, Carrier),
     file:write_file(HTMLFile, HTMLTpl),
     Cmd = <<(?HTML_TO_PDF(TemplateId))/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
     case os:cmd(wh_util:to_list(Cmd)) of
@@ -85,8 +95,8 @@ create_pdf(TemplateId, Vars, AccountId) ->
             {'error', _R}
     end.
 
-save_pdf(TemplateId, Vars, AccountId, Year, Month) ->
-    {'ok', PDF_Data} = create_pdf(TemplateId, Vars, AccountId),
+save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->
+    {'ok', PDF_Data} = create_pdf(Vars, TemplateId, Carrier, AccountId),
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     NewDoc = case kz_datamgr:open_doc(Modb, wh_util:to_binary(TemplateId)) of
         {ok, Doc} -> wh_json:set_values(Vars, Doc);
@@ -115,6 +125,26 @@ maybe_add_design_doc(Modb) ->
         {'ok', _ } -> 'ok'
     end.
 
+generate_docs(AccountId, Year, Month) ->
+    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
+    MonthlyFeeJObj = onbill_util:monthly_fee(Modb),
+    Carrier = <<"onnet">>,
+    {'ok', TplDoc} =  kz_datamgr:open_doc(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES(Carrier)),
+    Docs = ['invoice', 'act'],
+    Vars = [{<<"monthly_fee">>, MonthlyFeeJObj}
+           ,{<<"doc_number">>, <<"13">>}
+           ,{<<"doc_date">>, <<"31.03.2016">>}
+           ,{<<"start_date">>, <<"01.03.2016">>}
+           ,{<<"end_date">>, <<"31.03.2016">>}
+           ] ++ 
+           [{Key, wh_json:get_value(Key, TplDoc)} || Key <- wh_json:get_keys(TplDoc), filter_vars(Key)],
+lager:info("IAM Vars: ~p",[Vars]),
+% [wh_json:to_proplist(Line) || {_, Line} <- wh_json:to_proplist(TT)]
+    [save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) || TemplateId <- Docs].
+
+filter_vars(<<"_", _/binary>>) -> 'false';
+filter_vars(<<_/binary>>) -> 'true'.
+
 monthly_fee(Db) ->
     {_, Year, Month} = kazoo_modb_util:split_account_mod(Db),
     DaysInMonth = calendar:last_day_of_the_month(Year, Month),
@@ -128,10 +158,30 @@ monthly_fee(Db) ->
         {'ok', JObjs } -> [process_daily_fee(JObj, Modb, RawTableId) || JObj <- JObjs] 
     end,
     _ = process_ets(RawTableId, ResultTableId),
-    ServicesList = ets:tab2list(ResultTableId),
+    ServicesList = ets:tab2list(ResultTableId) ++ process_one_time_fees(Db),
     [lager:info("Result Table Line: ~p",[Service]) || Service <- ServicesList],
     {_, JObj} = services_to_jobj(ServicesList, Year, Month, DaysInMonth),
     JObj.
+
+process_one_time_fees(Modb) ->
+    case kz_datamgr:get_results(Modb, <<"onbills/one_time_fees">>, []) of
+        {'error', 'not_found'} ->
+             lager:warning("no one time charges found in Modb: ~s", [Modb]),
+             [];
+        {'ok', JObjs } -> [process_one_time_fee(JObj, Modb) || JObj <- JObjs] 
+    end.
+
+process_one_time_fee(JObj, Modb) ->
+    {'ok', DFDoc} =  kz_datamgr:open_doc(Modb, wh_json:get_value(<<"id">>, JObj)),
+    {Year, Month, Day} = wh_util:to_date(wh_json:get_value(<<"pvt_created">>, DFDoc)),
+    DaysInMonth = calendar:last_day_of_the_month(Year, Month),
+    {wh_json:get_value(<<"pvt_reason">>, DFDoc)
+     ,wh_json:get_value(<<"description">>, DFDoc)
+     ,wht_util:units_to_dollars(wh_json:get_integer_value(<<"pvt_amount">>, DFDoc))
+     ,1
+     ,wh_util:to_binary(Day)
+     ,DaysInMonth
+    }.
 
 process_daily_fee(JObj, Modb, RawTableId) ->
     case kz_datamgr:open_doc(Modb, wh_json:get_value(<<"id">>, JObj)) of
@@ -224,24 +274,18 @@ services_to_jobj(ServicesList, Year, Month, DaysInMonth) ->
     lists:foldl(fun(ServiceLine, Acc) -> service_to_jobj(ServiceLine, Year, Month, DaysInMonth, Acc) end, {0, {[]}}, ServicesList).
 
 service_to_jobj({ServiceType, Item, Price, Quantity, Period, DaysQty}, Year, Month, DaysInMonth, {Num, JObj}) ->
-    JLine = wh_json:set_values([{'category', ServiceType}
-                                ,{'item',Item}
-                                ,{'cost', DaysQty/DaysInMonth*Price}
-                                ,{'rate', Price}
-                                ,{'quantity', Quantity}
-                                ,{'period', Period}
-                                ,{days_quantity, DaysQty}
-                                ,{days_in_month, DaysInMonth}
-                                ,{month, Month}
-                                ,{year, Year}
+    JLine = wh_json:set_values([{<<"category">>, ServiceType}
+                                ,{<<"item">>,Item}
+                                ,{<<"cost">>, DaysQty / DaysInMonth * Price * Quantity}
+                                ,{<<"rate">>, Price}
+                                ,{<<"quantity">>, Quantity}
+                                ,{<<"period">>, Period}
+                                ,{<<"days_quantity">>, DaysQty}
+                                ,{<<"days_in_month">>, DaysInMonth}
+                                ,{<<"month">>, Month}
+                                ,{<<"year">>, Year}
                                ]
                                ,{[]}
                               ),
     JObjNew = wh_json:set_value(wh_util:to_binary(Num), JLine, JObj),
     {Num+1, JObjNew}. 
-
-generate_docs(AccountId, Year, Month) ->
-    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-    Docs = ['invoice', 'act'],
-    Vars = [{<<"monthly_fee">>, onbill_util:monthly_fee(Modb)}],
-    [save_pdf(TemplateId, Vars, AccountId, Year, Month) || TemplateId <- Docs].

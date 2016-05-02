@@ -1,9 +1,9 @@
 <table border=0>
 <tr>
 	<td width="80%" align="center">
-<font size=12>СЧЕТ-ФАКТУРА № %pref%%num%-%ind% от %date%<br />
+<font size=12>СЧЕТ-ФАКТУРА № {{ doc_pref }}{{ doc_number }}-{{ doc_ind }} от {{ doc_date }}<br />
 ИСПРАВЛЕНИЕ № <u> --- </u> от <u>   -------   </u></font><br />
-за оказанные услуги электросвязи за период: %start_date% — %end_date%</td>
+за оказанные услуги электросвязи за период: {{ start_date }} — {{ end_date }}</td>
 <td align="right" width="20%">
 <font size="7">	
 Приложение №1<br />
@@ -13,10 +13,9 @@
 </td></tr>
 </table>
 <br />
-Продавец: %oper_name%<br />
-Адрес: %oper_addr1%<br />
-ИНН/КПП продавца: %oper_inn%<br />
-%agent%
+Продавец: {{ oper_name }}<br />
+Адрес: {{ oper_addr }}<br />
+ИНН/КПП продавца: {{ inn }} / {{ kpp }} <br />
 Грузоотправитель и его адрес: ----<br />
 Грузополучатель и его адрес: ----<br />
 К платежно-расчетному документу № ______ от ______ <br />
@@ -178,33 +177,37 @@
 	<tr>
 		<td width="50%">
 			Руководитель организации<br />
-			или иное уполномоченное лицо ________________ (%operdir%)<br />
+			или иное уполномоченное лицо ________________ ({{ oper_dir }})<br />
 			<table border="0">
 				<tr>
 					<td width="50%" align="right"><font size=6>(подпись)</font></td>
 					<td width="33%" align="center"><font size=6>(ф.и.о.)</font></td>
 				</tr>
+                                {% if oper_dov %}
             			<tr>
-                                        <td width="90%" align="right"><h5>%operdov%</h5></td>
+                                        <td width="90%" align="right"><h5>{{ oper_dov }}</h5></td>
                                 </tr>
+                                {% endif %}
 			</table>			
 		</td>
 		<td width="50%">
 			Главный бухгалтер<br />
-			или иное уполномоченное лицо ________________ (%operbuh%)<br />
+			или иное уполномоченное лицо ________________ ({{ oper_buh }})<br />
 			<table border="0">
 				<tr>
 					<td width="50%" align="right"><font size=6>(подпись)</font></td>
 					<td width="33%" align="center"><font size=6>(ф.и.о.)</font></td>
                                 </tr>
-				<tr>
-                                        <td width="90%" align="right"><h5>%operdov%</h5></td>
+                                {% if oper_dov %}
+                                <tr>
+                                        <td width="90%" align="right"><h5>{{ oper_dov }}</h5></td>
                                 </tr>
+                                {% endif %}
 			</table>	
 		</td>
 	</tr>
 </table>
 <br />
-%coment% %coment01%%coment1% %coment02%%coment2%
+{{ comment1 }}
 <br />
 Примечание. Первый экземпляр — покупателю, второй экземпляр — продавцу
