@@ -5,10 +5,8 @@
          ,save_pdf/6
          ,maybe_add_design_doc/1
          ,get_attachment/2
-         ,monthly_fee/1
+         ,monthly_fees/1
          ,days_sequence_reduce/1
-         ,services_to_jobj/4
-         ,service_to_jobj/5
          ,generate_docs/3
         ]).
 
@@ -127,11 +125,10 @@ maybe_add_design_doc(Modb) ->
 
 generate_docs(AccountId, Year, Month) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-    MonthlyFeeJObj = onbill_util:monthly_fee(Modb),
     Carrier = <<"onnet">>,
     {'ok', TplDoc} =  kz_datamgr:open_doc(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES(Carrier)),
     Docs = ['invoice', 'act'],
-    Vars = [{<<"monthly_fee">>, MonthlyFeeJObj}
+    Vars = [{<<"monthly_fees">>, monthly_fees(Modb)}
            ,{<<"doc_number">>, <<"13">>}
            ,{<<"doc_date">>, <<"31.03.2016">>}
            ,{<<"start_date">>, <<"01.03.2016">>}
@@ -145,7 +142,7 @@ lager:info("IAM Vars: ~p",[Vars]),
 filter_vars(<<"_", _/binary>>) -> 'false';
 filter_vars(<<_/binary>>) -> 'true'.
 
-monthly_fee(Db) ->
+monthly_fees(Db) ->
     {_, Year, Month} = kazoo_modb_util:split_account_mod(Db),
     DaysInMonth = calendar:last_day_of_the_month(Year, Month),
     Modb = wh_util:format_account_modb(Db, 'encoded'),
@@ -160,8 +157,7 @@ monthly_fee(Db) ->
     _ = process_ets(RawTableId, ResultTableId),
     ServicesList = ets:tab2list(ResultTableId) ++ process_one_time_fees(Db),
     [lager:info("Result Table Line: ~p",[Service]) || Service <- ServicesList],
-    {_, JObj} = services_to_jobj(ServicesList, Year, Month, DaysInMonth),
-    JObj.
+    services_to_proplist(ServicesList, Year, Month, DaysInMonth).
 
 process_one_time_fees(Modb) ->
     case kz_datamgr:get_results(Modb, <<"onbills/one_time_fees">>, []) of
@@ -270,22 +266,18 @@ days_sequence_reduce(Prev, [First,Next|T], Acc) ->
 days_glue(L) ->
     lists:foldl(fun(X,Acc) -> case Acc of <<>> -> X; _ -> <<Acc/binary, ",", X/binary>> end end, <<>>, L).
 
-services_to_jobj(ServicesList, Year, Month, DaysInMonth) ->
-    lists:foldl(fun(ServiceLine, Acc) -> service_to_jobj(ServiceLine, Year, Month, DaysInMonth, Acc) end, {0, {[]}}, ServicesList).
+services_to_proplist(ServicesList, Year, Month, DaysInMonth) ->
+    lists:foldl(fun(ServiceLine, Acc) -> service_to_line(ServiceLine, Year, Month, DaysInMonth, Acc) end, [], ServicesList).
 
-service_to_jobj({ServiceType, Item, Price, Quantity, Period, DaysQty}, Year, Month, DaysInMonth, {Num, JObj}) ->
-    JLine = wh_json:set_values([{<<"category">>, ServiceType}
-                                ,{<<"item">>,Item}
-                                ,{<<"cost">>, DaysQty / DaysInMonth * Price * Quantity}
-                                ,{<<"rate">>, Price}
-                                ,{<<"quantity">>, Quantity}
-                                ,{<<"period">>, Period}
-                                ,{<<"days_quantity">>, DaysQty}
-                                ,{<<"days_in_month">>, DaysInMonth}
-                                ,{<<"month">>, Month}
-                                ,{<<"year">>, Year}
-                               ]
-                               ,{[]}
-                              ),
-    JObjNew = wh_json:set_value(wh_util:to_binary(Num), JLine, JObj),
-    {Num+1, JObjNew}. 
+service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty}, Year, Month, DaysInMonth, Acc) ->
+    [[{<<"category">>, ServiceType}
+    ,{<<"item">>,Item}
+    ,{<<"cost">>, DaysQty / DaysInMonth * Price * Quantity}
+    ,{<<"rate">>, Price}
+    ,{<<"quantity">>, Quantity}
+    ,{<<"period">>, Period}
+    ,{<<"days_quantity">>, DaysQty}
+    ,{<<"days_in_month">>, DaysInMonth}
+    ,{<<"month">>, Month}
+    ,{<<"year">>, Year}
+    ]] ++ Acc.
