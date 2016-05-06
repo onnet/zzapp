@@ -98,7 +98,7 @@ save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     NewDoc = case kz_datamgr:open_doc(Modb, wh_util:to_binary(TemplateId)) of
         {ok, Doc} -> wh_json:set_values(Vars, Doc);
-        {'error', 'not_found'} -> wh_json:set_values(Vars ++ [{<<"_id">>, wh_util:to_binary(TemplateId)}, {<<"pvt_type">>,<<"onbill_doc">>}], wh_json:new()) 
+        {'error', 'not_found'} -> wh_json:set_values(Vars ++ [{<<"_id">>, wh_util:to_binary(TemplateId)}, {<<"pvt_type">>, ?ONBILL_DOC}], wh_json:new()) 
     end,
     kz_datamgr:ensure_saved(Modb, NewDoc),
     kz_datamgr:put_attachment(Modb

@@ -3,7 +3,7 @@
     "language": "javascript",
     "views": {
         "crossbar_listing": {
-            "map": "function(doc) { if (doc.pvt_type != 'onbill_doc' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"
+            "map": "function(doc) { if (doc.pvt_type != 'onbill' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"
         },
         "daily_fees": {
             "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason != 'daily_fee' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"
