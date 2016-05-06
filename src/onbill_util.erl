@@ -127,20 +127,32 @@ generate_docs(AccountId, Year, Month) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     Carrier = <<"onnet">>,
     {'ok', TplDoc} =  kz_datamgr:open_doc(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES(Carrier)),
+    {'ok', AccOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, AccountId),
     Docs = ['invoice', 'act'],
     Vars = [{<<"monthly_fees">>, monthly_fees(Modb)}
+           ,{<<"account_addr">>, address_to_line(AccOnbillDoc)}
            ,{<<"doc_number">>, <<"13">>}
            ,{<<"doc_date">>, <<"31.03.2016">>}
            ,{<<"start_date">>, <<"01.03.2016">>}
            ,{<<"end_date">>, <<"31.03.2016">>}
            ] ++ 
            [{Key, wh_json:get_value(Key, TplDoc)} || Key <- wh_json:get_keys(TplDoc), filter_vars(Key)],
-lager:info("IAM Vars: ~p",[Vars]),
-% [wh_json:to_proplist(Line) || {_, Line} <- wh_json:to_proplist(TT)]
     [save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) || TemplateId <- Docs].
 
 filter_vars(<<"_", _/binary>>) -> 'false';
 filter_vars(<<_/binary>>) -> 'true'.
+
+address_to_line(JObj) ->
+    BillingAddrLinnes = wh_json:get_value(<<"billing_address">>, JObj, wh_json:new()),
+    {Keys, _} = wh_json:get_values(BillingAddrLinnes),
+    address_join([Line || Line <- Keys, Line =/= <<>>], <<", ">>).
+
+address_join([], _Sep) ->
+  <<>>;
+address_join([Part], _Sep) ->
+  Part;
+address_join([Head|Tail], Sep) ->
+  lists:foldl(fun (Value, Acc) -> <<Acc/binary, Sep/binary, Value/binary>> end, Head, Tail).
 
 monthly_fees(Db) ->
     {_, Year, Month} = kazoo_modb_util:split_account_mod(Db),
