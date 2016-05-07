@@ -25,9 +25,9 @@
 К платежно-расчетному документу № ______ от ______ <br />
 Покупатель: {{ account_name }}<br />
 Адрес: {{ account_addr }}<br />
-ИНН/КПП покупателя: %inn%<br />
+ИНН/КПП покупателя: {{ account_inn }} / {{ account_kpp }} <br />
 Валюта: наименование, код <u>Российский рубль, 643</u><br />
-<font size="9">Дополнительные (условия оплаты по договору (контракту), способ отправления и т.д.)</font> Договор № %agrm% от %agrmdate%<br />
+<font size="9">Дополнительные (условия оплаты по договору (контракту), способ отправления и т.д.)</font> Договор № {{ agrm_num }} от {{ agrm_date }}<br />
 <table border="1">
 	<tr align="center">
 		<td align="center" width="23%" rowspan="2">
@@ -153,14 +153,14 @@
 <!-- begin_item -->
 {% for fee_line in monthly_fees %}
 <tr>
-		<td width="23%">{{ fee_line.item }}</td>
+		<td width="23%">{{ fee_line.item }} {{ fee_line.period }}.{{ fee_line.month_pad }}.{{ fee_line.year }}</td>
 		<td width="3%" align="center">%edkod%</td>
 		<td width="8%" align="center">%ed%</td>
 		<td width="5%" align="right">{{ fee_line.quantity }}</td>
 		<td width="7%" align="right">{{ fee_line.rate }}</td>
 		<td width="10%" align="right">{{ fee_line.cost }}</td>
 		<td width="5%" align="center">Без акциза</td>
-		<td width="6%" align="right">18%</td>
+		<td width="6%" align="right">{{ vat }}%</td>
 		<td width="7%" align="right">%item_nds%</td>
 		<td width="10%" align="right">%item_amount_nds%</td>
 		<td width="4%" align="center">--</td>

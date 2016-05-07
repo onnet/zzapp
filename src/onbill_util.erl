@@ -127,16 +127,21 @@ generate_docs(AccountId, Year, Month) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     Carrier = <<"onnet">>,
     {'ok', TplDoc} =  kz_datamgr:open_doc(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES(Carrier)),
+    {'ok', OnbillCfg} =  kz_datamgr:open_doc(?ONBILL_DB, ?ONBILL_CONFIG),
     {'ok', AccOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, AccountId),
     Docs = ['invoice', 'act'],
     Vars = [{<<"monthly_fees">>, monthly_fees(Modb)}
            ,{<<"account_addr">>, address_to_line(AccOnbillDoc)}
            ,{<<"doc_number">>, <<"13">>}
-           ,{<<"doc_date">>, <<"31.03.2016">>}
-           ,{<<"start_date">>, <<"01.03.2016">>}
+           ,{<<"vat">>, wh_json:get_value(<<"vat">>, OnbillCfg)}
+           ,{<<"agrm_num">>, wh_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccOnbillDoc)}
+           ,{<<"agrm_date">>, wh_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccOnbillDoc)}
+           ,{<<"doc_date">>, <<"31.",(wh_util:pad_month(Month))/binary,".",(wh_util:to_binary(Year))/binary>>}
+           ,{<<"start_date">>, <<"01.",(wh_util:pad_month(Month))/binary,".",(wh_util:to_binary(Year))/binary>>}
            ,{<<"end_date">>, <<"31.03.2016">>}
-           ] ++ 
-           [{Key, wh_json:get_value(Key, TplDoc)} || Key <- wh_json:get_keys(TplDoc), filter_vars(Key)],
+           ] 
+           ++ [{Key, wh_json:get_value(Key, TplDoc)} || Key <- wh_json:get_keys(TplDoc), filter_vars(Key)]
+           ++ [{Key, wh_json:get_value(Key, AccOnbillDoc)} || Key <- wh_json:get_keys(AccOnbillDoc), filter_vars(Key)],
     [save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) || TemplateId <- Docs].
 
 filter_vars(<<"_", _/binary>>) -> 'false';
@@ -291,5 +296,6 @@ service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty}, Year, Mon
     ,{<<"days_quantity">>, DaysQty}
     ,{<<"days_in_month">>, DaysInMonth}
     ,{<<"month">>, Month}
+    ,{<<"month_pad">>, wh_util:pad_month(Month)}
     ,{<<"year">>, Year}
     ]] ++ Acc.
