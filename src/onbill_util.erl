@@ -130,10 +130,23 @@ generate_docs(AccountId, Year, Month) ->
     {'ok', OnbillCfg} =  kz_datamgr:open_doc(?ONBILL_DB, ?ONBILL_CONFIG),
     {'ok', AccOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, AccountId),
     Docs = ['invoice', 'act'],
-    Vars = [{<<"monthly_fees">>, monthly_fees(Modb)}
+    VatUpdatedFeesList = enhance_vat(monthly_fees(Modb), OnbillCfg),
+    {TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
+                                                        {TN_Acc + props:get_value(<<"cost_netto">>, X)
+                                                         ,VAT_Acc + props:get_value(<<"vat_total">>, X)
+                                                         ,TB_Acc + props:get_value(<<"cost_brutto">>, X)
+                                                        }
+                                                      end
+                                                      ,{0,0,0}
+                                                      ,VatUpdatedFeesList
+                                                     ),
+    Vars = [{<<"monthly_fees">>, VatUpdatedFeesList}
            ,{<<"account_addr">>, address_to_line(AccOnbillDoc)}
+           ,{<<"total_netto">>, TotalNetto}
+           ,{<<"total_vat">>, TotalVAT}
+           ,{<<"total_brutto">>, TotalBrutto}
            ,{<<"doc_number">>, <<"13">>}
-           ,{<<"vat">>, wh_json:get_value(<<"vat">>, OnbillCfg)}
+           ,{<<"vat_rate">>, wh_json:get_value(<<"vat_rate">>, OnbillCfg)}
            ,{<<"agrm_num">>, wh_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccOnbillDoc)}
            ,{<<"agrm_date">>, wh_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccOnbillDoc)}
            ,{<<"doc_date">>, <<"31.",(wh_util:pad_month(Month))/binary,".",(wh_util:to_binary(Year))/binary>>}
@@ -143,6 +156,31 @@ generate_docs(AccountId, Year, Month) ->
            ++ [{Key, wh_json:get_value(Key, TplDoc)} || Key <- wh_json:get_keys(TplDoc), filter_vars(Key)]
            ++ [{Key, wh_json:get_value(Key, AccOnbillDoc)} || Key <- wh_json:get_keys(AccOnbillDoc), filter_vars(Key)],
     [save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) || TemplateId <- Docs].
+
+enhance_vat(FeesList, OnbillCfg) ->
+    case wh_json:get_value(<<"vat_disposition">>, OnbillCfg) of
+        <<"netto">> ->
+            FeesList;
+        <<"brutto">> ->
+            [enhance_vat_brutto(FeeLine, OnbillCfg) || FeeLine <- FeesList];
+        _ ->
+            FeesList
+    end.
+
+enhance_vat_brutto(FeeLine, OnbillCfg) ->
+    VatRate = wh_json:get_value(<<"vat_rate">>, OnbillCfg),
+    Rate = props:get_value(<<"rate">>, FeeLine),
+    Cost = props:get_value(<<"cost">>, FeeLine),
+    VatTotal = round(Cost * VatRate / (100 + VatRate) * 100) / 100,
+    NetCost = Cost - VatTotal,
+    NetRate = round(Rate / (100 + VatRate) * 100 * 100) / 100,
+    NewValues = [{<<"rate_netto">>, NetRate}
+                ,{<<"cost_netto">>, NetCost}
+                ,{<<"rate_brutto">>, Rate}
+                ,{<<"cost_brutto">>, Cost}
+                ,{<<"vat_total">>, VatTotal}
+                ],
+    props:set_values(NewValues, FeeLine).
 
 filter_vars(<<"_", _/binary>>) -> 'false';
 filter_vars(<<_/binary>>) -> 'true'.
@@ -288,7 +326,7 @@ services_to_proplist(ServicesList, Year, Month, DaysInMonth) ->
 
 service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty}, Year, Month, DaysInMonth, Acc) ->
     [[{<<"category">>, ServiceType}
-    ,{<<"item">>,Item}
+    ,{<<"item">>, Item}
     ,{<<"cost">>, DaysQty / DaysInMonth * Price * Quantity}
     ,{<<"rate">>, Price}
     ,{<<"quantity">>, Quantity}
