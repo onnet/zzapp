@@ -133,7 +133,7 @@ generate_docs(AccountId, Year, Month) ->
     VatUpdatedFeesList = enhance_vat(monthly_fees(Modb), OnbillCfg),
     {TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
                                                         {TN_Acc + props:get_value(<<"cost_netto">>, X)
-                                                         ,VAT_Acc + props:get_value(<<"vat_total">>, X)
+                                                         ,VAT_Acc + props:get_value(<<"vat_line_total">>, X)
                                                          ,TB_Acc + props:get_value(<<"cost_brutto">>, X)
                                                         }
                                                       end
@@ -144,9 +144,9 @@ generate_docs(AccountId, Year, Month) ->
            ,{<<"account_addr">>, address_to_line(AccOnbillDoc)}
            ,{<<"total_netto">>, TotalNetto}
            ,{<<"total_vat">>, TotalVAT}
-           ,{<<"total_brutto">>, TotalBrutto}
+           ,{<<"total_brutto">>, round(TotalBrutto * 100) / 100}
            ,{<<"doc_number">>, <<"13">>}
-           ,{<<"vat_rate">>, wh_json:get_value(<<"vat_rate">>, OnbillCfg)}
+           ,{<<"vat_rate">>, wh_json:get_value(<<"vat_rate">>, OnbillCfg, 0.0)}
            ,{<<"agrm_num">>, wh_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccOnbillDoc)}
            ,{<<"agrm_date">>, wh_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccOnbillDoc)}
            ,{<<"doc_date">>, <<"31.",(wh_util:pad_month(Month))/binary,".",(wh_util:to_binary(Year))/binary>>}
@@ -160,25 +160,51 @@ generate_docs(AccountId, Year, Month) ->
 enhance_vat(FeesList, OnbillCfg) ->
     case wh_json:get_value(<<"vat_disposition">>, OnbillCfg) of
         <<"netto">> ->
-            FeesList;
+            [enhance_vat_netto(FeeLine, OnbillCfg) || FeeLine <- FeesList];
         <<"brutto">> ->
             [enhance_vat_brutto(FeeLine, OnbillCfg) || FeeLine <- FeesList];
         _ ->
-            FeesList
+            [enhance_no_or_zero_vat(FeeLine, OnbillCfg) || FeeLine <- FeesList]
     end.
+
+enhance_no_or_zero_vat(FeeLine, _OnbillCfg) ->
+    Rate = props:get_value(<<"rate">>, FeeLine),
+    Cost = props:get_value(<<"cost">>, FeeLine),
+    NewValues = [{<<"rate_netto">>, Rate}
+                ,{<<"cost_netto">>, Cost}
+                ,{<<"rate_brutto">>, Rate}
+                ,{<<"cost_brutto">>, Cost}
+                ,{<<"vat_line_total">>, 0.0}
+                ],
+    props:set_values(NewValues, FeeLine).
+
+enhance_vat_netto(FeeLine, OnbillCfg) ->
+    VatRate = wh_json:get_value(<<"vat_rate">>, OnbillCfg),
+    Rate = props:get_value(<<"rate">>, FeeLine),
+    Cost = props:get_value(<<"cost">>, FeeLine),
+    VatLineTotal = round(Cost * VatRate) / 100,
+    BruttoCost = round((Cost + VatLineTotal) * 100) / 100,
+    BruttoRate = round(Rate * (100 + VatRate)) / 100,
+    NewValues = [{<<"rate_netto">>, Rate}
+                ,{<<"cost_netto">>, Cost}
+                ,{<<"rate_brutto">>, BruttoRate}
+                ,{<<"cost_brutto">>, BruttoCost}
+                ,{<<"vat_line_total">>, VatLineTotal}
+                ],
+    props:set_values(NewValues, FeeLine).
 
 enhance_vat_brutto(FeeLine, OnbillCfg) ->
     VatRate = wh_json:get_value(<<"vat_rate">>, OnbillCfg),
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
-    VatTotal = round(Cost * VatRate / (100 + VatRate) * 100) / 100,
-    NetCost = Cost - VatTotal,
+    VatLineTotal = round(Cost * VatRate / (100 + VatRate) * 100) / 100,
+    NetCost = Cost - VatLineTotal,
     NetRate = round(Rate / (100 + VatRate) * 100 * 100) / 100,
     NewValues = [{<<"rate_netto">>, NetRate}
                 ,{<<"cost_netto">>, NetCost}
                 ,{<<"rate_brutto">>, Rate}
                 ,{<<"cost_brutto">>, Cost}
-                ,{<<"vat_total">>, VatTotal}
+                ,{<<"vat_line_total">>, VatLineTotal}
                 ],
     props:set_values(NewValues, FeeLine).
 
@@ -229,7 +255,7 @@ process_one_time_fee(JObj, Modb) ->
     {wh_json:get_value(<<"pvt_reason">>, DFDoc)
      ,wh_json:get_value(<<"description">>, DFDoc)
      ,wht_util:units_to_dollars(wh_json:get_integer_value(<<"pvt_amount">>, DFDoc))
-     ,1
+     ,1.0
      ,wh_util:to_binary(Day)
      ,DaysInMonth
     }.
