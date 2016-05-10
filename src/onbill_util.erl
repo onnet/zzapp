@@ -178,10 +178,10 @@ enhance_extra_codes(FeeLine, OnbillCfg) ->
 enhance_no_or_zero_vat(FeeLine, _OnbillCfg) ->
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
-    NewValues = [{<<"rate_netto">>, Rate}
-                ,{<<"cost_netto">>, Cost}
-                ,{<<"rate_brutto">>, Rate}
-                ,{<<"cost_brutto">>, Cost}
+    NewValues = [{<<"rate_netto">>, price_round(Rate)}
+                ,{<<"cost_netto">>, price_round(Cost)}
+                ,{<<"rate_brutto">>, price_round(Rate)}
+                ,{<<"cost_brutto">>, price_round(Cost)}
                 ,{<<"vat_line_total">>, 0.0}
                 ],
     props:set_values(NewValues, FeeLine).
@@ -191,12 +191,12 @@ enhance_vat_netto(FeeLine, OnbillCfg) ->
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
     VatLineTotal = price_round(Cost * VatRate / 100),
-    BruttoCost = price_round(Cost + VatLineTotal),
-    BruttoRate = price_round(Rate * (100 + VatRate) / 100),
-    NewValues = [{<<"rate_netto">>, Rate}
-                ,{<<"cost_netto">>, Cost}
-                ,{<<"rate_brutto">>, BruttoRate}
-                ,{<<"cost_brutto">>, BruttoCost}
+    BruttoCost = Cost + VatLineTotal,
+    BruttoRate = Rate * (100 + VatRate) / 100,
+    NewValues = [{<<"rate_netto">>, price_round(Rate)}
+                ,{<<"cost_netto">>, price_round(Cost)}
+                ,{<<"rate_brutto">>, price_round(BruttoRate)}
+                ,{<<"cost_brutto">>, price_round(BruttoCost)}
                 ,{<<"vat_line_total">>, VatLineTotal}
                 ],
     props:set_values(NewValues, FeeLine).
@@ -206,12 +206,12 @@ enhance_vat_brutto(FeeLine, OnbillCfg) ->
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
     VatLineTotal = price_round(Cost * VatRate / (100 + VatRate)),
-    NetCost = price_round(Cost - VatLineTotal),
-    NetRate = price_round(Rate / (100 + VatRate) * 100),
-    NewValues = [{<<"rate_netto">>, NetRate}
-                ,{<<"cost_netto">>, NetCost}
-                ,{<<"rate_brutto">>, Rate}
-                ,{<<"cost_brutto">>, Cost}
+    NetCost = Cost - VatLineTotal,
+    NetRate = Rate / (100 + VatRate) * 100,
+    NewValues = [{<<"rate_netto">>, price_round(NetRate)}
+                ,{<<"cost_netto">>, price_round(NetCost)}
+                ,{<<"rate_brutto">>, price_round(Rate)}
+                ,{<<"cost_brutto">>, price_round(Cost)}
                 ,{<<"vat_line_total">>, VatLineTotal}
                 ],
     props:set_values(NewValues, FeeLine).
