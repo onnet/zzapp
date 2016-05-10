@@ -142,9 +142,9 @@ generate_docs(AccountId, Year, Month) ->
                                                      ),
     Vars = [{<<"monthly_fees">>, VatUpdatedFeesList}
            ,{<<"account_addr">>, address_to_line(AccOnbillDoc)}
-           ,{<<"total_netto">>, TotalNetto}
-           ,{<<"total_vat">>, TotalVAT}
-           ,{<<"total_brutto">>, round(TotalBrutto * 100) / 100}
+           ,{<<"total_netto">>, price_round(TotalNetto)}
+           ,{<<"total_vat">>, price_round(TotalVAT)}
+           ,{<<"total_brutto">>, price_round(TotalBrutto)}
            ,{<<"doc_number">>, <<"13">>}
            ,{<<"vat_rate">>, wh_json:get_value(<<"vat_rate">>, OnbillCfg, 0.0)}
            ,{<<"agrm_num">>, wh_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccOnbillDoc)}
@@ -182,9 +182,9 @@ enhance_vat_netto(FeeLine, OnbillCfg) ->
     VatRate = wh_json:get_value(<<"vat_rate">>, OnbillCfg),
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
-    VatLineTotal = round(Cost * VatRate) / 100,
-    BruttoCost = round((Cost + VatLineTotal) * 100) / 100,
-    BruttoRate = round(Rate * (100 + VatRate)) / 100,
+    VatLineTotal = price_round(Cost * VatRate / 100),
+    BruttoCost = price_round(Cost + VatLineTotal),
+    BruttoRate = price_round(Rate * (100 + VatRate) / 100),
     NewValues = [{<<"rate_netto">>, Rate}
                 ,{<<"cost_netto">>, Cost}
                 ,{<<"rate_brutto">>, BruttoRate}
@@ -197,9 +197,9 @@ enhance_vat_brutto(FeeLine, OnbillCfg) ->
     VatRate = wh_json:get_value(<<"vat_rate">>, OnbillCfg),
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
-    VatLineTotal = round(Cost * VatRate / (100 + VatRate) * 100) / 100,
-    NetCost = Cost - VatLineTotal,
-    NetRate = round(Rate / (100 + VatRate) * 100 * 100) / 100,
+    VatLineTotal = price_round(Cost * VatRate / (100 + VatRate)),
+    NetCost = price_round(Cost - VatLineTotal),
+    NetRate = price_round(Rate / (100 + VatRate) * 100),
     NewValues = [{<<"rate_netto">>, NetRate}
                 ,{<<"cost_netto">>, NetCost}
                 ,{<<"rate_brutto">>, Rate}
@@ -207,6 +207,9 @@ enhance_vat_brutto(FeeLine, OnbillCfg) ->
                 ,{<<"vat_line_total">>, VatLineTotal}
                 ],
     props:set_values(NewValues, FeeLine).
+
+price_round(Price) ->
+    round(Price * 100) / 100.
 
 filter_vars(<<"_", _/binary>>) -> 'false';
 filter_vars(<<_/binary>>) -> 'true'.
@@ -238,6 +241,8 @@ monthly_fees(Db) ->
     _ = process_ets(RawTableId, ResultTableId),
     ServicesList = ets:tab2list(ResultTableId) ++ process_one_time_fees(Db),
     [lager:info("Result Table Line: ~p",[Service]) || Service <- ServicesList],
+    ets:delete(RawTableId),
+    ets:delete(ResultTableId),
     services_to_proplist(ServicesList, Year, Month, DaysInMonth).
 
 process_one_time_fees(Modb) ->
@@ -250,6 +255,7 @@ process_one_time_fees(Modb) ->
 
 process_one_time_fee(JObj, Modb) ->
     {'ok', DFDoc} =  kz_datamgr:open_doc(Modb, wh_json:get_value(<<"id">>, JObj)),
+lager:info("IAM5 DFDoc: ~p",[DFDoc]),
     {Year, Month, Day} = wh_util:to_date(wh_json:get_value(<<"pvt_created">>, DFDoc)),
     DaysInMonth = calendar:last_day_of_the_month(Year, Month),
     {wh_json:get_value(<<"pvt_reason">>, DFDoc)
@@ -258,7 +264,11 @@ process_one_time_fee(JObj, Modb) ->
      ,1.0
      ,wh_util:to_binary(Day)
      ,DaysInMonth
+     ,one_time_fee_name(DFDoc)
     }.
+
+one_time_fee_name(DFDoc) -> 
+    wh_json:get_value(<<"description">>, DFDoc).
 
 process_daily_fee(JObj, Modb, RawTableId) ->
     case kz_datamgr:open_doc(Modb, wh_json:get_value(<<"id">>, JObj)) of
@@ -276,7 +286,7 @@ upload_daily_fee_to_ets(DFDoc, RawTableId) ->
     ].
 
 process_element(Element, RawTableId, Day) ->
-    [ets:insert(RawTableId, {category(Unit), item(Unit), rate(Unit), quantity(Unit), Day})
+    [ets:insert(RawTableId, {category(Unit), item(Unit), rate(Unit), quantity(Unit), Day, name(Unit)})
      || {_, Unit} <- wh_json:to_proplist(Element)
      , quantity(Unit) =/= 0.0
     ].
@@ -287,6 +297,9 @@ category(Unit) ->
 item(Unit) ->
     wh_json:get_value(<<"item">>, Unit).
 
+name(Unit) ->
+    wh_json:get_value(<<"name">>, Unit).
+
 rate(Unit) ->
     wh_util:to_float(wh_json:get_value(<<"rate">>, Unit)).
 
@@ -294,25 +307,26 @@ quantity(Unit) ->
     wh_util:to_float(wh_json:get_value(<<"quantity">>, Unit)).
 
 process_ets(RawTableId, ResultTableId) ->
-    ServiceTypesList = lists:usort(ets:match(RawTableId,{'$1','_','_','_','_'})),
+    ServiceTypesList = lists:usort(ets:match(RawTableId,{'$1','_','_','_','_','_'})),
     [show_items(ServiceType, RawTableId, ResultTableId) || [ServiceType] <- ServiceTypesList].
     
 show_items(ServiceType, RawTableId, ResultTableId) ->
-    Items = lists:usort(ets:match(RawTableId,{ServiceType,'$2','_','_','_'})),
+    Items = lists:usort(ets:match(RawTableId,{ServiceType,'$2','_','_','_','_'})),
     [process_ets_item(RawTableId, ResultTableId, ServiceType, Item) || [Item] <- Items].
 
 process_ets_item(RawTableId, ResultTableId, ServiceType, Item) ->
-    Prices = lists:usort(ets:match(RawTableId,{ServiceType,Item,'$3','_','_'})),
+    Prices = lists:usort(ets:match(RawTableId,{ServiceType,Item,'$3','_','_','_'})),
     [handle_ets_item_price(RawTableId, ResultTableId, ServiceType, Item, Price) || [Price] <- Prices].
 
 handle_ets_item_price(RawTableId, ResultTableId, ServiceType, Item, Price) ->
-    Quantities = lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,'$4','_'})),
+    Quantities = lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,'$4','_','_'})),
     [handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Quantity) || [Quantity] <- Quantities].
 
 handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Quantity) ->
-    Days = [Day || [Day] <- lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'$5'}))],
-    lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Days: ~p",[ServiceType, Item, Price, Quantity, days_sequence_reduce(Days)]),
-    ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, days_sequence_reduce(Days), length(Days)}).
+    Days = [Day || [Day] <- lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'$5','_'}))],
+    [Name|_] = lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'_','$6'})),
+    lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Days: ~p, Name: ~p",[ServiceType, Item, Price, Quantity, days_sequence_reduce(Days), Name]),
+    ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, days_sequence_reduce(Days), length(Days), Name}).
 
 days_sequence_reduce([Digit]) ->
     days_sequence_reduce([Digit], []);
@@ -350,9 +364,10 @@ days_glue(L) ->
 services_to_proplist(ServicesList, Year, Month, DaysInMonth) ->
     lists:foldl(fun(ServiceLine, Acc) -> service_to_line(ServiceLine, Year, Month, DaysInMonth, Acc) end, [], ServicesList).
 
-service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty}, Year, Month, DaysInMonth, Acc) ->
+service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name}, Year, Month, DaysInMonth, Acc) ->
     [[{<<"category">>, ServiceType}
     ,{<<"item">>, Item}
+    ,{<<"name">>, Name}
     ,{<<"cost">>, DaysQty / DaysInMonth * Price * Quantity}
     ,{<<"rate">>, Price}
     ,{<<"quantity">>, Quantity}
