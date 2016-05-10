@@ -1,12 +1,12 @@
 <br />
 <h1 ALIGN=CENTER>АКТ оказания услуг </h1>
-<h4 ALIGN=CENTER>по Договору № %agrm% от %agrmdate% <br />
-за оказанные услуги электросвязи за период: %start_date% — %end_date%</h4>
+<h4 ALIGN=CENTER>по Договору № {{ doc_pref }}{{ doc_number }}-{{ doc_ind }} от {{ doc_date }}<br />
+за оказанные услуги электросвязи за период: {{ start_date }} - {{ end_date }}</h4>
 <br />
 <table>
 	<tr>
 		<td width="50%" align="left">Санкт-Петербург</td>
-		<td width="49%" align="right">%date%</td>
+		<td width="49%" align="right">{{ doc_date }}</td>
 	</tr>
 </table>
 <br />
@@ -25,23 +25,25 @@
 <table border="1">
 <!-- begin_services -->
 <!-- begin_item -->
+{% for fee_line in monthly_fees %}
         <tr>
                 <td width="5%"><h4 align="center">%N%</h4></td>
-                <TD WIDTH="44%">%item%</td>
-                <TD WIDTH="8%"><h4 align="center">%ed%</h4></td>
-                <TD WIDTH="14%"><h4 align="center">%vol%</h4></td>
-                <TD WIDTH="14%"><h4 align="center">%price%</h4></td>
-                <TD WIDTH="14%"><h4 align="center">%amount%</h4></td>
+                <TD WIDTH="44%">{{ fee_line.name }} {{ fee_line.period }}.{{ fee_line.month_pad }}.{{ fee_line.year }}</td>
+                <TD WIDTH="8%"><h4 align="center">{{ fee_line.code_name }}</h4></td>
+                <TD WIDTH="14%"><h4 align="center">{{ fee_line.quantity }}</h4></td>
+                <TD WIDTH="14%"><h4 align="center">{{ fee_line.rate_brutto }}</h4></td>
+                <TD WIDTH="14%"><h4 align="center">{{ fee_line.cost_brutto }}</h4></td>
         </tr>
+{% endfor %}
 <!-- end_item -->
 <!-- end_services -->
         <tr>
                <td colspan="4" align="right" width="85%">Итого:</td>
-                <td width="14%"><h4 align="center">%total_summ%</h4></td>
+                <td width="14%"><h4 align="center">{{ total_brutto }}</h4></td>
         </tr>
 	<tr>
                 <td colspan="4" align="right" width="85%">%ndstitle%НДС(%ndsper%%):</td>
-                <td width="14%"><h4 align="center">%totalnds%</h4></td>
+                <td width="14%"><h4 align="center">{{ total_vat }}</h4></td>
         </tr>
  </table>
 <br />Всего оказано услуг на сумму: %totalstr%, в т.ч. НДС(%ndsper%%) — %ndsstr%
