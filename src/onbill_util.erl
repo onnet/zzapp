@@ -130,7 +130,7 @@ generate_docs(AccountId, Year, Month) ->
     {'ok', OnbillCfg} =  kz_datamgr:open_doc(?ONBILL_DB, ?ONBILL_CONFIG),
     {'ok', AccOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, AccountId),
     Docs = ['invoice', 'act'],
-    VatUpdatedFeesList = enhance_vat(monthly_fees(Modb), OnbillCfg),
+    VatUpdatedFeesList = enhance_fees(monthly_fees(Modb), OnbillCfg),
     {TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
                                                         {TN_Acc + props:get_value(<<"cost_netto">>, X)
                                                          ,VAT_Acc + props:get_value(<<"vat_line_total">>, X)
@@ -157,15 +157,20 @@ generate_docs(AccountId, Year, Month) ->
            ++ [{Key, wh_json:get_value(Key, AccOnbillDoc)} || Key <- wh_json:get_keys(AccOnbillDoc), filter_vars(Key)],
     [save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) || TemplateId <- Docs].
 
-enhance_vat(FeesList, OnbillCfg) ->
+enhance_fees(FeesList, OnbillCfg) ->
     case wh_json:get_value(<<"vat_disposition">>, OnbillCfg) of
         <<"netto">> ->
-            [enhance_vat_netto(FeeLine, OnbillCfg) || FeeLine <- FeesList];
+            [enhance_vat_netto(FeeLine, OnbillCfg) ++ enhance_extra_codes(FeeLine, OnbillCfg) || FeeLine <- FeesList];
         <<"brutto">> ->
-            [enhance_vat_brutto(FeeLine, OnbillCfg) || FeeLine <- FeesList];
+            [enhance_vat_brutto(FeeLine, OnbillCfg) ++ enhance_extra_codes(FeeLine, OnbillCfg) || FeeLine <- FeesList];
         _ ->
-            [enhance_no_or_zero_vat(FeeLine, OnbillCfg) || FeeLine <- FeesList]
+            [enhance_no_or_zero_vat(FeeLine, OnbillCfg) ++ enhance_extra_codes(FeeLine, OnbillCfg) || FeeLine <- FeesList]
     end.
+
+enhance_extra_codes(FeeLine, OnbillCfg) ->
+    Category = props:get_value(<<"category">>, FeeLine),
+    CodesBag = wh_json:get_value([<<"extra_codes">>, Category], OnbillCfg, wh_json:new()),
+    [{Key, wh_json:get_value(Key, CodesBag)} || Key <- wh_json:get_keys(CodesBag)].
 
 enhance_no_or_zero_vat(FeeLine, _OnbillCfg) ->
     Rate = props:get_value(<<"rate">>, FeeLine),
@@ -255,7 +260,6 @@ process_one_time_fees(Modb) ->
 
 process_one_time_fee(JObj, Modb) ->
     {'ok', DFDoc} =  kz_datamgr:open_doc(Modb, wh_json:get_value(<<"id">>, JObj)),
-lager:info("IAM5 DFDoc: ~p",[DFDoc]),
     {Year, Month, Day} = wh_util:to_date(wh_json:get_value(<<"pvt_created">>, DFDoc)),
     DaysInMonth = calendar:last_day_of_the_month(Year, Month),
     {wh_json:get_value(<<"pvt_reason">>, DFDoc)
