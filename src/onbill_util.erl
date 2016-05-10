@@ -169,7 +169,10 @@ enhance_fees(FeesList, OnbillCfg) ->
 
 enhance_extra_codes(FeeLine, OnbillCfg) ->
     Category = props:get_value(<<"category">>, FeeLine),
-    CodesBag = wh_json:get_value([<<"extra_codes">>, Category], OnbillCfg, wh_json:new()),
+    CodesBag = case wh_json:get_value([<<"extra_codes">>, Category], OnbillCfg) of
+                   'undefined' -> wh_json:get_value([<<"extra_codes">>, <<"default">>], OnbillCfg, wh_json:new());
+                    FoundBag -> FoundBag
+               end,
     [{Key, wh_json:get_value(Key, CodesBag)} || Key <- wh_json:get_keys(CodesBag)].
 
 enhance_no_or_zero_vat(FeeLine, _OnbillCfg) ->
@@ -328,7 +331,7 @@ handle_ets_item_price(RawTableId, ResultTableId, ServiceType, Item, Price) ->
 
 handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Quantity) ->
     Days = [Day || [Day] <- lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'$5','_'}))],
-    [Name|_] = lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'_','$6'})),
+    [[Name]|_] = lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'_','$6'})),
     lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Days: ~p, Name: ~p",[ServiceType, Item, Price, Quantity, days_sequence_reduce(Days), Name]),
     ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, days_sequence_reduce(Days), length(Days), Name}).
 
