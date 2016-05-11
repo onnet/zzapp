@@ -5,8 +5,8 @@
         ]).
 
 populate_modb_with_fees(AccountId, Year, Month) ->
-    wh_bookkeeper_onnet:populate_modb_with_fees(wh_util:to_binary(AccountId), Year, Month).
+    kz_bookkeeper_onbill:populate_modb_with_fees(kz_util:to_binary(AccountId), Year, Month).
 
 populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
-    wh_bookkeeper_onnet:populate_modb_day_with_fee(wh_util:to_binary(AccountId), Year, Month, Day).
+    kz_bookkeeper_onbill:populate_modb_day_with_fee(kz_util:to_binary(AccountId), Year, Month, Day).
 

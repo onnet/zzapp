@@ -60,13 +60,13 @@ validate(Context, Id, ?ATTACHMENT) ->
 
 -spec validate_generate(cb_context:context()) -> cb_context:context().
 validate_generate(Context) ->
-    Year = wh_json:get_float_value(<<"year">>, cb_context:req_data(Context)),
-    Month = wh_json:get_float_value(<<"month">>, cb_context:req_data(Context)),
+    Year = kz_json:get_float_value(<<"year">>, cb_context:req_data(Context)),
+    Month = kz_json:get_float_value(<<"month">>, cb_context:req_data(Context)),
 
     case cb_modules_util:is_superduper_admin(Context) of
         'true' -> validate_generate(Context, Year, Month);
         'false' ->
-            case wh_services:is_reseller(cb_context:auth_account_id(Context)) of
+            case kz_services:is_reseller(cb_context:auth_account_id(Context)) of
                 'true' -> validate_generate(Context, Year, Month);
                 'false' -> cb_context:add_system_error('forbidden', Context)
             end
@@ -77,12 +77,12 @@ validate_generate(Context, Year, Month) when Year == 'undefined' orelse Month ==
     cb_context:add_validation_error(
       <<"Year and month">>
       ,<<"required">>
-      ,wh_json:from_list([{<<"message">>, Message}])
+      ,kz_json:from_list([{<<"message">>, Message}])
       ,Context
      );
 
 validate_generate(Context, Year, Month) when is_float(Year) orelse is_float(Month) ->
-    validate_generate(Context, wh_util:to_integer(Year), wh_util:to_integer(Month));
+    validate_generate(Context, kz_util:to_integer(Year), kz_util:to_integer(Month));
 
 validate_generate(Context, Year, Month) ->
     AccountId = cb_context:account_id(Context),
@@ -107,43 +107,43 @@ read(Id, Context) ->
 -spec summary(cb_context:context()) -> cb_context:context().
 summary(Context) ->
     QueryString = cb_context:query_string(Context),
-    {Year, Month} = case (wh_json:get_value(<<"year">>,QueryString) == 'undefined')
+    {Year, Month} = case (kz_json:get_value(<<"year">>,QueryString) == 'undefined')
                           orelse
-                          (wh_json:get_value(<<"month">>,QueryString) == 'undefined')
+                          (kz_json:get_value(<<"month">>,QueryString) == 'undefined')
                     of
                         'true' ->
                             {{Y,M,_},_} = calendar:universal_time(),
                             {Y,M};
                         'false' ->
-                            {wh_json:get_value(<<"year">>,QueryString), wh_json:get_value(<<"month">>,QueryString)}
+                            {kz_json:get_value(<<"year">>,QueryString), kz_json:get_value(<<"month">>,QueryString)}
                     end,
     AccountId = cb_context:account_id(Context),
-    Modb = kazoo_modb:get_modb(AccountId, wh_util:to_integer(Year), wh_util:to_integer(Month)),
+    Modb = kazoo_modb:get_modb(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
     onbill_util:maybe_add_design_doc(Modb),
     Context1 = cb_context:set_account_db(Context, Modb),
     crossbar_doc:load_view(?CB_LIST, [], Context1, fun normalize_view_results/2).
 
--spec normalize_view_results(wh_json:object(), wh_json:objects()) -> wh_json:objects().
+-spec normalize_view_results(kz_json:object(), kz_json:objects()) -> kz_json:objects().
 normalize_view_results(JObj, Acc) ->
-    [wh_json:get_value(<<"value">>, JObj)|Acc].
+    [kz_json:get_value(<<"value">>, JObj)|Acc].
 
 load_attachment(Context0, Id) ->
     QueryString = cb_context:query_string(Context0),
-    Year = wh_json:get_value(<<"year">>,QueryString),
-    Month = wh_json:get_value(<<"month">>,QueryString),
-    Context = crossbar_doc:load(Id, cb_context:set_account_modb(Context0, wh_util:to_integer(Year), wh_util:to_integer(Month))),
+    Year = kz_json:get_value(<<"year">>,QueryString),
+    Month = kz_json:get_value(<<"month">>,QueryString),
+    Context = crossbar_doc:load(Id, cb_context:set_account_modb(Context0, kz_util:to_integer(Year), kz_util:to_integer(Month))),
     AccountId = cb_context:account_id(Context),
-    Modb = kazoo_modb:get_modb(AccountId, wh_util:to_integer(Year), wh_util:to_integer(Month)),
+    Modb = kazoo_modb:get_modb(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
     case onbill_util:get_attachment(Id, Modb) of
         {'ok', Attachment} ->
             cb_context:set_resp_etag(
                 cb_context:set_resp_headers(cb_context:setters(Context,[{fun cb_context:set_resp_data/2, Attachment},{fun cb_context:set_resp_etag/2, 'undefined'}])
                                             ,[{<<"Content-Disposition">>, <<"attachment; filename="
-                                                                            ,(wh_util:to_binary(Id))/binary
+                                                                            ,(kz_util:to_binary(Id))/binary
                                                                             ,"-"
-                                                                            ,(wh_util:to_binary(Id))/binary
+                                                                            ,(kz_util:to_binary(Id))/binary
                                                                             ,"-"
-                                                                            ,(wh_util:to_binary(Id))/binary>>
+                                                                            ,(kz_util:to_binary(Id))/binary>>
                                               }
                                              ,{<<"Content-Type">>, <<"application/pdf">>}
                                              |cb_context:resp_headers(Context)

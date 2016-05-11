@@ -23,7 +23,7 @@ do_check_db(Db, 'false') ->
     _ = kz_datamgr:db_create(Db).
 
 get_template(TemplateId, Carrier) ->
-    case kz_datamgr:fetch_attachment(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES(Carrier), <<(wh_util:to_binary(TemplateId))/binary, ".tpl">>) of
+    case kz_datamgr:fetch_attachment(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES(Carrier), <<(kz_util:to_binary(TemplateId))/binary, ".tpl">>) of
         {'ok', Template} -> Template;
         {error, not_found} ->
             Template = default_template(TemplateId),
@@ -31,15 +31,15 @@ get_template(TemplateId, Carrier) ->
                 {'ok', _} ->
                     'ok';
                 {'error', 'not_found'} ->
-                    NewDoc = wh_json:set_values([{<<"_id">>, ?MOD_CONFIG_TEMLATES(Carrier)}
+                    NewDoc = kz_json:set_values([{<<"_id">>, ?MOD_CONFIG_TEMLATES(Carrier)}
                                                  ,{<<"carrier_name">>,<<"this_doc_carrier_Name">>}
                                                 ]
-                                                ,wh_json:new()),
+                                                ,kz_json:new()),
                     kz_datamgr:ensure_saved(?SYSTEM_CONFIG_DB, NewDoc)
             end,
             kz_datamgr:put_attachment(?SYSTEM_CONFIG_DB
                                      ,?MOD_CONFIG_TEMLATES(Carrier)
-                                     ,<<(wh_util:to_binary(TemplateId))/binary, ".tpl">>
+                                     ,<<(kz_util:to_binary(TemplateId))/binary, ".tpl">>
                                      ,Template
                                      ,[{'content_type', <<"text/html">>}]
                                     ),
@@ -47,18 +47,18 @@ get_template(TemplateId, Carrier) ->
     end.
 
 default_template(TemplateId) ->
-    FilePath = <<"applications/onbill/priv/templates/ru/", (wh_util:to_binary(TemplateId))/binary, ".tpl">>,
+    FilePath = <<"applications/onbill/priv/templates/ru/", (kz_util:to_binary(TemplateId))/binary, ".tpl">>,
     {'ok', Data} = file:read_file(FilePath),
     Data.
 
 get_attachment(AttachmentId, Db) ->
-    case kz_datamgr:fetch_attachment(Db, AttachmentId, <<(wh_util:to_binary(AttachmentId))/binary, ".pdf">>) of
+    case kz_datamgr:fetch_attachment(Db, AttachmentId, <<(kz_util:to_binary(AttachmentId))/binary, ".pdf">>) of
         {'ok', _} = OK -> OK;
         E -> E
     end.
 
 prepare_tpl(Vars, TemplateId, Carrier) ->
-    ErlyMod = wh_util:to_atom(TemplateId),
+    ErlyMod = kz_util:to_atom(TemplateId),
     try erlydtl:compile_template(get_template(TemplateId, Carrier), ErlyMod, [{'out_dir', 'false'},'return']) of
         {ok, ErlyMod} -> render_tpl(ErlyMod, Vars);
         {ok, ErlyMod,[]} -> render_tpl(ErlyMod, Vars); 
@@ -78,14 +78,14 @@ render_tpl(ErlyMod, Vars) ->
     erlang:iolist_to_binary(IoList).
 
 create_pdf(Vars, TemplateId, Carrier, AccountId) ->
-    Rand = wh_util:rand_hex_binary(5),
-    Prefix = <<AccountId/binary, "-", (wh_util:to_binary(TemplateId))/binary, "-", Rand/binary>>,
+    Rand = kz_util:rand_hex_binary(5),
+    Prefix = <<AccountId/binary, "-", (kz_util:to_binary(TemplateId))/binary, "-", Rand/binary>>,
     HTMLFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".html">>]),
     PDFFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".pdf">>]),
     HTMLTpl = prepare_tpl(Vars, TemplateId, Carrier),
     file:write_file(HTMLFile, HTMLTpl),
     Cmd = <<(?HTML_TO_PDF(TemplateId))/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
-    case os:cmd(wh_util:to_list(Cmd)) of
+    case os:cmd(kz_util:to_list(Cmd)) of
         [] -> file:read_file(PDFFile);
         "\n" -> file:read_file(PDFFile);
         _R ->
@@ -96,14 +96,14 @@ create_pdf(Vars, TemplateId, Carrier, AccountId) ->
 save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->
     {'ok', PDF_Data} = create_pdf(Vars, TemplateId, Carrier, AccountId),
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-    NewDoc = case kz_datamgr:open_doc(Modb, wh_util:to_binary(TemplateId)) of
-        {ok, Doc} -> wh_json:set_values(Vars, Doc);
-        {'error', 'not_found'} -> wh_json:set_values(Vars ++ [{<<"_id">>, wh_util:to_binary(TemplateId)}, {<<"pvt_type">>, ?ONBILL_DOC}], wh_json:new()) 
+    NewDoc = case kz_datamgr:open_doc(Modb, kz_util:to_binary(TemplateId)) of
+        {ok, Doc} -> kz_json:set_values(Vars, Doc);
+        {'error', 'not_found'} -> kz_json:set_values(Vars ++ [{<<"_id">>, kz_util:to_binary(TemplateId)}, {<<"pvt_type">>, ?ONBILL_DOC}], kz_json:new()) 
     end,
     kz_datamgr:ensure_saved(Modb, NewDoc),
     kz_datamgr:put_attachment(Modb
-                             ,wh_util:to_binary(TemplateId)
-                             ,<<(wh_util:to_binary(TemplateId))/binary, ".pdf">>
+                             ,kz_util:to_binary(TemplateId)
+                             ,<<(kz_util:to_binary(TemplateId))/binary, ".pdf">>
                              ,PDF_Data
                              ,[{'content_type', <<"application/pdf">>}]
                             ),
@@ -152,20 +152,20 @@ generate_docs(AccountId, Year, Month) ->
            ,{<<"total_brutto_div">>, unicode:characters_to_binary(amount_into_words:render(TotalBruttoDiv), unicode, utf8)}
            ,{<<"total_brutto_rem">>, unicode:characters_to_binary(amount_into_words:render(TotalBruttoRem), unicode, utf8)}
            ,{<<"doc_number">>, <<"13">>}
-           ,{<<"vat_rate">>, wh_json:get_value(<<"vat_rate">>, OnbillCfg, 0.0)}
-           ,{<<"currency1">>, wh_json:get_value(<<"currency1">>, OnbillCfg)}
-           ,{<<"agrm_num">>, wh_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccOnbillDoc)}
-           ,{<<"agrm_date">>, wh_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccOnbillDoc)}
-           ,{<<"doc_date">>, <<"31.",(wh_util:pad_month(Month))/binary,".",(wh_util:to_binary(Year))/binary>>}
-           ,{<<"start_date">>, <<"01.",(wh_util:pad_month(Month))/binary,".",(wh_util:to_binary(Year))/binary>>}
-           ,{<<"end_date">>, <<(wh_util:to_binary(calendar:last_day_of_the_month(Year, Month)))/binary,".",(wh_util:pad_month(Month))/binary,".",(wh_util:to_binary(Year))/binary>>}
+           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillCfg, 0.0)}
+           ,{<<"currency1">>, kz_json:get_value(<<"currency1">>, OnbillCfg)}
+           ,{<<"agrm_num">>, kz_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccOnbillDoc)}
+           ,{<<"agrm_date">>, kz_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccOnbillDoc)}
+           ,{<<"doc_date">>, <<"31.",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>}
+           ,{<<"start_date">>, <<"01.",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>}
+           ,{<<"end_date">>, <<(kz_util:to_binary(calendar:last_day_of_the_month(Year, Month)))/binary,".",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>}
            ] 
-           ++ [{Key, wh_json:get_value(Key, TplDoc)} || Key <- wh_json:get_keys(TplDoc), filter_vars(Key)]
-           ++ [{Key, wh_json:get_value(Key, AccOnbillDoc)} || Key <- wh_json:get_keys(AccOnbillDoc), filter_vars(Key)],
+           ++ [{Key, kz_json:get_value(Key, TplDoc)} || Key <- kz_json:get_keys(TplDoc), filter_vars(Key)]
+           ++ [{Key, kz_json:get_value(Key, AccOnbillDoc)} || Key <- kz_json:get_keys(AccOnbillDoc), filter_vars(Key)],
     [save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) || TemplateId <- Docs].
 
 enhance_fees(FeesList, OnbillCfg) ->
-    case wh_json:get_value(<<"vat_disposition">>, OnbillCfg) of
+    case kz_json:get_value(<<"vat_disposition">>, OnbillCfg) of
         <<"netto">> ->
             [enhance_vat_netto(FeeLine, OnbillCfg) ++ enhance_extra_codes(FeeLine, OnbillCfg) || FeeLine <- FeesList];
         <<"brutto">> ->
@@ -176,11 +176,11 @@ enhance_fees(FeesList, OnbillCfg) ->
 
 enhance_extra_codes(FeeLine, OnbillCfg) ->
     Category = props:get_value(<<"category">>, FeeLine),
-    CodesBag = case wh_json:get_value([<<"extra_codes">>, Category], OnbillCfg) of
-                   'undefined' -> wh_json:get_value([<<"extra_codes">>, <<"default">>], OnbillCfg, wh_json:new());
+    CodesBag = case kz_json:get_value([<<"extra_codes">>, Category], OnbillCfg) of
+                   'undefined' -> kz_json:get_value([<<"extra_codes">>, <<"default">>], OnbillCfg, kz_json:new());
                     FoundBag -> FoundBag
                end,
-    [{Key, wh_json:get_value(Key, CodesBag)} || Key <- wh_json:get_keys(CodesBag)].
+    [{Key, kz_json:get_value(Key, CodesBag)} || Key <- kz_json:get_keys(CodesBag)].
 
 enhance_no_or_zero_vat(FeeLine, _OnbillCfg) ->
     Rate = props:get_value(<<"rate">>, FeeLine),
@@ -194,7 +194,7 @@ enhance_no_or_zero_vat(FeeLine, _OnbillCfg) ->
     props:set_values(NewValues, FeeLine).
 
 enhance_vat_netto(FeeLine, OnbillCfg) ->
-    VatRate = wh_json:get_value(<<"vat_rate">>, OnbillCfg),
+    VatRate = kz_json:get_value(<<"vat_rate">>, OnbillCfg),
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
     VatLineTotal = price_round(Cost * VatRate / 100),
@@ -209,7 +209,7 @@ enhance_vat_netto(FeeLine, OnbillCfg) ->
     props:set_values(NewValues, FeeLine).
 
 enhance_vat_brutto(FeeLine, OnbillCfg) ->
-    VatRate = wh_json:get_value(<<"vat_rate">>, OnbillCfg),
+    VatRate = kz_json:get_value(<<"vat_rate">>, OnbillCfg),
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
     VatLineTotal = price_round(Cost * VatRate / (100 + VatRate)),
@@ -230,8 +230,8 @@ filter_vars(<<"_", _/binary>>) -> 'false';
 filter_vars(<<_/binary>>) -> 'true'.
 
 address_to_line(JObj) ->
-    BillingAddrLinnes = wh_json:get_value(<<"billing_address">>, JObj, wh_json:new()),
-    {Keys, _} = wh_json:get_values(BillingAddrLinnes),
+    BillingAddrLinnes = kz_json:get_value(<<"billing_address">>, JObj, kz_json:new()),
+    {Keys, _} = kz_json:get_values(BillingAddrLinnes),
     address_join([Line || Line <- Keys, Line =/= <<>>], <<", ">>).
 
 address_join([], _Sep) ->
@@ -244,8 +244,8 @@ address_join([Head|Tail], Sep) ->
 monthly_fees(Db) ->
     {_, Year, Month} = kazoo_modb_util:split_account_mod(Db),
     DaysInMonth = calendar:last_day_of_the_month(Year, Month),
-    Modb = wh_util:format_account_modb(Db, 'encoded'),
-    RawModb = wh_util:format_account_modb(Db, 'raw'),
+    Modb = kz_util:format_account_modb(Db, 'encoded'),
+    RawModb = kz_util:format_account_modb(Db, 'raw'),
     _ = maybe_add_design_doc(Modb),
     RawTableId = ets:new(erlang:binary_to_atom(<<RawModb/binary,"-raw">>, 'latin1'), [duplicate_bag]),
     ResultTableId = ets:new(erlang:binary_to_atom(<<RawModb/binary,"-result">>, 'latin1'), [bag]),
@@ -269,56 +269,56 @@ process_one_time_fees(Modb) ->
     end.
 
 process_one_time_fee(JObj, Modb) ->
-    {'ok', DFDoc} =  kz_datamgr:open_doc(Modb, wh_json:get_value(<<"id">>, JObj)),
-    {Year, Month, Day} = wh_util:to_date(wh_json:get_value(<<"pvt_created">>, DFDoc)),
+    {'ok', DFDoc} =  kz_datamgr:open_doc(Modb, kz_json:get_value(<<"id">>, JObj)),
+    {Year, Month, Day} = kz_util:to_date(kz_json:get_value(<<"pvt_created">>, DFDoc)),
     DaysInMonth = calendar:last_day_of_the_month(Year, Month),
-    {wh_json:get_value(<<"pvt_reason">>, DFDoc)
-     ,wh_json:get_value(<<"description">>, DFDoc)
-     ,wht_util:units_to_dollars(wh_json:get_integer_value(<<"pvt_amount">>, DFDoc))
+    {kz_json:get_value(<<"pvt_reason">>, DFDoc)
+     ,kz_json:get_value(<<"description">>, DFDoc)
+     ,wht_util:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, DFDoc))
      ,1.0
-     ,wh_util:to_binary(Day)
+     ,kz_util:to_binary(Day)
      ,DaysInMonth
      ,one_time_fee_name(DFDoc)
     }.
 
 one_time_fee_name(DFDoc) -> 
-    wh_json:get_value(<<"description">>, DFDoc).
+    kz_json:get_value(<<"description">>, DFDoc).
 
 process_daily_fee(JObj, Modb, RawTableId) ->
-    case kz_datamgr:open_doc(Modb, wh_json:get_value(<<"id">>, JObj)) of
+    case kz_datamgr:open_doc(Modb, kz_json:get_value(<<"id">>, JObj)) of
         {'error', 'not_found'} -> 'ok';
         {'ok', DFDoc} -> upload_daily_fee_to_ets(DFDoc, RawTableId)
     end.
 
 upload_daily_fee_to_ets(DFDoc, RawTableId) ->
-    ItemsList = wh_json:get_value([<<"pvt_metadata">>, <<"items_history">>],DFDoc),
-    [ItemTs|_] = lists:reverse(lists:sort(wh_json:get_keys(ItemsList))),
-    Item = wh_json:get_value(ItemTs, ItemsList),
-    {{_,_,Day},_} = calendar:gregorian_seconds_to_datetime(wh_util:to_integer(ItemTs)),
-    [process_element(wh_json:get_value(ElementKey, Item), RawTableId, Day) || ElementKey <- wh_json:get_keys(Item)
-     ,wh_json:is_json_object(wh_json:get_value(ElementKey, Item)) == 'true'
+    ItemsList = kz_json:get_value([<<"pvt_metadata">>, <<"items_history">>],DFDoc),
+    [ItemTs|_] = lists:reverse(lists:sort(kz_json:get_keys(ItemsList))),
+    Item = kz_json:get_value(ItemTs, ItemsList),
+    {{_,_,Day},_} = calendar:gregorian_seconds_to_datetime(kz_util:to_integer(ItemTs)),
+    [process_element(kz_json:get_value(ElementKey, Item), RawTableId, Day) || ElementKey <- kz_json:get_keys(Item)
+     ,kz_json:is_json_object(kz_json:get_value(ElementKey, Item)) == 'true'
     ].
 
 process_element(Element, RawTableId, Day) ->
     [ets:insert(RawTableId, {category(Unit), item(Unit), rate(Unit), quantity(Unit), Day, name(Unit)})
-     || {_, Unit} <- wh_json:to_proplist(Element)
+     || {_, Unit} <- kz_json:to_proplist(Element)
      , quantity(Unit) =/= 0.0
     ].
 
 category(Unit) ->
-    wh_json:get_value(<<"category">>, Unit).
+    kz_json:get_value(<<"category">>, Unit).
 
 item(Unit) ->
-    wh_json:get_value(<<"item">>, Unit).
+    kz_json:get_value(<<"item">>, Unit).
 
 name(Unit) ->
-    wh_json:get_value(<<"name">>, Unit).
+    kz_json:get_value(<<"name">>, Unit).
 
 rate(Unit) ->
-    wh_util:to_float(wh_json:get_value(<<"rate">>, Unit)).
+    kz_util:to_float(kz_json:get_value(<<"rate">>, Unit)).
 
 quantity(Unit) ->
-    wh_util:to_float(wh_json:get_value(<<"quantity">>, Unit)).
+    kz_util:to_float(kz_json:get_value(<<"quantity">>, Unit)).
 
 process_ets(RawTableId, ResultTableId) ->
     ServiceTypesList = lists:usort(ets:match(RawTableId,{'$1','_','_','_','_','_'})),
@@ -350,25 +350,25 @@ days_sequence_reduce(LongList) ->
     days_glue(days_sequence_reduce(LongList, [])).
 
 days_sequence_reduce([Digit], Acc) ->
-    Acc ++ [wh_util:to_binary(Digit)];
+    Acc ++ [kz_util:to_binary(Digit)];
 days_sequence_reduce([First,Last], Acc) ->
     case First+1 == Last of
-        'true' -> Acc ++ [<<(wh_util:to_binary(First))/binary,"-", (wh_util:to_binary(Last))/binary>>];
-        'false' -> Acc ++ [<<(wh_util:to_binary(First))/binary,",", (wh_util:to_binary(Last))/binary>>]
+        'true' -> Acc ++ [<<(kz_util:to_binary(First))/binary,"-", (kz_util:to_binary(Last))/binary>>];
+        'false' -> Acc ++ [<<(kz_util:to_binary(First))/binary,",", (kz_util:to_binary(Last))/binary>>]
     end;
 days_sequence_reduce([First,Next|T], Acc) ->
     case First+1 == Next of
-        'false' -> days_sequence_reduce([Next] ++ T, Acc ++ [wh_util:to_binary(First)]);
+        'false' -> days_sequence_reduce([Next] ++ T, Acc ++ [kz_util:to_binary(First)]);
         'true' -> days_sequence_reduce(First, [Next] ++ T, Acc)
     end.
     
 days_sequence_reduce(Prev, [], Acc) ->
     days_sequence_reduce([Prev], Acc);
 days_sequence_reduce(Prev, [Digit], Acc) ->
-    Acc ++ [<<(wh_util:to_binary(Prev))/binary,"-", (wh_util:to_binary(Digit))/binary>>];
+    Acc ++ [<<(kz_util:to_binary(Prev))/binary,"-", (kz_util:to_binary(Digit))/binary>>];
 days_sequence_reduce(Prev, [First,Next|T], Acc) ->
     case First+1 == Next of
-        'false' -> days_sequence_reduce([Next] ++ T, Acc ++ [<<(wh_util:to_binary(Prev))/binary,"-", (wh_util:to_binary(First))/binary>>]);
+        'false' -> days_sequence_reduce([Next] ++ T, Acc ++ [<<(kz_util:to_binary(Prev))/binary,"-", (kz_util:to_binary(First))/binary>>]);
         'true' -> days_sequence_reduce(Prev, [Next] ++ T, Acc)
     end.
 
@@ -389,6 +389,6 @@ service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name}, Yea
     ,{<<"days_quantity">>, DaysQty}
     ,{<<"days_in_month">>, DaysInMonth}
     ,{<<"month">>, Month}
-    ,{<<"month_pad">>, wh_util:pad_month(Month)}
+    ,{<<"month_pad">>, kz_util:pad_month(Month)}
     ,{<<"year">>, Year}
     ]] ++ Acc.
