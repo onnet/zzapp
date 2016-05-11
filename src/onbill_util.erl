@@ -140,12 +140,17 @@ generate_docs(AccountId, Year, Month) ->
                                                       ,{0,0,0}
                                                       ,VatUpdatedFeesList
                                                      ),
+    [TotalBruttoDiv, TotalBruttoRem] = binary:split(float_to_binary(TotalBrutto,[{decimals,2}]), <<".">>),
+    [TotalVatDiv, TotalVatRem] = binary:split(float_to_binary(TotalVAT,[{decimals,2}]), <<".">>),
     Vars = [{<<"monthly_fees">>, VatUpdatedFeesList}
            ,{<<"account_addr">>, address_to_line(AccOnbillDoc)}
            ,{<<"total_netto">>, price_round(TotalNetto)}
            ,{<<"total_vat">>, price_round(TotalVAT)}
-           ,{<<"total_vat_words">>, unicode:characters_to_binary(amount_into_words:render(12), unicode, utf8)}
+           ,{<<"total_vat_div">>, unicode:characters_to_binary(amount_into_words:render(TotalVatDiv), unicode, utf8)}
+           ,{<<"total_vat_rem">>, unicode:characters_to_binary(amount_into_words:render(TotalVatRem), unicode, utf8)}
            ,{<<"total_brutto">>, price_round(TotalBrutto)}
+           ,{<<"total_brutto_div">>, unicode:characters_to_binary(amount_into_words:render(TotalBruttoDiv), unicode, utf8)}
+           ,{<<"total_brutto_rem">>, unicode:characters_to_binary(amount_into_words:render(TotalBruttoRem), unicode, utf8)}
            ,{<<"doc_number">>, <<"13">>}
            ,{<<"vat_rate">>, wh_json:get_value(<<"vat_rate">>, OnbillCfg, 0.0)}
            ,{<<"currency1">>, wh_json:get_value(<<"currency1">>, OnbillCfg)}

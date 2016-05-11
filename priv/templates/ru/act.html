@@ -31,23 +31,24 @@
                 <TD WIDTH="44%">{{ fee_line.name }} {{ fee_line.period }}.{{ fee_line.month_pad }}.{{ fee_line.year }}</td>
                 <TD WIDTH="8%"><h4 align="center">{{ fee_line.code_name }}</h4></td>
                 <TD WIDTH="14%"><h4 align="center">{{ fee_line.quantity }}</h4></td>
-                <TD WIDTH="14%"><h4 align="center">{{ fee_line.rate_brutto }}</h4></td>
-                <TD WIDTH="14%"><h4 align="center">{{ fee_line.cost_brutto }}</h4></td>
+                <TD WIDTH="14%"><h4 align="center">{{ fee_line.rate_brutto|floatformat:2 }}</h4></td>
+                <TD WIDTH="14%"><h4 align="center">{{ fee_line.cost_brutto|floatformat:2 }}</h4></td>
         </tr>
 {% endfor %}
 <!-- end_item -->
 <!-- end_services -->
         <tr>
                <td colspan="4" align="right" width="85%">Итого:</td>
-                <td width="14%"><h4 align="center">{{ total_brutto }}</h4></td>
+                <td width="14%"><h4 align="center">{{ total_brutto|floatformat:2 }}</h4></td>
         </tr>
 	<tr>
                 <td colspan="4" align="right" width="85%">В том числе НДС({{ vat_rate }}%):</td>
-                <td width="14%"><h4 align="center">{{ total_vat }}</h4></td>
+                <td width="14%"><h4 align="center">{{ total_vat|floatformat:2 }}</h4></td>
         </tr>
  </table>
-<br />Всего оказано услуг на сумму: %totalstr%, в т.ч. НДС({{ vat_rate }}%) — {{ total_vat_words }}
-<br /><br />
+<br />Всего оказано услуг на сумму: {{ total_brutto_div }} руб. {{ total_brutto_rem }} коп., в т.ч. НДС({{ vat_rate }}%) — {% if total_vat_div %}{{ total_vat_div }} руб.{% endif %} {{ total_vat_rem }} коп.
+<br />
+<br />
 <h4 align="center">Указанные услуги полностью соответствуют условиям Договора. <br />
 Клиент претензий к объему оказанных услуг и их качеству не имеет.</h4><br /><br />
 <table>

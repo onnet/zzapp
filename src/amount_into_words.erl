@@ -6,7 +6,10 @@
 
 render(Num) when is_integer(Num) ->
     Tris = tri_split(lists:reverse(integer_to_list(Num)), [], [], 0),
-    gen_string(Tris, length(Tris) + 1, []).
+    gen_string(Tris, length(Tris) + 1, []);
+
+render(Num) when is_binary(Num) ->
+    render(binary_to_integer(Num)).
 
 gen_string([], _, Acc) ->
     string:strip(Acc);
