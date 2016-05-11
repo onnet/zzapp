@@ -157,12 +157,12 @@
 		<td width="3%" align="center">{{ fee_line.code_number }}</td>
 		<td width="8%" align="center">{{ fee_line.code_name }}</td>
 		<td width="5%" align="right">{{ fee_line.quantity }}</td>
-		<td width="7%" align="right">{{ fee_line.rate_netto }}</td>
-		<td width="10%" align="right">{{ fee_line.cost_netto }}</td>
+		<td width="7%" align="right">{{ fee_line.rate_netto|floatformat:2 }}</td>
+		<td width="10%" align="right">{{ fee_line.cost_netto|floatformat:2 }}</td>
 		<td width="5%" align="center">Без акциза</td>
 		<td width="6%" align="right">{{ vat_rate }}%</td>
-		<td width="7%" align="right">{{ fee_line.vat_line_total }}</td>
-		<td width="10%" align="right">{{ fee_line.cost_brutto }}</td>
+		<td width="7%" align="right">{{ fee_line.vat_line_total|floatformat:2 }}</td>
+		<td width="10%" align="right">{{ fee_line.cost_brutto|floatformat:2 }}</td>
 		<td width="4%" align="center">--</td>
 		<td width="8%" align="center">--</td>
 		<td width="7%" align="center">--</td>
@@ -172,10 +172,10 @@
 <!-- end_services -->
 <tr>
 		<td width="46%" colspan=5>Всего к оплате:</td>		
-		<td width="10%" align="right">{{ total_netto }}</td>
+		<td width="10%" align="right">{{ total_netto|floatformat:2 }}</td>
 		<td width="11%" align="center" colspan="2">X</td>
-		<td width="7%" align="right">{{ total_vat }}</td>
-		<td width="10%" align="right">{{ total_brutto }}</td>
+		<td width="7%" align="right">{{ total_vat|floatformat:2 }}</td>
+		<td width="10%" align="right">{{ total_brutto|floatformat:2 }}</td>
 	</tr>	
 </table>
 <br />
