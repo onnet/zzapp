@@ -144,14 +144,16 @@ generate_docs(AccountId, Year, Month) ->
            ,{<<"account_addr">>, address_to_line(AccOnbillDoc)}
            ,{<<"total_netto">>, price_round(TotalNetto)}
            ,{<<"total_vat">>, price_round(TotalVAT)}
+           ,{<<"total_vat_words">>, unicode:characters_to_binary(amount_into_words:render(12), unicode, utf8)}
            ,{<<"total_brutto">>, price_round(TotalBrutto)}
            ,{<<"doc_number">>, <<"13">>}
            ,{<<"vat_rate">>, wh_json:get_value(<<"vat_rate">>, OnbillCfg, 0.0)}
+           ,{<<"currency1">>, wh_json:get_value(<<"currency1">>, OnbillCfg)}
            ,{<<"agrm_num">>, wh_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccOnbillDoc)}
            ,{<<"agrm_date">>, wh_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccOnbillDoc)}
            ,{<<"doc_date">>, <<"31.",(wh_util:pad_month(Month))/binary,".",(wh_util:to_binary(Year))/binary>>}
            ,{<<"start_date">>, <<"01.",(wh_util:pad_month(Month))/binary,".",(wh_util:to_binary(Year))/binary>>}
-           ,{<<"end_date">>, <<"31.03.2016">>}
+           ,{<<"end_date">>, <<(wh_util:to_binary(calendar:last_day_of_the_month(Year, Month)))/binary,".",(wh_util:pad_month(Month))/binary,".",(wh_util:to_binary(Year))/binary>>}
            ] 
            ++ [{Key, wh_json:get_value(Key, TplDoc)} || Key <- wh_json:get_keys(TplDoc), filter_vars(Key)]
            ++ [{Key, wh_json:get_value(Key, AccOnbillDoc)} || Key <- wh_json:get_keys(AccOnbillDoc), filter_vars(Key)],

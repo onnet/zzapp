@@ -81,6 +81,9 @@ validate_generate(Context, Year, Month) when Year == 'undefined' orelse Month ==
       ,Context
      );
 
+validate_generate(Context, Year, Month) when is_float(Year) orelse is_float(Month) ->
+    validate_generate(Context, wh_util:to_integer(Year), wh_util:to_integer(Month));
+
 validate_generate(Context, Year, Month) ->
     AccountId = cb_context:account_id(Context),
     onbill_util:generate_docs(AccountId, Year, Month),
