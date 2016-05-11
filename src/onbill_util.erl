@@ -47,7 +47,7 @@ get_template(TemplateId, Carrier) ->
     end.
 
 default_template(TemplateId) ->
-    FilePath = <<"applications/onbill/priv/templates/ru/", (wh_util:to_binary(TemplateId))/binary, ".html">>,
+    FilePath = <<"applications/onbill/priv/templates/ru/", (wh_util:to_binary(TemplateId))/binary, ".tpl">>,
     {'ok', Data} = file:read_file(FilePath),
     Data.
 
