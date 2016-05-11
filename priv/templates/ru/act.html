@@ -46,7 +46,10 @@
                 <td width="14%"><h4 align="center">{{ total_vat|floatformat:2 }}</h4></td>
         </tr>
  </table>
-<br />Всего оказано услуг на сумму: {{ total_brutto_div }} руб. {{ total_brutto_rem }} коп., в т.ч. НДС({{ vat_rate }}%) — {% if total_vat_div %}{{ total_vat_div }} руб.{% endif %} {{ total_vat_rem }} коп.
+<br />Всего оказано услуг на сумму:
+{% if total_brutto_div %}{{ total_brutto_div }}{% else %}00{% endif %} руб. {% if total_brutto_rem %}{{ total_brutto_rem }}{% else %}00{% endif %} коп.,
+в т.ч. НДС({{ vat_rate }}%) —
+{% if total_vat_div %}{{ total_vat_div }}{% else %}00{% endif %} руб. {% if total_vat_rem %}{{ total_vat_rem }}{% else %}00{% endif %} коп.
 <br />
 <br />
 <h4 align="center">Указанные услуги полностью соответствуют условиям Договора. <br />
