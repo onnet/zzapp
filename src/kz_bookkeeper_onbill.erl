@@ -40,7 +40,7 @@ sync(Timestamp, Year, Month, Day, [], AccountId, Acc, Items) ->
     end,
     'ok';
 sync(Timestamp, Year, Month, Day, [ServiceItem|ServiceItems], AccountId, Acc, Items) ->
-    JObj = kz_service_item:bookkeeper(<<"onnet">>, ServiceItem),
+    JObj = kz_service_item:bookkeeper(<<"onbill">>, ServiceItem),
     case {kz_json:get_value(<<"plan">>, JObj), kz_json:get_value(<<"addon">>, JObj)} of
         {'undefined', _} ->
             lager:debug("sync service item had no plan id: ~p", [ServiceItem]),
