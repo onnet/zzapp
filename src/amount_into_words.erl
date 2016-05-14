@@ -1,3 +1,6 @@
+%%
+%% Taken from here: https://github.com/dixel/erl-amount-in-ru-words
+%%
 -module(amount_into_words).
 
 -export([render/1]).
