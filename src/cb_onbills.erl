@@ -86,7 +86,7 @@ validate_generate(Context, Year, Month) when is_float(Year) orelse is_float(Mont
 
 validate_generate(Context, Year, Month) ->
     AccountId = cb_context:account_id(Context),
-    onbill_util:generate_docs(AccountId, Year, Month),
+    fees_and_docs:generate_docs(AccountId, Year, Month),
     cb_context:set_resp_status(Context, 'success').
 
 -spec validate_onbills(cb_context:context(), http_method()) -> cb_context:context().
