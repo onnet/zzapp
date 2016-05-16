@@ -5,27 +5,29 @@
          ,monthly_fees/1
          ,days_sequence_reduce/1
          ,generate_docs/3
+         ,get_template/2
+         ,process_per_minute_calls/1
         ]).
 
 -include("onbill.hrl").
 
 get_template(TemplateId, Carrier) ->
-    case kz_datamgr:fetch_attachment(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES(Carrier), <<(kz_util:to_binary(TemplateId))/binary, ".tpl">>) of
+    case kz_datamgr:fetch_attachment(?ONBILL_DB, ?CARRIER_DOC(Carrier), <<(kz_util:to_binary(TemplateId))/binary, ".tpl">>) of
         {'ok', Template} -> Template;
         {error, not_found} ->
             Template = default_template(TemplateId),
-            case kz_datamgr:open_doc(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES(Carrier)) of
+            case kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)) of
                 {'ok', _} ->
                     'ok';
                 {'error', 'not_found'} ->
-                    NewDoc = kz_json:set_values([{<<"_id">>, ?MOD_CONFIG_TEMLATES(Carrier)}
+                    NewDoc = kz_json:set_values([{<<"_id">>, ?CARRIER_DOC(Carrier)}
                                                  ,{<<"carrier_name">>,<<"this_doc_carrier_Name">>}
                                                 ]
                                                 ,kz_json:new()),
-                    kz_datamgr:ensure_saved(?SYSTEM_CONFIG_DB, NewDoc)
+                    kz_datamgr:ensure_saved(?ONBILL_DB, NewDoc)
             end,
-            kz_datamgr:put_attachment(?SYSTEM_CONFIG_DB
-                                     ,?MOD_CONFIG_TEMLATES(Carrier)
+            kz_datamgr:put_attachment(?ONBILL_DB
+                                     ,?CARRIER_DOC(Carrier)
                                      ,<<(kz_util:to_binary(TemplateId))/binary, ".tpl">>
                                      ,Template
                                      ,[{'content_type', <<"text/html">>}]
@@ -93,7 +95,7 @@ save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->
 generate_docs(AccountId, Year, Month) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     Carrier = <<"onnet">>,
-    {'ok', TplDoc} =  kz_datamgr:open_doc(?SYSTEM_CONFIG_DB, ?MOD_CONFIG_TEMLATES(Carrier)),
+    {'ok', TplDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)),
     {'ok', OnbillCfg} =  kz_datamgr:open_doc(?ONBILL_DB, ?ONBILL_CONFIG),
     {'ok', AccOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, AccountId),
     Docs = ['invoice', 'act'],
@@ -213,7 +215,7 @@ monthly_fees(Db) ->
     DaysInMonth = calendar:last_day_of_the_month(Year, Month),
     Modb = kz_util:format_account_modb(Db, 'encoded'),
     RawModb = kz_util:format_account_modb(Db, 'raw'),
-    _ = onnet_util:maybe_add_design_doc(Modb),
+    _ = onbill_util:maybe_add_design_doc(Modb),
     RawTableId = ets:new(erlang:binary_to_atom(<<RawModb/binary,"-raw">>, 'latin1'), [duplicate_bag]),
     ResultTableId = ets:new(erlang:binary_to_atom(<<RawModb/binary,"-result">>, 'latin1'), [bag]),
     case kz_datamgr:get_results(Modb, <<"onbills/daily_fees">>, []) of
@@ -226,6 +228,14 @@ monthly_fees(Db) ->
     ets:delete(RawTableId),
     ets:delete(ResultTableId),
     services_to_proplist(ServicesList, Year, Month, DaysInMonth).
+
+process_per_minute_calls(Modb) ->
+    case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, []) of
+        {'error', 'not_found'} ->
+             lager:warning("no per_minute_calls found in Modb: ~s", [Modb]),
+             [];
+        {'ok', JObjs } -> [{JObj, Modb} || JObj <- JObjs] 
+    end.
 
 process_one_time_fees(Modb) ->
     case kz_datamgr:get_results(Modb, <<"onbills/one_time_fees">>, []) of
