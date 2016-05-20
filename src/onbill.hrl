@@ -13,6 +13,7 @@
 -define(MOD_CONFIG_CRAWLER, <<(?APP_NAME)/binary, ".account_crawler">>).
 -define(SYSTEM_CONFIG_DB, <<"system_config">>).
 -define(HTML_TO_PDF(TemplateId), <<"php applications/onbill/priv/templates/ru/", (kz_util:to_binary(TemplateId))/binary, ".php">>).
+-define(DEFAULT_REGEX, <<"^\\d*$">>).
 
 -define(ONBILL_HRL, 'true').
 -endif.

@@ -2,11 +2,11 @@
 
 -export([create_pdf/4
          ,save_pdf/6
-         ,monthly_fees/1
+         ,monthly_fees/2
          ,days_sequence_reduce/1
          ,generate_docs/3
          ,get_template/2
-         ,process_per_minute_calls/1
+         ,process_per_minute_calls/2
         ]).
 
 -include("onbill.hrl").
@@ -95,11 +95,11 @@ save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->
 generate_docs(AccountId, Year, Month) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     Carrier = <<"onnet">>,
-    {'ok', TplDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)),
+    {'ok', CarrierDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)),
     {'ok', OnbillGlobalVars} =  kz_datamgr:open_doc(?ONBILL_DB, ?ONBILL_GLOBAL_VARIABLES),
     {'ok', AccOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, AccountId),
     Docs = ['invoice', 'act'],
-    VatUpdatedFeesList = enhance_fees(monthly_fees(Modb), OnbillGlobalVars),
+    VatUpdatedFeesList = enhance_fees(monthly_fees(Modb, CarrierDoc), OnbillGlobalVars),
     {TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
                                                         {TN_Acc + props:get_value(<<"cost_netto">>, X)
                                                          ,VAT_Acc + props:get_value(<<"vat_line_total">>, X)
@@ -129,7 +129,7 @@ generate_docs(AccountId, Year, Month) ->
            ,{<<"start_date">>, <<"01.",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>}
            ,{<<"end_date">>, <<(kz_util:to_binary(calendar:last_day_of_the_month(Year, Month)))/binary,".",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>}
            ] 
-           ++ [{Key, kz_json:get_value(Key, TplDoc)} || Key <- kz_json:get_keys(TplDoc), filter_vars(Key)]
+           ++ [{Key, kz_json:get_value(Key, CarrierDoc)} || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccOnbillDoc)} || Key <- kz_json:get_keys(AccOnbillDoc), filter_vars(Key)],
     [save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) || TemplateId <- Docs].
 
@@ -210,7 +210,7 @@ address_join([Part], _Sep) ->
 address_join([Head|Tail], Sep) ->
   lists:foldl(fun (Value, Acc) -> <<Acc/binary, Sep/binary, Value/binary>> end, Head, Tail).
 
-monthly_fees(Db) ->
+monthly_fees(Db, _CarrierDoc) ->
     {_, Year, Month} = kazoo_modb_util:split_account_mod(Db),
     DaysInMonth = calendar:last_day_of_the_month(Year, Month),
     Modb = kz_util:format_account_modb(Db, 'encoded'),
@@ -229,13 +229,20 @@ monthly_fees(Db) ->
     ets:delete(ResultTableId),
     services_to_proplist(ServicesList, Year, Month, DaysInMonth).
 
-process_per_minute_calls(Modb) ->
+process_per_minute_calls(Modb, CarrierDoc) ->
     case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, []) of
         {'error', 'not_found'} ->
              lager:warning("no per_minute_calls found in Modb: ~s", [Modb]),
              [];
-        {'ok', JObjs } -> [{JObj, Modb} || JObj <- JObjs] 
+        {'ok', JObjs } ->
+            RegexFrom = kz_json:get_value(<<"caller_number_regex">>, CarrierDoc, <<"^\\d*$">>),
+            RegexTo = kz_json:get_value(<<"called_number_regex">>, CarrierDoc, <<"^\\d*$">>),
+            CallsTotalSumm = lists:foldl(fun(X, Acc) -> Acc + maybe_count_call(RegexFrom, RegexTo, X) end, 0, JObjs),
+            {CallsTotalSumm} 
     end.
+
+maybe_count_call(_RegexFrom, _RegexTo, _JObj) ->
+    0.
 
 process_one_time_fees(Modb) ->
     case kz_datamgr:get_results(Modb, <<"onbills/one_time_fees">>, []) of

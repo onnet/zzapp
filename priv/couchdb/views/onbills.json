@@ -12,7 +12,7 @@
             "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason == 'daily_fee' || doc.pvt_reason == 'per_minute_call' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"
         },
         "per_minute_call": {
-            "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason != 'per_minute_call' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name, amount: doc.pvt_amount, from: doc.metadata.from, to: doc.metadata.to}); }"
+            "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason != 'per_minute_call' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name, amount: doc.pvt_amount, from: doc.metadata.caller_id_number, to: doc.metadata.callee_id_number, rate: doc.metadata.rate, rate_name: doc.metadata.rate_name, rate_increment: doc.metadata.rate_increment, rate_minimum: doc.metadata.rate_minimum }); }"
         }
     }
 }
