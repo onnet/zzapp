@@ -37,6 +37,16 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
     {'noreply', State}.
 
+handle_info('crawl_accounts', _) ->
+    _ = case kz_datamgr:all_docs(?KZ_ACCOUNTS_DB) of
+            {'ok', JObjs} ->
+                self() ! 'next_account',
+                {'noreply', kz_util:shuffle_list(JObjs)};
+            {'error', _R} ->
+                lager:warning("unable to list all docs in ~s: ~p", [?KZ_ACCOUNTS_DB, _R]),
+                self() ! 'next_account',
+                {'noreply', []}
+        end;
 handle_info('next_account', []) ->
     NextDay = calendar:datetime_to_gregorian_seconds({erlang:date(),{0,45,0}}) + ?SECONDS_IN_DAY,
     Cycle = NextDay - calendar:datetime_to_gregorian_seconds(erlang:localtime()),
@@ -52,16 +62,6 @@ handle_info('next_account', [Account|Accounts]) ->
     Cycle = kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"interaccount_delay">>, 10 * ?MILLISECONDS_IN_SECOND),
     erlang:send_after(Cycle, self(), 'next_account'),
     {'noreply', Accounts, 'hibernate'};
-handle_info('crawl_accounts', _) ->
-    _ = case kz_datamgr:all_docs(?KZ_ACCOUNTS_DB) of
-            {'ok', JObjs} ->
-                self() ! 'next_account',
-                {'noreply', kz_util:shuffle_list(JObjs)};
-            {'error', _R} ->
-                lager:warning("unable to list all docs in ~s: ~p", [?KZ_ACCOUNTS_DB, _R]),
-                self() ! 'next_account',
-                {'noreply', []}
-        end;
 handle_info(_Info, State) ->
     lager:debug("unhandled msg: ~p", [_Info]),
     {'noreply', State}.
