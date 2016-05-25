@@ -153,7 +153,7 @@
 <!-- begin_item -->
 {% for fee_line in monthly_fees %}
 <tr>
-		<td width="23%">{{ fee_line.name }} {{ fee_line.period }}.{{ fee_line.month_pad }}.{{ fee_line.year }}</td>
+		<td width="23%">{{ fee_line.name }} {% if fee_line.period %}{{ fee_line.period }}.{{ fee_line.month_pad }}.{{ fee_line.year }}{% endif %}</td>
 		<td width="3%" align="center">{{ fee_line.code_number }}</td>
 		<td width="8%" align="center">{{ fee_line.code_name }}</td>
 		<td width="5%" align="right">{{ fee_line.quantity }}</td>

@@ -6,7 +6,7 @@
          ,days_sequence_reduce/1
          ,generate_docs/3
          ,get_template/2
-         ,process_per_minute_calls/2
+         ,process_per_minute_calls/5
          ,process_one_time_fees/1
         ]).
 
@@ -224,13 +224,13 @@ monthly_fees(Db, CarrierDoc) ->
         {'ok', JObjs } -> [process_daily_fee(JObj, Modb, RawTableId) || JObj <- JObjs] 
     end,
     _ = process_ets(RawTableId, ResultTableId),
-    ServicesList = ets:tab2list(ResultTableId) ++ process_one_time_fees(Db) ++ process_per_minute_calls(Modb, CarrierDoc),
+    ServicesList = ets:tab2list(ResultTableId) ++ process_one_time_fees(Db),
     [lager:info("Result Table Line: ~p",[Service]) || Service <- ServicesList],
     ets:delete(RawTableId),
     ets:delete(ResultTableId),
-    services_to_proplist(ServicesList, Year, Month, DaysInMonth).
+    services_to_proplist(ServicesList, Year, Month, DaysInMonth) ++ process_per_minute_calls(Modb, CarrierDoc, Year, Month, DaysInMonth).
 
-process_per_minute_calls(Modb, CarrierDoc) ->
+process_per_minute_calls(Modb, CarrierDoc, Year, Month, DaysInMonth) ->
     case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, []) of
         {'error', 'not_found'} ->
              lager:warning("no per_minute_calls found in Modb: ~s", [Modb]),
@@ -239,18 +239,21 @@ process_per_minute_calls(Modb, CarrierDoc) ->
             RegexFrom = kz_json:get_value(<<"caller_number_regex">>, CarrierDoc, <<"^\\d*$">>),
             RegexTo = kz_json:get_value(<<"called_number_regex">>, CarrierDoc, <<"^\\d*$">>),
             {CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(RegexFrom, RegexTo, X, Acc) end, {0,0}, JObjs),
-            [{<<"per-minute-voip">>
-             ,<<"description">>
-             ,wht_util:units_to_dollars(CallsTotalSumm)
-             ,kz_util:to_integer(CallsTotalSec / 60)
-             ,<<"33">>
-             ,31
-             ,<<"Per minute calls">>
-            }]
+            per_minute_to_line({<<"per-minute-voip">>
+                               ,<<"description">>
+                               ,wht_util:units_to_dollars(CallsTotalSumm)
+                               ,kz_util:to_integer(CallsTotalSec / 60)
+                               ,<<"">>
+                               ,DaysInMonth
+                               ,kz_json:get_value(<<"per_minute_item_name">>, CarrierDoc, <<"Per minute calls">>)
+                               }
+                               ,Year
+                               ,Month
+                               ,DaysInMonth
+                              )
     end.
 
 maybe_count_call(_RegexFrom, _RegexTo, JObj, {ASec, AAmount}) ->
-lager:info("IAM JObj: ~p",[JObj]),
     {ASec + kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0)
      ,AAmount + kz_json:get_integer_value([<<"value">>,<<"cost">>], JObj, 0)
     }.
@@ -387,3 +390,18 @@ service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name}, Yea
     ,{<<"month_pad">>, kz_util:pad_month(Month)}
     ,{<<"year">>, Year}
     ]] ++ Acc.
+
+per_minute_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, Name}, Year, Month, DaysInMonth) ->
+    [[{<<"category">>, ServiceType}
+    ,{<<"item">>, Item}
+    ,{<<"name">>, Name}
+    ,{<<"cost">>, Cost}
+    ,{<<"rate">>, Cost / Quantity}
+    ,{<<"quantity">>, Quantity}
+    ,{<<"period">>, Period}
+    ,{<<"days_quantity">>, DaysQty}
+    ,{<<"days_in_month">>, DaysInMonth}
+    ,{<<"month">>, Month}
+    ,{<<"month_pad">>, kz_util:pad_month(Month)}
+    ,{<<"year">>, Year}
+    ]].
