@@ -7,6 +7,7 @@
          ,generate_docs/3
          ,get_template/2
          ,process_per_minute_calls/2
+         ,process_one_time_fees/1
         ]).
 
 -include("onbill.hrl").
@@ -210,7 +211,7 @@ address_join([Part], _Sep) ->
 address_join([Head|Tail], Sep) ->
   lists:foldl(fun (Value, Acc) -> <<Acc/binary, Sep/binary, Value/binary>> end, Head, Tail).
 
-monthly_fees(Db, _CarrierDoc) ->
+monthly_fees(Db, CarrierDoc) ->
     {_, Year, Month} = kazoo_modb_util:split_account_mod(Db),
     DaysInMonth = calendar:last_day_of_the_month(Year, Month),
     Modb = kz_util:format_account_modb(Db, 'encoded'),
@@ -223,7 +224,7 @@ monthly_fees(Db, _CarrierDoc) ->
         {'ok', JObjs } -> [process_daily_fee(JObj, Modb, RawTableId) || JObj <- JObjs] 
     end,
     _ = process_ets(RawTableId, ResultTableId),
-    ServicesList = ets:tab2list(ResultTableId) ++ process_one_time_fees(Db),
+    ServicesList = ets:tab2list(ResultTableId) ++ process_one_time_fees(Db) ++ process_per_minute_calls(Modb, CarrierDoc),
     [lager:info("Result Table Line: ~p",[Service]) || Service <- ServicesList],
     ets:delete(RawTableId),
     ets:delete(ResultTableId),
@@ -237,12 +238,22 @@ process_per_minute_calls(Modb, CarrierDoc) ->
         {'ok', JObjs } ->
             RegexFrom = kz_json:get_value(<<"caller_number_regex">>, CarrierDoc, <<"^\\d*$">>),
             RegexTo = kz_json:get_value(<<"called_number_regex">>, CarrierDoc, <<"^\\d*$">>),
-            CallsTotalSumm = lists:foldl(fun(X, Acc) -> Acc + maybe_count_call(RegexFrom, RegexTo, X) end, 0, JObjs),
-            {CallsTotalSumm} 
+            {CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(RegexFrom, RegexTo, X, Acc) end, {0,0}, JObjs),
+            [{<<"per-minute-voip">>
+             ,<<"description">>
+             ,wht_util:units_to_dollars(CallsTotalSumm)
+             ,kz_util:to_integer(CallsTotalSec / 60)
+             ,<<"33">>
+             ,31
+             ,<<"Per minute calls">>
+            }]
     end.
 
-maybe_count_call(_RegexFrom, _RegexTo, _JObj) ->
-    0.
+maybe_count_call(_RegexFrom, _RegexTo, JObj, {ASec, AAmount}) ->
+lager:info("IAM JObj: ~p",[JObj]),
+    {ASec + kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0)
+     ,AAmount + kz_json:get_integer_value([<<"value">>,<<"cost">>], JObj, 0)
+    }.
 
 process_one_time_fees(Modb) ->
     case kz_datamgr:get_results(Modb, <<"onbills/one_time_fees">>, []) of
