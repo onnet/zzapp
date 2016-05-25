@@ -6,8 +6,6 @@
          ,days_sequence_reduce/1
          ,generate_docs/3
          ,get_template/2
-         ,process_per_minute_calls/5
-         ,process_one_time_fees/1
         ]).
 
 -include("onbill.hrl").
@@ -22,7 +20,8 @@ get_template(TemplateId, Carrier) ->
                     'ok';
                 {'error', 'not_found'} ->
                     NewDoc = kz_json:set_values([{<<"_id">>, ?CARRIER_DOC(Carrier)}
-                                                 ,{<<"carrier_name">>,<<"this_doc_carrier_Name">>}
+                                                 ,{<<"called_number_regex">>,<<"^\\d*$">>}
+                                                 ,{<<"callee_number_regex">>,<<"^\\d*$">>}
                                                 ]
                                                 ,kz_json:new()),
                     kz_datamgr:ensure_saved(?ONBILL_DB, NewDoc)
@@ -239,7 +238,7 @@ process_per_minute_calls(Modb, CarrierDoc, Year, Month, DaysInMonth) ->
             RegexFrom = kz_json:get_value(<<"caller_number_regex">>, CarrierDoc, <<"^\\d*$">>),
             RegexTo = kz_json:get_value(<<"called_number_regex">>, CarrierDoc, <<"^\\d*$">>),
             {CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(RegexFrom, RegexTo, X, Acc) end, {0,0}, JObjs),
-            per_minute_to_line({<<"per-minute-voip">>
+            aggregated_service_to_line({<<"per-minute-voip">>
                                ,<<"description">>
                                ,wht_util:units_to_dollars(CallsTotalSumm)
                                ,kz_util:to_integer(CallsTotalSec / 60)
@@ -253,10 +252,23 @@ process_per_minute_calls(Modb, CarrierDoc, Year, Month, DaysInMonth) ->
                               )
     end.
 
-maybe_count_call(_RegexFrom, _RegexTo, JObj, {ASec, AAmount}) ->
-    {ASec + kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0)
-     ,AAmount + kz_json:get_integer_value([<<"value">>,<<"cost">>], JObj, 0)
-    }.
+maybe_count_call(RegexFrom, RegexTo, JObj, {ASec, AAmount}) ->
+    case maybe_interesting_call(RegexFrom, RegexTo, JObj) of
+        'true' ->
+            {ASec + kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0)
+             ,AAmount + kz_json:get_integer_value([<<"value">>,<<"cost">>], JObj, 0)
+            };
+        _ -> 
+            {ASec ,AAmount}
+    end.
+
+maybe_interesting_call(RegexFrom, RegexTo, JObj) ->
+    From = kz_json:get_binary_value([<<"value">>,<<"from">>], JObj, <<>>),
+    To = kz_json:get_binary_value([<<"value">>,<<"to">>], JObj, <<>>),
+    case {re:run(From, RegexFrom), re:run(To, RegexTo)} of
+        {{'match',_}, {'match',_}} -> 'true';
+        _ -> 'false'
+    end.
 
 process_one_time_fees(Modb) ->
     case kz_datamgr:get_results(Modb, <<"onbills/one_time_fees">>, []) of
@@ -391,7 +403,7 @@ service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name}, Yea
     ,{<<"year">>, Year}
     ]] ++ Acc.
 
-per_minute_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, Name}, Year, Month, DaysInMonth) ->
+aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, Name}, Year, Month, DaysInMonth) when Cost > 0.0, Quantity > 0.0 ->
     [[{<<"category">>, ServiceType}
     ,{<<"item">>, Item}
     ,{<<"name">>, Name}
@@ -404,4 +416,6 @@ per_minute_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, Name}, Y
     ,{<<"month">>, Month}
     ,{<<"month_pad">>, kz_util:pad_month(Month)}
     ,{<<"year">>, Year}
-    ]].
+    ]];
+aggregated_service_to_line(_, _, _, _) ->
+    [].
