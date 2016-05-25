@@ -28,7 +28,7 @@
 {% for fee_line in monthly_fees %}
         <tr>
                 <td width="5%"><h4 align="center">{{ forloop.counter }}</h4></td>
-                <TD WIDTH="44%">{{ fee_line.name }} {{ fee_line.period }}.{{ fee_line.month_pad }}.{{ fee_line.year }}</td>
+                <TD WIDTH="44%">{{ fee_line.name }} {% if fee_line.period %}{{ fee_line.period }}.{{ fee_line.month_pad }}.{{ fee_line.year }}{% endif %}</td>
                 <TD WIDTH="8%"><h4 align="center">{{ fee_line.code_name }}</h4></td>
                 <TD WIDTH="14%"><h4 align="center">{{ fee_line.quantity }}</h4></td>
                 <TD WIDTH="14%"><h4 align="center">{{ fee_line.rate_brutto|floatformat:2 }}</h4></td>
