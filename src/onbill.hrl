@@ -9,10 +9,12 @@
 -define(ONBILL_DB, <<"onbill">>).
 -define(ONBILL_GLOBAL_VARIABLES, <<"onbill_global_variables">>).
 -define(ONBILL_DOC, <<"onbill">>).
--define(CARRIER_DOC(CarrierName), <<"carrier.", (kz_util:to_binary(CarrierName))/binary>>).
+-define(CARRIER_DOC(CarrierName), <<"carrier.", CarrierName/binary>>).
 -define(MOD_CONFIG_CRAWLER, <<(?APP_NAME)/binary, ".account_crawler">>).
 -define(SYSTEM_CONFIG_DB, <<"system_config">>).
--define(HTML_TO_PDF(TemplateId), <<"php applications/onbill/priv/templates/ru/", (kz_util:to_binary(TemplateId))/binary, ".php">>).
+-define(DOC_NAME_FORMAT(Carrier, TemplateID), <<Carrier/binary, "_", TemplateId/binary>>).
+-define(HTML_TO_PDF(TemplateId), <<"php applications/onbill/priv/templates/ru/", TemplateId/binary, ".php">>).
+-define(HTML_TO_PDF(TemplateId, Carrier), <<"php applications/onbill/priv/templates/ru/", Carrier/binary, "_", TemplateId/binary, ".php">>).
 -define(DEFAULT_REGEX, <<"^\\d*$">>).
 
 -define(ONBILL_HRL, 'true').
