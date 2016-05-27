@@ -11,7 +11,7 @@
 -include("onbill.hrl").
 
 get_template(TemplateId, Carrier) ->
-    case kz_datamgr:fetch_attachment(?ONBILL_DB, ?CARRIER_DOC(Carrier), <<Carrier/binary, "_", TemplateId/binary, ".tpl">>) of
+    case kz_datamgr:fetch_attachment(?ONBILL_DB, ?CARRIER_DOC(Carrier), <<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".tpl">>) of
         {'ok', Template} -> Template;
         {error, not_found} ->
             Template = default_template(TemplateId, Carrier),
@@ -28,7 +28,7 @@ get_template(TemplateId, Carrier) ->
             end,
             kz_datamgr:put_attachment(?ONBILL_DB
                                      ,?CARRIER_DOC(Carrier)
-                                     ,<<Carrier/binary, "_", TemplateId/binary, ".tpl">>
+                                     ,<<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".tpl">>
                                      ,Template
                                      ,[{'content_type', <<"text/html">>}]
                                     ),
@@ -36,7 +36,7 @@ get_template(TemplateId, Carrier) ->
     end.
 
 default_template(TemplateId, Carrier) ->
-    CarrierFilePath = <<"applications/onbill/priv/templates/ru/", Carrier/binary, "_", TemplateId/binary, ".tpl">>,
+    CarrierFilePath = <<"applications/onbill/priv/templates/ru/", (?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".tpl">>,
     case file:read_file(CarrierFilePath) of
         {'ok', CarrierData} -> CarrierData;
         _ ->
@@ -46,7 +46,7 @@ default_template(TemplateId, Carrier) ->
     end.
 
 prepare_tpl(Vars, TemplateId, Carrier) ->
-    ErlyMod = erlang:binary_to_atom(<<Carrier/binary, "_", TemplateId/binary>>, 'latin1'),
+    ErlyMod = erlang:binary_to_atom(?DOC_NAME_FORMAT(Carrier, TemplateId), 'latin1'),
     try erlydtl:compile_template(get_template(TemplateId, Carrier), ErlyMod, [{'out_dir', 'false'},'return']) of
         {ok, ErlyMod} -> render_tpl(ErlyMod, Vars);
         {ok, ErlyMod,[]} -> render_tpl(ErlyMod, Vars); 
@@ -67,7 +67,7 @@ render_tpl(ErlyMod, Vars) ->
 
 create_pdf(Vars, TemplateId, Carrier, AccountId) ->
     Rand = kz_util:rand_hex_binary(5),
-    Prefix = <<AccountId/binary, "-", Carrier/binary, "_", TemplateId/binary, "-", Rand/binary>>,
+    Prefix = <<AccountId/binary, "-", (?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, "-", Rand/binary>>,
     HTMLFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".html">>]),
     PDFFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".pdf">>]),
     HTMLTpl = prepare_tpl(Vars, TemplateId, Carrier),
