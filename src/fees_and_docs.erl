@@ -145,8 +145,8 @@ generate_docs(AccountId, Year, Month, Carrier) ->
            ] 
            ++ [{Key, kz_json:get_value(Key, CarrierDoc)} || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
-    [save_pdf(Vars, DocName, Carrier, AccountId, Year, Month)
-     || DocName <- kz_json:get_value(<<"documents">>, CarrierDoc)
+    [save_pdf(Vars ++ [{<<"this_document">>, Document}], Document, Carrier, AccountId, Year, Month)
+     || Document <- kz_json:get_value(<<"documents">>, CarrierDoc)
     ].
 
 enhance_fees(FeesList, OnbillGlobalVars) ->
