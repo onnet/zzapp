@@ -1,10 +1,6 @@
 -module(fees_and_docs).
 
--export([create_pdf/4
-         ,save_pdf/6
-         ,days_sequence_reduce/1
-         ,generate_docs/3
-         ,get_template/2
+-export([generate_docs/3
         ]).
 
 -include("onbill.hrl").
@@ -113,7 +109,7 @@ generate_docs(AccountId, Year, Month, Carrier) ->
     {'ok', CarrierDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)),
     {'ok', OnbillGlobalVars} =  kz_datamgr:open_doc(?ONBILL_DB, ?ONBILL_GLOBAL_VARIABLES),
     {'ok', AccountOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, AccountId),
-    VatUpdatedFeesList = enhance_fees(maybe_monthly_fees(Modb, CarrierDoc, Year, Month, DaysInMonth), OnbillGlobalVars),
+    VatUpdatedFeesList = shape_fees(Modb, CarrierDoc, Year, Month, DaysInMonth, OnbillGlobalVars),
     {TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
                                                         {TN_Acc + props:get_value(<<"cost_netto">>, X)
                                                          ,VAT_Acc + props:get_value(<<"vat_line_total">>, X)
@@ -149,7 +145,8 @@ generate_docs(AccountId, Year, Month, Carrier) ->
      || Document <- kz_json:get_value(<<"documents">>, CarrierDoc)
     ].
 
-enhance_fees(FeesList, OnbillGlobalVars) ->
+shape_fees(Modb, CarrierDoc, Year, Month, DaysInMonth, OnbillGlobalVars) ->
+    FeesList = maybe_monthly_fees(Modb, CarrierDoc, Year, Month, DaysInMonth),
     case kz_json:get_value(<<"vat_disposition">>, OnbillGlobalVars) of
         <<"netto">> ->
             [enhance_vat_netto(FeeLine, OnbillGlobalVars) ++ enhance_extra_codes(FeeLine, OnbillGlobalVars) || FeeLine <- FeesList];
