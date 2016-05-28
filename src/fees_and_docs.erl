@@ -2,7 +2,6 @@
 
 -export([create_pdf/4
          ,save_pdf/6
-         ,monthly_fees/2
          ,days_sequence_reduce/1
          ,generate_docs/3
          ,get_template/2
@@ -109,11 +108,12 @@ generate_docs(AccountId, Year, Month) ->
     [generate_docs(AccountId, Year, Month, Carrier) || Carrier <- kz_json:get_value(<<"carriers">>, ResellerOnbillDoc, [])].
 
 generate_docs(AccountId, Year, Month, Carrier) ->
+    DaysInMonth = calendar:last_day_of_the_month(Year, Month),
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     {'ok', CarrierDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)),
     {'ok', OnbillGlobalVars} =  kz_datamgr:open_doc(?ONBILL_DB, ?ONBILL_GLOBAL_VARIABLES),
     {'ok', AccountOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, AccountId),
-    VatUpdatedFeesList = enhance_fees(monthly_fees(Modb, CarrierDoc), OnbillGlobalVars),
+    VatUpdatedFeesList = enhance_fees(maybe_monthly_fees(Modb, CarrierDoc, Year, Month, DaysInMonth), OnbillGlobalVars),
     {TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
                                                         {TN_Acc + props:get_value(<<"cost_netto">>, X)
                                                          ,VAT_Acc + props:get_value(<<"vat_line_total">>, X)
@@ -226,11 +226,20 @@ address_join([Part], _Sep) ->
 address_join([Head|Tail], Sep) ->
   lists:foldl(fun (Value, Acc) -> <<Acc/binary, Sep/binary, Value/binary>> end, Head, Tail).
 
-monthly_fees(Db, CarrierDoc) ->
-    {_, Year, Month} = kazoo_modb_util:split_account_mod(Db),
-    DaysInMonth = calendar:last_day_of_the_month(Year, Month),
-    Modb = kz_util:format_account_modb(Db, 'encoded'),
-    RawModb = kz_util:format_account_modb(Db, 'raw'),
+maybe_monthly_fees(Modb, CarrierDoc, Year, Month, DaysInMonth) ->
+    case maybe_main_carrier(CarrierDoc) of
+        'true' -> monthly_fees(Modb, Year, Month, DaysInMonth) ++ process_per_minute_calls(Modb, CarrierDoc, Year, Month, DaysInMonth);
+        _ -> process_per_minute_calls(Modb, CarrierDoc, Year, Month, DaysInMonth)
+    end.
+
+maybe_main_carrier(CarrierDoc) ->
+    case kz_json:get_value(<<"carrier_type">>, CarrierDoc) of
+        <<"main">> -> 'true';
+        _ -> 'false'
+    end.
+ 
+monthly_fees(Modb, Year, Month, DaysInMonth) ->
+    RawModb = kz_util:format_account_modb(Modb, 'raw'),
     _ = onbill_util:maybe_add_design_doc(Modb),
     RawTableId = ets:new(erlang:binary_to_atom(<<RawModb/binary,"-raw">>, 'latin1'), [duplicate_bag]),
     ResultTableId = ets:new(erlang:binary_to_atom(<<RawModb/binary,"-result">>, 'latin1'), [bag]),
@@ -239,11 +248,11 @@ monthly_fees(Db, CarrierDoc) ->
         {'ok', JObjs } -> [process_daily_fee(JObj, Modb, RawTableId) || JObj <- JObjs] 
     end,
     _ = process_ets(RawTableId, ResultTableId),
-    ServicesList = ets:tab2list(ResultTableId) ++ process_one_time_fees(Db),
+    ServicesList = ets:tab2list(ResultTableId) ++ process_one_time_fees(Modb),
     [lager:info("Result Table Line: ~p",[Service]) || Service <- ServicesList],
     ets:delete(RawTableId),
     ets:delete(ResultTableId),
-    services_to_proplist(ServicesList, Year, Month, DaysInMonth) ++ process_per_minute_calls(Modb, CarrierDoc, Year, Month, DaysInMonth).
+    services_to_proplist(ServicesList, Year, Month, DaysInMonth).
 
 process_per_minute_calls(Modb, CarrierDoc, Year, Month, DaysInMonth) ->
     case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, []) of
