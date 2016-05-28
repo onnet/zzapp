@@ -233,6 +233,7 @@ maybe_monthly_fees(Modb, CarrierDoc, Year, Month, DaysInMonth) ->
     end.
 
 maybe_main_carrier(CarrierDoc) ->
+% {_, Year, Month} = kazoo_modb_util:split_account_mod(Db)
     case kz_json:get_value(<<"carrier_type">>, CarrierDoc) of
         <<"main">> -> 'true';
         _ -> 'false'
