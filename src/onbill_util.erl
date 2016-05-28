@@ -3,6 +3,7 @@
 -export([check_db/1
          ,maybe_add_design_doc/1
          ,get_attachment/2
+         ,price_round/1
         ]).
 
 -include("onbill.hrl").
@@ -35,3 +36,5 @@ get_attachment(AttachmentId, Db) ->
         E -> E
     end.
 
+price_round(Price) ->
+    round(Price * 100) / 100.
