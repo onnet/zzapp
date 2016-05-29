@@ -1,12 +1,18 @@
 -module(fees).
 
--export([shape_fees/6
+-export([shape_fees/4
+        ,shape_fees/5
         ]).
 
 -include("onbill.hrl").
 
-shape_fees(Modb, CarrierDoc, Year, Month, DaysInMonth, OnbillGlobalVars) ->
-    FeesList = maybe_monthly_fees(Modb, CarrierDoc, Year, Month, DaysInMonth),
+shape_fees(AccountId, Year, Month, Carrier) ->
+    CarrierDoc =  onbill_util:carrier_doc(Carrier),
+    OnbillGlobalVars = onbill_util:global_vars(),
+    shape_fees(AccountId, Year, Month, CarrierDoc, OnbillGlobalVars).
+
+shape_fees(AccountId, Year, Month, CarrierDoc, OnbillGlobalVars) ->
+    FeesList = maybe_monthly_fees(AccountId, CarrierDoc, Year, Month),
     case kz_json:get_value(<<"vat_disposition">>, OnbillGlobalVars) of
         <<"netto">> ->
             [enhance_vat_netto(FeeLine, OnbillGlobalVars) ++ enhance_extra_codes(FeeLine, OnbillGlobalVars) || FeeLine <- FeesList];
@@ -65,20 +71,22 @@ enhance_vat_brutto(FeeLine, OnbillGlobalVars) ->
                 ],
     props:set_values(NewValues, FeeLine).
 
-maybe_monthly_fees(Modb, CarrierDoc, Year, Month, DaysInMonth) ->
+maybe_monthly_fees(AccountId, CarrierDoc, Year, Month) ->
     case maybe_main_carrier(CarrierDoc) of
-        'true' -> monthly_fees(Modb, Year, Month, DaysInMonth) ++ process_per_minute_calls(Modb, CarrierDoc, Year, Month, DaysInMonth);
-        _ -> process_per_minute_calls(Modb, CarrierDoc, Year, Month, DaysInMonth)
+        'true' -> monthly_fees(AccountId, Year, Month) ++ process_per_minute_calls(AccountId, Year, Month, CarrierDoc);
+        _ -> process_per_minute_calls(AccountId, Year, Month, CarrierDoc)
     end.
 
+maybe_main_carrier(Carrier) when is_binary(Carrier) ->
+    maybe_main_carrier(onbill_util:carrier_doc(Carrier));
 maybe_main_carrier(CarrierDoc) ->
-% {_, Year, Month} = kazoo_modb_util:split_account_mod(Db)
     case kz_json:get_value(<<"carrier_type">>, CarrierDoc) of
         <<"main">> -> 'true';
         _ -> 'false'
     end.
  
-monthly_fees(Modb, Year, Month, DaysInMonth) ->
+monthly_fees(AccountId, Year, Month) ->
+    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     RawModb = kz_util:format_account_modb(Modb, 'raw'),
     _ = onbill_util:maybe_add_design_doc(Modb),
     RawTableId = ets:new(erlang:binary_to_atom(<<RawModb/binary,"-raw">>, 'latin1'), [duplicate_bag]),
@@ -92,33 +100,55 @@ monthly_fees(Modb, Year, Month, DaysInMonth) ->
     [lager:info("Result Table Line: ~p",[Service]) || Service <- ServicesList],
     ets:delete(RawTableId),
     ets:delete(ResultTableId),
-    services_to_proplist(ServicesList, Year, Month, DaysInMonth).
+    services_to_proplist(ServicesList, Year, Month).
 
-process_per_minute_calls(Modb, CarrierDoc, Year, Month, DaysInMonth) ->
+process_per_minute_calls(AccountId, Year, Month, Carrier) when is_binary(Carrier) ->
+    process_per_minute_calls(AccountId, Year, Month, onbill_util:carrier_doc(Carrier));
+process_per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
+    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, []) of
         {'error', 'not_found'} ->
              lager:warning("no per_minute_calls found in Modb: ~s", [Modb]),
              [];
         {'ok', JObjs } ->
-            RegexFrom = kz_json:get_value(<<"caller_number_regex">>, CarrierDoc, <<"^\\d*$">>),
-            RegexTo = kz_json:get_value(<<"called_number_regex">>, CarrierDoc, <<"^\\d*$">>),
-            {CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(RegexFrom, RegexTo, X, Acc) end, {0,0}, JObjs),
+            Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
+            {CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc) end, {0,0}, JObjs),
             aggregated_service_to_line({<<"per-minute-voip">>
                                ,<<"description">>
                                ,wht_util:units_to_dollars(CallsTotalSumm)
                                ,kz_util:to_integer(CallsTotalSec / 60)
                                ,<<"">>
-                               ,DaysInMonth
+                               ,calendar:last_day_of_the_month(Year, Month)
                                ,kz_json:get_value(<<"per_minute_item_name">>, CarrierDoc, <<"Per minute calls">>)
                                }
                                ,Year
                                ,Month
-                               ,DaysInMonth
                               )
     end.
 
-maybe_count_call(RegexFrom, RegexTo, JObj, {ASec, AAmount}) ->
-    case maybe_interesting_call(RegexFrom, RegexTo, JObj) of
+get_per_minute_regexes(AccountId, CarrierDoc) ->
+    case maybe_main_carrier(CarrierDoc) of
+        'true' ->
+            Carriers = onbill_util:account_carriers_list(AccountId),
+            get_other_carriers_regexes(Carriers);
+        _ -> 
+            get_carrier_regexes(CarrierDoc)
+    end.
+
+get_other_carriers_regexes(Carriers) when length(Carriers) > 1 ->
+    [get_carrier_regexes(Carrier) || Carrier <- Carriers, not maybe_main_carrier(Carrier)];
+get_other_carriers_regexes(_) ->
+    {<<"^\\d*$">>, <<"^\\d*$">>}.
+
+get_carrier_regexes(Carrier) when is_binary(Carrier) ->    
+    get_carrier_regexes(onbill_util:carrier_doc(Carrier));    
+get_carrier_regexes(CarrierDoc) ->    
+    {kz_json:get_value(<<"caller_number_regex">>, CarrierDoc, <<"^\\d*$">>)
+    ,kz_json:get_value(<<"called_number_regex">>, CarrierDoc, <<"^\\d*$">>)
+    }.
+
+maybe_count_call(Regexes, JObj, {ASec, AAmount}) ->
+    case maybe_interesting_call(Regexes, JObj) of
         'true' ->
             {ASec + kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0)
              ,AAmount + kz_json:get_integer_value([<<"value">>,<<"cost">>], JObj, 0)
@@ -127,7 +157,9 @@ maybe_count_call(RegexFrom, RegexTo, JObj, {ASec, AAmount}) ->
             {ASec ,AAmount}
     end.
 
-maybe_interesting_call(RegexFrom, RegexTo, JObj) ->
+maybe_interesting_call(RegexesList, JObj) when is_list(RegexesList) ->
+    not lists:foldl(fun(X, Acc) -> maybe_interesting_call(X, JObj) or Acc end, 'false', RegexesList);
+maybe_interesting_call({RegexFrom, RegexTo}, JObj) ->
     From = kz_json:get_binary_value([<<"value">>,<<"from">>], JObj, <<>>),
     To = kz_json:get_binary_value([<<"value">>,<<"to">>], JObj, <<>>),
     case {re:run(From, RegexFrom), re:run(To, RegexTo)} of
@@ -250,10 +282,11 @@ days_sequence_reduce(Prev, [First,Next|T], Acc) ->
 days_glue(L) ->
     lists:foldl(fun(X,Acc) -> case Acc of <<>> -> X; _ -> <<Acc/binary, ",", X/binary>> end end, <<>>, L).
 
-services_to_proplist(ServicesList, Year, Month, DaysInMonth) ->
-    lists:foldl(fun(ServiceLine, Acc) -> service_to_line(ServiceLine, Year, Month, DaysInMonth, Acc) end, [], ServicesList).
+services_to_proplist(ServicesList, Year, Month) ->
+    lists:foldl(fun(ServiceLine, Acc) -> service_to_line(ServiceLine, Year, Month, Acc) end, [], ServicesList).
 
-service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name}, Year, Month, DaysInMonth, Acc) ->
+service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name}, Year, Month, Acc) ->
+    DaysInMonth = calendar:last_day_of_the_month(Year, Month),
     [[{<<"category">>, ServiceType}
     ,{<<"item">>, Item}
     ,{<<"name">>, Name}
@@ -268,7 +301,7 @@ service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name}, Yea
     ,{<<"year">>, Year}
     ]] ++ Acc.
 
-aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, Name}, Year, Month, DaysInMonth) when Cost > 0.0, Quantity > 0.0 ->
+aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, Name}, Year, Month) when Cost > 0.0, Quantity > 0.0 ->
     [[{<<"category">>, ServiceType}
     ,{<<"item">>, Item}
     ,{<<"name">>, Name}
@@ -277,10 +310,10 @@ aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, 
     ,{<<"quantity">>, Quantity}
     ,{<<"period">>, Period}
     ,{<<"days_quantity">>, DaysQty}
-    ,{<<"days_in_month">>, DaysInMonth}
+    ,{<<"days_in_month">>, calendar:last_day_of_the_month(Year, Month)}
     ,{<<"month">>, Month}
     ,{<<"month_pad">>, kz_util:pad_month(Month)}
     ,{<<"year">>, Year}
     ]];
-aggregated_service_to_line(_, _, _, _) ->
+aggregated_service_to_line(_, _, _) ->
     [].

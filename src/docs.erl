@@ -104,12 +104,10 @@ generate_docs(AccountId, Year, Month) ->
     [generate_docs(AccountId, Year, Month, Carrier) || Carrier <- kz_json:get_value(<<"carriers">>, ResellerOnbillDoc, [])].
 
 generate_docs(AccountId, Year, Month, Carrier) ->
-    DaysInMonth = calendar:last_day_of_the_month(Year, Month),
-    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     {'ok', CarrierDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)),
     {'ok', OnbillGlobalVars} =  kz_datamgr:open_doc(?ONBILL_DB, ?ONBILL_GLOBAL_VARIABLES),
     {'ok', AccountOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, AccountId),
-    VatUpdatedFeesList = fees:shape_fees(Modb, CarrierDoc, Year, Month, DaysInMonth, OnbillGlobalVars),
+    VatUpdatedFeesList = fees:shape_fees(AccountId, Year, Month, CarrierDoc, OnbillGlobalVars),
     {TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
                                                         {TN_Acc + props:get_value(<<"cost_netto">>, X)
                                                          ,VAT_Acc + props:get_value(<<"vat_line_total">>, X)

@@ -4,6 +4,9 @@
          ,maybe_add_design_doc/1
          ,get_attachment/2
          ,price_round/1
+         ,account_carriers_list/1
+         ,carrier_doc/1
+         ,global_vars/0
         ]).
 
 -include("onbill.hrl").
@@ -38,3 +41,16 @@ get_attachment(AttachmentId, Db) ->
 
 price_round(Price) ->
     round(Price * 100) / 100.
+
+account_carriers_list(AccountId) ->
+    ResellerId = kz_services:find_reseller_id(AccountId),
+    {'ok', ResellerOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ResellerId),
+    kz_json:get_value(<<"carriers">>, ResellerOnbillDoc, []).
+
+carrier_doc(Carrier) ->
+    {'ok', CarrierDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)),
+    CarrierDoc.
+
+global_vars() ->
+    {'ok', GlobalVars} =  kz_datamgr:open_doc(?ONBILL_DB, ?ONBILL_GLOBAL_VARIABLES),
+    GlobalVars.
