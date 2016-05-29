@@ -87,10 +87,9 @@ maybe_main_carrier(CarrierDoc) ->
  
 monthly_fees(AccountId, Year, Month) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-    RawModb = kz_util:format_account_modb(Modb, 'raw'),
     _ = onbill_util:maybe_add_design_doc(Modb),
-    RawTableId = ets:new(erlang:binary_to_atom(<<RawModb/binary,"-raw">>, 'latin1'), [duplicate_bag]),
-    ResultTableId = ets:new(erlang:binary_to_atom(<<RawModb/binary,"-result">>, 'latin1'), [bag]),
+    RawTableId = ets:new(erlang:binary_to_atom(kz_util:rand_hex_binary(7), 'latin1'), [duplicate_bag]),
+    ResultTableId = ets:new(erlang:binary_to_atom(kz_util:rand_hex_binary(7), 'latin1'), [bag]),
     case kz_datamgr:get_results(Modb, <<"onbills/daily_fees">>, []) of
         {'error', 'not_found'} -> lager:warning("unable to process monthly fee calculaton for Modb: ~s", [Modb]);
         {'ok', JObjs } -> [process_daily_fee(JObj, Modb, RawTableId) || JObj <- JObjs] 
