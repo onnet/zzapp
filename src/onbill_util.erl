@@ -5,8 +5,11 @@
          ,get_attachment/2
          ,price_round/1
          ,account_carriers_list/1
+         ,account_doc/1
          ,carrier_doc/1
          ,global_vars/0
+         ,maybe_main_carrier/1
+         ,get_main_carrier/1
         ]).
 
 -include("onbill.hrl").
@@ -47,6 +50,10 @@ account_carriers_list(AccountId) ->
     {'ok', ResellerOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ResellerId),
     kz_json:get_value(<<"carriers">>, ResellerOnbillDoc, []).
 
+account_doc(AccountId) ->
+    {'ok', AccountDoc} =  kz_datamgr:open_doc(?ONBILL_DB, AccountId),
+    AccountDoc.
+
 carrier_doc(Carrier) ->
     {'ok', CarrierDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)),
     CarrierDoc.
@@ -54,3 +61,21 @@ carrier_doc(Carrier) ->
 global_vars() ->
     {'ok', GlobalVars} =  kz_datamgr:open_doc(?ONBILL_DB, ?ONBILL_GLOBAL_VARIABLES),
     GlobalVars.
+
+maybe_main_carrier(Carrier) when is_binary(Carrier) ->
+    maybe_main_carrier(carrier_doc(Carrier));
+maybe_main_carrier(CarrierDoc) ->
+    case kz_json:get_value(<<"carrier_type">>, CarrierDoc) of
+        <<"main">> -> 'true';
+        _ -> 'false'
+    end.
+
+get_main_carrier([Carrier]) ->
+    Carrier;
+get_main_carrier([Carrier|T]) ->
+    case maybe_main_carrier(Carrier) of
+        'true' -> Carrier;
+        _ -> get_main_carrier(T)
+    end;
+get_main_carrier(AccountId) ->
+    get_main_carrier(account_carriers_list(AccountId)).

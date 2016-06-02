@@ -1,6 +1,7 @@
 -module(docs).
 
 -export([generate_docs/3
+,aggregate_invoice/4
         ]).
 
 -include("onbill.hrl").
@@ -99,14 +100,14 @@ save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->
     kz_datamgr:flush_cache_doc(Modb, NewDoc).
 
 generate_docs(AccountId, Year, Month) ->
-    ResellerId = kz_services:find_reseller_id(AccountId),
-    {'ok', ResellerOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ResellerId),
-    [generate_docs(AccountId, Year, Month, Carrier) || Carrier <- kz_json:get_value(<<"carriers">>, ResellerOnbillDoc, [])].
+    Carriers = onbill_util:account_carriers_list(AccountId),
+    _ = [generate_docs(AccountId, Year, Month, Carrier) || Carrier <- Carriers],
+    maybe_aggregate_invoice(AccountId, Year, Month, Carriers).
 
 generate_docs(AccountId, Year, Month, Carrier) ->
-    {'ok', CarrierDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)),
-    {'ok', OnbillGlobalVars} =  kz_datamgr:open_doc(?ONBILL_DB, ?ONBILL_GLOBAL_VARIABLES),
-    {'ok', AccountOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, AccountId),
+    CarrierDoc = onbill_util:carrier_doc(Carrier),
+    AccountOnbillDoc = onbill_util:account_doc(AccountId),
+    OnbillGlobalVars = onbill_util:global_vars(),
     VatUpdatedFeesList = fees:shape_fees(AccountId, Year, Month, CarrierDoc, OnbillGlobalVars),
     {TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
                                                         {TN_Acc + props:get_value(<<"cost_netto">>, X)
@@ -139,9 +140,9 @@ generate_docs(AccountId, Year, Month, Carrier) ->
            ] 
            ++ [{Key, kz_json:get_value(Key, CarrierDoc)} || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
-    [save_pdf(Vars ++ [{<<"this_document">>, Document}], Document, Carrier, AccountId, Year, Month)
-     || Document <- kz_json:get_value(<<"documents">>, CarrierDoc)
-    ].
+    _ = [save_pdf(Vars ++ [{<<"this_document">>, Document}], Document, Carrier, AccountId, Year, Month)
+         || Document <- kz_json:get_value(<<"documents">>, CarrierDoc)
+        ].
 
 filter_vars(<<"_", _/binary>>) -> 'false';
 filter_vars(<<_/binary>>) -> 'true'.
@@ -157,3 +158,21 @@ address_join([Part], _Sep) ->
   Part;
 address_join([Head|Tail], Sep) ->
   lists:foldl(fun (Value, Acc) -> <<Acc/binary, Sep/binary, Value/binary>> end, Head, Tail).
+
+maybe_aggregate_invoice(AccountId, Year, Month, Carriers) ->
+    AccountOnbillDoc = onbill_util:account_doc(AccountId),
+    case kz_json:get_value(<<"agregate_invoice">>, AccountOnbillDoc) of
+        'true' -> aggregate_invoice(AccountId, Year, Month, Carriers);
+        _ -> 'ok'
+    end.
+
+aggregate_invoice(AccountId, Year, Month, Carriers) ->
+    Document = <<"aggregated_invoice">>,
+    MainCarrier = onbill_util:get_main_carrier(Carriers),
+    AggregatedVars = [get_aggregated_vars(AccountId, Year, Month, Carrier) || Carrier <- Carriers],
+    Vars = [{<<"aggregated_vars">>, AggregatedVars}
+           ],
+    save_pdf(Vars ++ [{<<"this_document">>, Document}], Document, MainCarrier, AccountId, Year, Month).
+
+get_aggregated_vars(_AccountId, _Year, _Month, _Carrier) ->
+    ok.

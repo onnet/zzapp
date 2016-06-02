@@ -72,19 +72,11 @@ enhance_vat_brutto(FeeLine, OnbillGlobalVars) ->
     props:set_values(NewValues, FeeLine).
 
 maybe_monthly_fees(AccountId, CarrierDoc, Year, Month) ->
-    case maybe_main_carrier(CarrierDoc) of
+    case onbill_util:maybe_main_carrier(CarrierDoc) of
         'true' -> monthly_fees(AccountId, Year, Month) ++ process_per_minute_calls(AccountId, Year, Month, CarrierDoc);
         _ -> process_per_minute_calls(AccountId, Year, Month, CarrierDoc)
     end.
 
-maybe_main_carrier(Carrier) when is_binary(Carrier) ->
-    maybe_main_carrier(onbill_util:carrier_doc(Carrier));
-maybe_main_carrier(CarrierDoc) ->
-    case kz_json:get_value(<<"carrier_type">>, CarrierDoc) of
-        <<"main">> -> 'true';
-        _ -> 'false'
-    end.
- 
 monthly_fees(AccountId, Year, Month) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     _ = onbill_util:maybe_add_design_doc(Modb),
@@ -126,7 +118,7 @@ process_per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
     end.
 
 get_per_minute_regexes(AccountId, CarrierDoc) ->
-    case maybe_main_carrier(CarrierDoc) of
+    case onbill_util:maybe_main_carrier(CarrierDoc) of
         'true' ->
             Carriers = onbill_util:account_carriers_list(AccountId),
             get_other_carriers_regexes(Carriers);
@@ -135,7 +127,7 @@ get_per_minute_regexes(AccountId, CarrierDoc) ->
     end.
 
 get_other_carriers_regexes(Carriers) when length(Carriers) > 1 ->
-    [get_carrier_regexes(Carrier) || Carrier <- Carriers, not maybe_main_carrier(Carrier)];
+    [get_carrier_regexes(Carrier) || Carrier <- Carriers, not onbill_util:maybe_main_carrier(Carrier)];
 get_other_carriers_regexes(_) ->
     {<<"^\\d*$">>, <<"^\\d*$">>}.
 
