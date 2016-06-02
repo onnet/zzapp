@@ -5,9 +5,9 @@
 <br />
 <table border="0"><tr>
 	<td width="60%">
-		Поставщик: %opername%<br />
-		Адрес: %operaddr%<br />
-		ИНН/КПП: %operinn%/%operkpp%<br />
+		Поставщик: {{ oper_name }}<br />
+		Адрес: {{ oper_addr }}<br />
+		ИНН/КПП: {{ inn }} / {{ kpp }}<br />
 		
 	</td>
 	<td width="40%">
@@ -19,8 +19,8 @@
 
 <h1 align="center">Счет № %ordernum% от %orderdate%</h1>
 <h4 align="center">за оказанные услуги электросвязи за период: %start_date% — %end_date%</h4><br />
-Плательщик: %name%<br />
-ИНН/КПП: %inn%/%kpp%<br />
+Плательщик: {{ account_name }}<br />
+ИНН/КПП: {{ account_inn }} / {{ account_kpp }}<br />
 <br />
 
 <table border="1" cellpadding="2">

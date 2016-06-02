@@ -169,9 +169,13 @@ maybe_aggregate_invoice(AccountId, Year, Month, Carriers) ->
 aggregate_invoice(AccountId, Year, Month, Carriers) ->
     Document = <<"aggregated_invoice">>,
     MainCarrier = onbill_util:get_main_carrier(Carriers),
+    MainCarrierDoc = onbill_util:carrier_doc(MainCarrier),
+    AccountOnbillDoc = onbill_util:account_doc(AccountId),
     AggregatedVars = [get_aggregated_vars(AccountId, Year, Month, Carrier) || Carrier <- Carriers],
     Vars = [{<<"aggregated_vars">>, AggregatedVars}
-           ],
+           ]
+           ++ [{Key, kz_json:get_value(Key, MainCarrierDoc)} || Key <- kz_json:get_keys(MainCarrierDoc), filter_vars(Key)]
+           ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
     save_pdf(Vars ++ [{<<"this_document">>, Document}], Document, MainCarrier, AccountId, Year, Month).
 
 get_aggregated_vars(_AccountId, _Year, _Month, _Carrier) ->
