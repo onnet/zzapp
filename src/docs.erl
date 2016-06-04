@@ -106,10 +106,9 @@ generate_docs(AccountId, Year, Month) ->
 
 generate_docs(AccountId, Year, Month, Carrier) ->
     CarrierDoc = onbill_util:carrier_doc(Carrier),
-    AccountOnbillDoc = onbill_util:account_doc(AccountId),
     OnbillGlobalVars = onbill_util:global_vars(),
     VatUpdatedFeesList = fees:shape_fees(AccountId, Year, Month, CarrierDoc, OnbillGlobalVars),
-    {TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
+    Totals = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
                                                         {TN_Acc + props:get_value(<<"cost_netto">>, X)
                                                          ,VAT_Acc + props:get_value(<<"vat_line_total">>, X)
                                                          ,TB_Acc + props:get_value(<<"cost_brutto">>, X)
@@ -118,8 +117,16 @@ generate_docs(AccountId, Year, Month, Carrier) ->
                                                       ,{0,0,0}
                                                       ,VatUpdatedFeesList
                                                      ),
+    generate_docs(AccountId, Year, Month, Carrier, VatUpdatedFeesList, Totals).
+
+generate_docs(_, _, _, Carrier, _, {TotalNetto, TotalVAT, TotalBrutto}) when TotalNetto =< 0.0 orelse TotalVAT =< 0.0 orelse TotalBrutto =< 0.0 ->
+    lager:debug("Skipping generate_docs for ~p because of zero usage: TotalNetto: ~p, TotalVAT: ~p, TotalBrutto: ~p",[Carrier, TotalNetto, TotalVAT, TotalBrutto]);
+generate_docs(AccountId, Year, Month, Carrier, VatUpdatedFeesList, {TotalNetto, TotalVAT, TotalBrutto}) ->
+    CarrierDoc = onbill_util:carrier_doc(Carrier),
+    OnbillGlobalVars = onbill_util:global_vars(),
     [TotalBruttoDiv, TotalBruttoRem] = binary:split(float_to_binary(TotalBrutto,[{decimals,2}]), <<".">>),
     [TotalVatDiv, TotalVatRem] = binary:split(float_to_binary(TotalVAT,[{decimals,2}]), <<".">>),
+    AccountOnbillDoc = onbill_util:account_doc(AccountId),
     Vars = [{<<"monthly_fees">>, VatUpdatedFeesList}
            ,{<<"account_addr">>, address_to_line(AccountOnbillDoc)}
            ,{<<"total_netto">>, onbill_util:price_round(TotalNetto)}
@@ -161,7 +168,7 @@ address_join([Head|Tail], Sep) ->
 
 maybe_aggregate_invoice(AccountId, Year, Month, Carriers) ->
     AccountOnbillDoc = onbill_util:account_doc(AccountId),
-    case kz_json:get_value(<<"agregate_invoice">>, AccountOnbillDoc) of
+    case kz_json:get_value(<<"aggregate_invoice">>, AccountOnbillDoc) of
         'true' -> aggregate_invoice(AccountId, Year, Month, Carriers);
         _ -> 'ok'
     end.
@@ -178,5 +185,10 @@ aggregate_invoice(AccountId, Year, Month, Carriers) ->
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
     save_pdf(Vars ++ [{<<"this_document">>, Document}], Document, MainCarrier, AccountId, Year, Month).
 
-get_aggregated_vars(_AccountId, _Year, _Month, _Carrier) ->
-    ok.
+get_aggregated_vars(AccountId, Year, Month, Carrier) ->
+    TemplateId = <<"invoice">>,
+    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
+    case kz_datamgr:open_doc(Modb, ?DOC_NAME_FORMAT(Carrier, TemplateId)) of
+        {ok, InvoiceDoc} -> [{Key, kz_json:get_value(Key, InvoiceDoc)} || Key <- kz_json:get_keys(InvoiceDoc), filter_vars(Key)];
+        _ -> [] 
+    end.
