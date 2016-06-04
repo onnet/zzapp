@@ -142,8 +142,10 @@ generate_docs(AccountId, Year, Month, Carrier, VatUpdatedFeesList, {TotalNetto, 
            ,{<<"agrm_num">>, kz_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccountOnbillDoc)}
            ,{<<"agrm_date">>, kz_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccountOnbillDoc)}
            ,{<<"doc_date">>, <<"31.",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>}
-           ,{<<"start_date">>, <<"01.",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>}
-           ,{<<"end_date">>, <<(kz_util:to_binary(calendar:last_day_of_the_month(Year, Month)))/binary,".",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>}
+        %   ,{<<"start_date">>, <<"01.",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>}
+           ,{<<"start_date">>, ?START_DATE(Month, Year)}
+           ,{<<"end_date">>, ?END_DATE(Month, Year)}
+        %   ,{<<"end_date">>, <<(kz_util:to_binary(calendar:last_day_of_the_month(Year, Month)))/binary,".",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>}
            ] 
            ++ [{Key, kz_json:get_value(Key, CarrierDoc)} || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
@@ -175,20 +177,33 @@ maybe_aggregate_invoice(AccountId, Year, Month, Carriers) ->
 
 aggregate_invoice(AccountId, Year, Month, Carriers) ->
     Document = <<"aggregated_invoice">>,
+    OnbillGlobalVars = onbill_util:global_vars(),
     MainCarrier = onbill_util:get_main_carrier(Carriers),
     MainCarrierDoc = onbill_util:carrier_doc(MainCarrier),
     AccountOnbillDoc = onbill_util:account_doc(AccountId),
-    AggregatedVars = [get_aggregated_vars(AccountId, Year, Month, Carrier) || Carrier <- Carriers],
+    {AggregatedVars, TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(Carrier, Acc) -> aggregate_data(AccountId, Year, Month, Carrier, Acc) end, {[], 0, 0, 0}, Carriers),
     Vars = [{<<"aggregated_vars">>, AggregatedVars}
+           ,{<<"start_date">>, ?START_DATE(Month, Year)}
+           ,{<<"end_date">>, ?END_DATE(Month, Year)}
+           ,{<<"total_netto">>, onbill_util:price_round(TotalNetto)}
+           ,{<<"total_vat">>, onbill_util:price_round(TotalVAT)}
+           ,{<<"total_brutto">>, onbill_util:price_round(TotalBrutto)}
+           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillGlobalVars, 0.0)}
            ]
            ++ [{Key, kz_json:get_value(Key, MainCarrierDoc)} || Key <- kz_json:get_keys(MainCarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
     save_pdf(Vars ++ [{<<"this_document">>, Document}], Document, MainCarrier, AccountId, Year, Month).
 
-get_aggregated_vars(AccountId, Year, Month, Carrier) ->
+aggregate_data(AccountId, Year, Month, Carrier, {AggrVars, TotalNetto, TotalVAT, TotalBrutto}) ->
     TemplateId = <<"invoice">>,
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     case kz_datamgr:open_doc(Modb, ?DOC_NAME_FORMAT(Carrier, TemplateId)) of
-        {ok, InvoiceDoc} -> [{Key, kz_json:get_value(Key, InvoiceDoc)} || Key <- kz_json:get_keys(InvoiceDoc), filter_vars(Key)];
-        _ -> [] 
+        {ok, InvoiceDoc} ->
+            {[[{Key, kz_json:get_value(Key, InvoiceDoc)} || Key <- kz_json:get_keys(InvoiceDoc), filter_vars(Key)]] ++ AggrVars
+            ,kz_json:get_value(<<"total_netto">>, InvoiceDoc) + TotalNetto
+            ,kz_json:get_value(<<"total_vat">>, InvoiceDoc) + TotalVAT
+            ,kz_json:get_value(<<"total_brutto">>, InvoiceDoc) + TotalBrutto
+            };
+        _ -> {AggrVars, TotalNetto, TotalVAT, TotalBrutto} 
     end.
+    
