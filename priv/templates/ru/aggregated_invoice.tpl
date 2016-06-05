@@ -43,12 +43,13 @@
 		<td width="15%">{{ total_brutto }}</td>		
 	</tr>
 	<tr>
-		<td colspan="4" align="right" width="85%">В том числе НДС ({{ vat_rate }})</td>
+		<td colspan="4" align="right" width="85%">В том числе НДС ({{ vat_rate }}%)</td>
 		<td width="15%">{{ total_vat }}</td>		
 	</tr>
 </table> 
 <br />
-Сумма прописью: %totalstr%
+Сумма прописью:
+{% if total_brutto_div %}{{ total_brutto_div }}{% else %}00{% endif %} руб. {% if total_brutto_rem %}{{ total_brutto_rem }}{% else %}00{% endif %} коп.
 <br />
 Счет действителен в течение 14 календарных дней<br /><br />
 <h4>Генеральный директор____________________________________{{ oper_dir }}</h4>

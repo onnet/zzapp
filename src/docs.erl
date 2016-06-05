@@ -124,34 +124,38 @@ generate_docs(_, _, _, Carrier, _, {TotalNetto, TotalVAT, TotalBrutto}) when Tot
 generate_docs(AccountId, Year, Month, Carrier, VatUpdatedFeesList, {TotalNetto, TotalVAT, TotalBrutto}) ->
     CarrierDoc = onbill_util:carrier_doc(Carrier),
     OnbillGlobalVars = onbill_util:global_vars(),
-    [TotalBruttoDiv, TotalBruttoRem] = binary:split(float_to_binary(TotalBrutto,[{decimals,2}]), <<".">>),
-    [TotalVatDiv, TotalVatRem] = binary:split(float_to_binary(TotalVAT,[{decimals,2}]), <<".">>),
+    {TotalBruttoDiv, TotalBruttoRem} = total_to_words(TotalBrutto),
+    {TotalVatDiv, TotalVatRem} = total_to_words(TotalVAT),
     AccountOnbillDoc = onbill_util:account_doc(AccountId),
     Vars = [{<<"monthly_fees">>, VatUpdatedFeesList}
            ,{<<"account_addr">>, address_to_line(AccountOnbillDoc)}
            ,{<<"total_netto">>, onbill_util:price_round(TotalNetto)}
            ,{<<"total_vat">>, onbill_util:price_round(TotalVAT)}
-           ,{<<"total_vat_div">>, unicode:characters_to_binary(amount_into_words:render(TotalVatDiv), unicode, utf8)}
-           ,{<<"total_vat_rem">>, unicode:characters_to_binary(amount_into_words:render(TotalVatRem), unicode, utf8)}
+           ,{<<"total_vat_div">>, TotalVatDiv}
+           ,{<<"total_vat_rem">>, TotalVatRem}
            ,{<<"total_brutto">>, onbill_util:price_round(TotalBrutto)}
-           ,{<<"total_brutto_div">>, unicode:characters_to_binary(amount_into_words:render(TotalBruttoDiv), unicode, utf8)}
-           ,{<<"total_brutto_rem">>, unicode:characters_to_binary(amount_into_words:render(TotalBruttoRem), unicode, utf8)}
-           ,{<<"doc_number">>, <<"13">>}
+           ,{<<"total_brutto_div">>, TotalBruttoDiv}
+           ,{<<"total_brutto_rem">>, TotalBruttoRem}
            ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillGlobalVars, 0.0)}
            ,{<<"currency1">>, kz_json:get_value(<<"currency1">>, OnbillGlobalVars)}
+           ,{<<"doc_number">>, <<"13">>}
            ,{<<"agrm_num">>, kz_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccountOnbillDoc)}
            ,{<<"agrm_date">>, kz_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccountOnbillDoc)}
            ,{<<"doc_date">>, <<"31.",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>}
-        %   ,{<<"start_date">>, <<"01.",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>}
            ,{<<"start_date">>, ?START_DATE(Month, Year)}
            ,{<<"end_date">>, ?END_DATE(Month, Year)}
-        %   ,{<<"end_date">>, <<(kz_util:to_binary(calendar:last_day_of_the_month(Year, Month)))/binary,".",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>}
            ] 
            ++ [{Key, kz_json:get_value(Key, CarrierDoc)} || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
     _ = [save_pdf(Vars ++ [{<<"this_document">>, Document}], Document, Carrier, AccountId, Year, Month)
          || Document <- kz_json:get_value(<<"documents">>, CarrierDoc)
         ].
+
+total_to_words(Total) ->
+    [TotalDiv, TotalRem] = binary:split(float_to_binary(Total,[{decimals,2}]), <<".">>),
+    {unicode:characters_to_binary(amount_into_words:render(TotalDiv), unicode, utf8)
+    ,unicode:characters_to_binary(amount_into_words:render(TotalRem), unicode, utf8)
+    }.
 
 filter_vars(<<"_", _/binary>>) -> 'false';
 filter_vars(<<_/binary>>) -> 'true'.
@@ -182,6 +186,8 @@ aggregate_invoice(AccountId, Year, Month, Carriers) ->
     MainCarrierDoc = onbill_util:carrier_doc(MainCarrier),
     AccountOnbillDoc = onbill_util:account_doc(AccountId),
     {AggregatedVars, TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(Carrier, Acc) -> aggregate_data(AccountId, Year, Month, Carrier, Acc) end, {[], 0, 0, 0}, Carriers),
+    {TotalBruttoDiv, TotalBruttoRem} = total_to_words(TotalBrutto),
+    {TotalVatDiv, TotalVatRem} = total_to_words(TotalVAT),
     Vars = [{<<"aggregated_vars">>, AggregatedVars}
            ,{<<"start_date">>, ?START_DATE(Month, Year)}
            ,{<<"end_date">>, ?END_DATE(Month, Year)}
@@ -189,6 +195,10 @@ aggregate_invoice(AccountId, Year, Month, Carriers) ->
            ,{<<"total_vat">>, onbill_util:price_round(TotalVAT)}
            ,{<<"total_brutto">>, onbill_util:price_round(TotalBrutto)}
            ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillGlobalVars, 0.0)}
+           ,{<<"total_vat_div">>, TotalVatDiv}
+           ,{<<"total_vat_rem">>, TotalVatRem}
+           ,{<<"total_brutto_div">>, TotalBruttoDiv}
+           ,{<<"total_brutto_rem">>, TotalBruttoRem}
            ]
            ++ [{Key, kz_json:get_value(Key, MainCarrierDoc)} || Key <- kz_json:get_keys(MainCarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
