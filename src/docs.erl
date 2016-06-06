@@ -63,25 +63,17 @@ render_tpl(ErlyMod, Vars) ->
 
 create_pdf(Vars, TemplateId, Carrier, AccountId) ->
     Rand = kz_util:rand_hex_binary(5),
-lager:info("IAM 1"),
     Prefix = <<AccountId/binary, "-", (?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, "-", Rand/binary>>,
-lager:info("IAM 2"),
     HTMLFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".html">>]),
-lager:info("IAM 3"),
     PDFFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".pdf">>]),
-lager:info("IAM 4"),
     HTMLTpl = prepare_tpl(Vars, TemplateId, Carrier),
-lager:info("IAM 5"),
     file:write_file(HTMLFile, HTMLTpl),
-lager:info("IAM 6"),
     Cmd = <<(?HTML_TO_PDF(TemplateId, Carrier))/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
-lager:info("IAM 7. Cmd: ~p", [Cmd]),
     case os:cmd(kz_util:to_list(Cmd)) of
         [] -> file:read_file(PDFFile);
         "\n" -> file:read_file(PDFFile);
         _ ->
             CmdDefault = <<(?HTML_TO_PDF(TemplateId))/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
-lager:info("IAM 8. CmdDefault: ~p", [CmdDefault]),
             case os:cmd(kz_util:to_list(CmdDefault)) of
                 [] -> file:read_file(PDFFile);
                 "\n" -> file:read_file(PDFFile);
