@@ -1,16 +1,16 @@
 <TABLE style="width: 197mm;" BORDER="0" CELLPADDING="0" CELLSPACING="0">
 <TR>
-<TD>Поставщик:</TD>
-<TD>%oper_name% ИНН: %inn% КПП: %kpp%</TD>
+<TD>Поставщик:{{ oper_name_short }}</TD>
+<TD>%oper_name% ИНН: {{ inn }} КПП: {{ kpp }}</TD>
 </TR>
 <TR>
 <TD>Адрес:</TD>
-<TD>%oper_addr%</TD>
+<TD>{{ oper_addr }}</TD>
 </TR>
 </TABLE>
 <br />
 <div style="text-align: center;"><strong>Детализация телефонных звонков для %name%</strong></div>
-<div style="text-align: center;">период с %start_date% по %end_date%</div><br />
+<div style="text-align: center;">период с {{ start_date }} по {{ end_date }}</div><br />
 <!-- begin_service -->		
 <div style="text-align: center; font-size: 7pt;">%serv% (логин учетной записи: %login%)</div>
 <!-- begin_have_stat -->		
