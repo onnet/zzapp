@@ -226,8 +226,13 @@ per_minute_report(AccountId, Year, Month, Carrier) ->
     OnbillGlobalVars = onbill_util:global_vars(),
     CarrierDoc = onbill_util:carrier_doc(Carrier),
     AccountOnbillDoc = onbill_util:account_doc(AccountId),
-    Vars = [
-           {<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillGlobalVars, 0.0)}
+    {CallsJObjs, CallsTotalSec, CallsTotalSumm} = fees:per_minute_calls(AccountId, Year, Month, Carrier),
+lager:info("IAM CallsJObjs: ~p",[CallsJObjs]),
+lager:info("IAM CallsTotalSec: ~p",[CallsTotalSec]),
+lager:info("IAM CallsTotalSumm: ~p",[CallsTotalSumm]),
+    Vars = [{<<"per_minute_calls">>, CallsJObjs}
+            
+           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillGlobalVars, 0.0)}
            ]
            ++ [{Key, kz_json:get_value(Key, CarrierDoc)} || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],

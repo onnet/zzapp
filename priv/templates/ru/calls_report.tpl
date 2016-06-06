@@ -25,15 +25,17 @@
 <TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">Сумма, руб.</TD>
 </TR>
 <!-- begin_row -->
+{% for per_minute_call in per_minute_calls %}
 <TR>
-<TD style="width: 4%; font-size: 9pt; vertical-align: bottom; text-align: center">%N%</TD>
-<TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">%A%</TD>
-<TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">%B%</TD>
-<TD style="width: 22%; font-size: 9pt; vertical-align: bottom; text-align: center">%tf%</TD>
-<TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">%tt%</TD>
-<TD style="width: 43%; font-size: 9pt; vertical-align: bottom; text-align: center">%cat%</TD>
-<TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">%sum%</TD>
+<TD style="width: 4%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ forloop.counter }}</TD>
+<TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.from }}</TD>
+<TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.to }}</TD>
+<TD style="width: 22%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.start }}</TD>
+<TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.duration }}</TD>
+<TD style="width: 43%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.rate_description }}</TD>
+<TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.cost }}</TD>
 </TR>
+{% endfor %}
 <!-- end_row -->			
 </TABLE>
 <!-- end_have_stat -->		

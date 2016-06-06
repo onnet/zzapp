@@ -2,6 +2,7 @@
 
 -export([shape_fees/4
         ,shape_fees/5
+        ,per_minute_calls/4
         ]).
 
 -include("onbill.hrl").
@@ -103,7 +104,7 @@ process_per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
              [];
         {'ok', JObjs } ->
             Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
-            {CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc) end, {0,0}, JObjs),
+            {_, CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc) end, {[], 0,0}, JObjs),
             aggregated_service_to_line({<<"per-minute-voip">>
                                ,<<"description">>
                                ,wht_util:units_to_dollars(CallsTotalSumm)
@@ -115,6 +116,19 @@ process_per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
                                ,Year
                                ,Month
                               )
+    end.
+
+per_minute_calls(AccountId, Year, Month, Carrier) when is_binary(Carrier) ->
+    per_minute_calls(AccountId, Year, Month, onbill_util:carrier_doc(Carrier));
+per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
+    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
+    case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, []) of
+        {'error', 'not_found'} ->
+             lager:warning("no per_minute_calls found in Modb: ~s", [Modb]),
+             [];
+        {'ok', JObjs } ->
+            Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
+            lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc) end, {[], 0,0}, JObjs)
     end.
 
 get_per_minute_regexes(AccountId, CarrierDoc) ->
@@ -138,14 +152,15 @@ get_carrier_regexes(CarrierDoc) ->
     ,kz_json:get_value(<<"called_number_regex">>, CarrierDoc, <<"^\\d*$">>)
     }.
 
-maybe_count_call(Regexes, JObj, {ASec, AAmount}) ->
+maybe_count_call(Regexes, JObj, {JObjs, ASec, AAmount}) ->
     case maybe_interesting_call(Regexes, JObj) of
         'true' ->
-            {ASec + kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0)
+            {[JObj] ++ JObjs
+             ,ASec + kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0)
              ,AAmount + kz_json:get_integer_value([<<"value">>,<<"cost">>], JObj, 0)
             };
         _ -> 
-            {ASec ,AAmount}
+            {JObjs, ASec ,AAmount}
     end.
 
 maybe_interesting_call(RegexesList, JObj) when is_list(RegexesList) ->
