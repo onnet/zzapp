@@ -1,7 +1,7 @@
 -module(docs).
 
 -export([generate_docs/3
-,aggregate_invoice/4
+        ,per_minute_reports/3
         ]).
 
 -include("onbill.hrl").
@@ -63,17 +63,25 @@ render_tpl(ErlyMod, Vars) ->
 
 create_pdf(Vars, TemplateId, Carrier, AccountId) ->
     Rand = kz_util:rand_hex_binary(5),
+lager:info("IAM 1"),
     Prefix = <<AccountId/binary, "-", (?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, "-", Rand/binary>>,
+lager:info("IAM 2"),
     HTMLFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".html">>]),
+lager:info("IAM 3"),
     PDFFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".pdf">>]),
+lager:info("IAM 4"),
     HTMLTpl = prepare_tpl(Vars, TemplateId, Carrier),
+lager:info("IAM 5"),
     file:write_file(HTMLFile, HTMLTpl),
+lager:info("IAM 6"),
     Cmd = <<(?HTML_TO_PDF(TemplateId, Carrier))/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
+lager:info("IAM 7. Cmd: ~p", [Cmd]),
     case os:cmd(kz_util:to_list(Cmd)) of
         [] -> file:read_file(PDFFile);
         "\n" -> file:read_file(PDFFile);
         _ ->
             CmdDefault = <<(?HTML_TO_PDF(TemplateId))/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
+lager:info("IAM 8. CmdDefault: ~p", [CmdDefault]),
             case os:cmd(kz_util:to_list(CmdDefault)) of
                 [] -> file:read_file(PDFFile);
                 "\n" -> file:read_file(PDFFile);
@@ -217,3 +225,18 @@ aggregate_data(AccountId, Year, Month, Carrier, {AggrVars, TotalNetto, TotalVAT,
         _ -> {AggrVars, TotalNetto, TotalVAT, TotalBrutto} 
     end.
     
+per_minute_reports(AccountId, Year, Month) ->
+    Carriers = onbill_util:account_carriers_list(AccountId),
+    _ = [per_minute_report(AccountId, Year, Month, Carrier) || Carrier <- Carriers].
+
+per_minute_report(AccountId, Year, Month, Carrier) ->
+    Document = <<"calls_report">>,
+    OnbillGlobalVars = onbill_util:global_vars(),
+    CarrierDoc = onbill_util:carrier_doc(Carrier),
+    AccountOnbillDoc = onbill_util:account_doc(AccountId),
+    Vars = [
+           {<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillGlobalVars, 0.0)}
+           ]
+           ++ [{Key, kz_json:get_value(Key, CarrierDoc)} || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)]
+           ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
+    save_pdf(Vars ++ [{<<"this_document">>, Document}], Document, Carrier, AccountId, Year, Month).
