@@ -62,31 +62,42 @@ validate(Context, Id, ?ATTACHMENT) ->
 validate_generate(Context) ->
     Year = kz_json:get_float_value(<<"year">>, cb_context:req_data(Context)),
     Month = kz_json:get_float_value(<<"month">>, cb_context:req_data(Context)),
+    validate_generate(Context, Year, Month).
 
-    case cb_modules_util:is_superduper_admin(Context) of
-        'true' -> validate_generate(Context, Year, Month);
-        'false' ->
-            case kz_services:is_reseller(cb_context:auth_account_id(Context)) of
-                'true' -> validate_generate(Context, Year, Month);
-                'false' -> cb_context:add_system_error('forbidden', Context)
-            end
-    end.
+validate_generate(Context, Year, Month) when is_number(Year) andalso is_number(Month) ->
+    case kz_json:get_value(<<"doc_type">>, cb_context:req_data(Context)) of
+        "calls_reports" -> generate_per_minute_reports(Context, Year, Month);
+        _ -> maybe_generate_billing_docs(Context, Year, Month)
+    end;
 
-validate_generate(Context, Year, Month) when Year == 'undefined' orelse Month == 'undefined' ->
+validate_generate(Context, _, _) ->
     Message = <<"Year and Month required">>,
     cb_context:add_validation_error(
       <<"Year and month">>
       ,<<"required">>
       ,kz_json:from_list([{<<"message">>, Message}])
       ,Context
-     );
+     ).
 
-validate_generate(Context, Year, Month) when is_float(Year) orelse is_float(Month) ->
-    validate_generate(Context, kz_util:to_integer(Year), kz_util:to_integer(Month));
+maybe_generate_billing_docs(Context, Year, Month) ->
+    case cb_modules_util:is_superduper_admin(Context) of
+        'true' ->
+            generate_billing_docs(Context, Year, Month);
+        'false' ->
+            case kz_services:is_reseller(cb_context:auth_account_id(Context)) of
+                'true' -> generate_billing_docs(Context, Year, Month);
+                'false' -> cb_context:add_system_error('forbidden', Context)
+            end
+    end.
 
-validate_generate(Context, Year, Month) ->
+generate_billing_docs(Context, Year, Month) ->
     AccountId = cb_context:account_id(Context),
-    docs:generate_docs(AccountId, Year, Month),
+    docs:generate_docs(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
+    cb_context:set_resp_status(Context, 'success').
+
+generate_per_minute_reports(Context, Year, Month) ->
+    AccountId = cb_context:account_id(Context),
+    docs:per_minute_reports(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
     cb_context:set_resp_status(Context, 'success').
 
 -spec validate_onbills(cb_context:context(), http_method()) -> cb_context:context().

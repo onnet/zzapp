@@ -10,6 +10,7 @@
          ,global_vars/0
          ,maybe_main_carrier/1
          ,get_main_carrier/1
+         ,format_datetime/1
         ]).
 
 -include("onbill.hrl").
@@ -79,3 +80,8 @@ get_main_carrier([Carrier|T]) ->
     end;
 get_main_carrier(AccountId) ->
     get_main_carrier(account_carriers_list(AccountId)).
+
+format_datetime(TStamp) ->
+    {{Year, Month, Day}, {Hour, Minute, Second}} = calendar:gregorian_seconds_to_datetime(TStamp),
+    StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])),
+    kz_util:to_binary(StrTime).

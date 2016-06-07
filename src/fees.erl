@@ -123,7 +123,7 @@ per_minute_calls(AccountId, Year, Month, Carrier) when is_binary(Carrier) ->
     per_minute_calls(AccountId, Year, Month, onbill_util:carrier_doc(Carrier));
 per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-    case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, []) of
+    case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, ['descending']) of
         {'error', 'not_found'} ->
              lager:warning("no per_minute_calls found in Modb: ~s", [Modb]),
              [];
@@ -157,7 +157,10 @@ maybe_count_call(Regexes, JObj, {JObjs, AccSec, AccAmount}) ->
     case maybe_interesting_call(Regexes, JObj) of
         'true' ->
             CallCost = wht_util:units_to_dollars(kz_json:get_integer_value([<<"value">>,<<"cost">>], JObj, 0)),
-            {[kz_json:set_value([<<"value">>,<<"cost">>], CallCost, JObj)] ++ JObjs
+            Values = [{[<<"value">>,<<"cost">>], CallCost}
+                      ,{[<<"value">>,<<"start_datetime">>], onbill_util:format_datetime(kz_json:get_integer_value([<<"value">>,<<"start">>], JObj))}
+                     ],
+            {[kz_json:set_values(Values, JObj)] ++ JObjs
              ,AccSec + kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0)
              ,AccAmount + CallCost
             };
