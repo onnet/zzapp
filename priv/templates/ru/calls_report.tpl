@@ -1,7 +1,7 @@
 <TABLE style="width: 197mm;" BORDER="0" CELLPADDING="0" CELLSPACING="0">
 <TR>
-<TD>Поставщик:{{ oper_name_short }}</TD>
-<TD>%oper_name% ИНН: {{ inn }} КПП: {{ kpp }}</TD>
+<TD>Поставщик:</TD>
+<TD>{{ oper_name_short }} ИНН: {{ inn }} КПП: {{ kpp }}</TD>
 </TR>
 <TR>
 <TD>Адрес:</TD>
@@ -9,11 +9,8 @@
 </TR>
 </TABLE>
 <br />
-<div style="text-align: center;"><strong>Детализация телефонных звонков для %name%</strong></div>
-<div style="text-align: center;">период с {{ start_date }} по {{ end_date }}</div><br />
-<!-- begin_service -->		
-<div style="text-align: center; font-size: 7pt;">%serv% (логин учетной записи: %login%)</div>
-<!-- begin_have_stat -->		
+<div style="text-align: center;"><strong>Детализация телефонных вызовов {{ account_name }}</strong></div>
+<div style="text-align: center; font-size: 7pt;">Договор № {{ agrm_num }} от {{ agrm_date }}. Период с {{ start_date }} по {{ end_date }}.</div><br />
 <TABLE style="width: 100%;" BORDER="1" CELLPADDING="0" CELLSPACING="0">
 <TR>
 <TD style="width: 4%; font-size: 9pt; vertical-align: bottom; text-align: center">№</TD>
@@ -33,7 +30,7 @@
 <TD style="width: 22%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.start }}</TD>
 <TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.duration }}</TD>
 <TD style="width: 43%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.rate_description }}</TD>
-<TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.cost }}</TD>
+<TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.cost|floatformat:2 }}</TD>
 </TR>
 {% endfor %}
 <!-- end_row -->			
@@ -42,10 +39,10 @@
 <!-- end_service -->	
 <TABLE style="width: 100%;" BORDER="0" CELLPADDING="0" CELLSPACING="0">
 <tr>
-<td style="width: 85%; text-align: right;">Итого:<td style="width: 15%; text-align: right;">%summ% руб.</td>
+<td style="width: 85%; text-align: right;">Итого:<td style="width: 15%; text-align: right;">{{ total_brutto }} руб.</td>
 </tr>
 <tr>
-<td style="width: 85%; text-align: right;">В том числе НДС (18%):</td><td style="width: 15%; text-align: right;">%nds_summ% руб.</td>
+<td style="width: 85%; text-align: right;">В том числе НДС (18%):</td><td style="width: 15%; text-align: right;">{{ total_vat }} руб.</td>
 </tr>
 </TABLE>
 <TABLE style="width: 100%;" BORDER="0" CELLPADDING="0" CELLSPACING="0">

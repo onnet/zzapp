@@ -3,6 +3,7 @@
 -export([shape_fees/4
         ,shape_fees/5
         ,per_minute_calls/4
+        ,vatify_amount/3
         ]).
 
 -include("onbill.hrl").
@@ -107,7 +108,7 @@ process_per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
             {_, CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc) end, {[], 0,0}, JObjs),
             aggregated_service_to_line({<<"per-minute-voip">>
                                ,<<"description">>
-                               ,wht_util:units_to_dollars(CallsTotalSumm)
+                               ,CallsTotalSumm
                                ,kz_util:to_integer(CallsTotalSec / 60)
                                ,<<"">>
                                ,calendar:last_day_of_the_month(Year, Month)
@@ -152,15 +153,16 @@ get_carrier_regexes(CarrierDoc) ->
     ,kz_json:get_value(<<"called_number_regex">>, CarrierDoc, <<"^\\d*$">>)
     }.
 
-maybe_count_call(Regexes, JObj, {JObjs, ASec, AAmount}) ->
+maybe_count_call(Regexes, JObj, {JObjs, AccSec, AccAmount}) ->
     case maybe_interesting_call(Regexes, JObj) of
         'true' ->
-            {[JObj] ++ JObjs
-             ,ASec + kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0)
-             ,AAmount + kz_json:get_integer_value([<<"value">>,<<"cost">>], JObj, 0)
+            CallCost = wht_util:units_to_dollars(kz_json:get_integer_value([<<"value">>,<<"cost">>], JObj, 0)),
+            {[kz_json:set_value([<<"value">>,<<"cost">>], CallCost, JObj)] ++ JObjs
+             ,AccSec + kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0)
+             ,AccAmount + CallCost
             };
         _ -> 
-            {JObjs, ASec ,AAmount}
+            {JObjs, AccSec ,AccAmount}
     end.
 
 maybe_interesting_call(RegexesList, JObj) when is_list(RegexesList) ->
@@ -323,3 +325,28 @@ aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, 
     ]];
 aggregated_service_to_line(_, _, _) ->
     [].
+
+vatify_amount(AmountName, Amount, OnbillGlobalVars) ->
+    VatRate = kz_json:get_value(<<"vat_rate">>, OnbillGlobalVars),
+    VatDisposition = kz_json:get_value(<<"vat_disposition">>, OnbillGlobalVars),
+    vatify_amount(AmountName, Amount, VatRate, VatDisposition).
+
+vatify_amount(AmountName, Netto, VatRate, VatDisposition) when VatDisposition == <<"netto">> ->
+    Vat = onbill_util:price_round(Netto * VatRate / 100),
+    Brutto = Netto + Vat,
+    [{<<AmountName/binary, "_netto">>, onbill_util:price_round(Netto)}
+    ,{<<AmountName/binary, "_brutto">>, onbill_util:price_round(Brutto)}
+    ,{<<AmountName/binary, "_vat">>, Vat}
+    ];
+vatify_amount(AmountName, Brutto, VatRate, VatDisposition) when VatDisposition == <<"brutto">> ->
+    Vat = onbill_util:price_round(Brutto * VatRate / (100 + VatRate)),
+    Netto = onbill_util:price_round(Brutto) - Vat,
+    [{<<AmountName/binary, "_netto">>, onbill_util:price_round(Netto)}
+    ,{<<AmountName/binary, "_brutto">>, onbill_util:price_round(Brutto)}
+    ,{<<AmountName/binary, "_vat">>, Vat}
+    ];
+vatify_amount(AmountName, Amount, _, _) ->
+    [{<<AmountName/binary, "_netto">>, Amount}
+    ,{<<AmountName/binary, "_brutto">>, Amount}
+    ,{<<AmountName/binary, "_vat">>, 0.0}
+    ].
