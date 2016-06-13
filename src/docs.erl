@@ -106,8 +106,8 @@ generate_docs(AccountId, Year, Month) ->
 
 generate_docs(AccountId, Year, Month, Carrier) ->
     CarrierDoc = onbill_util:carrier_doc(Carrier),
-    OnbillGlobalVars = onbill_util:global_vars(),
-    VatUpdatedFeesList = fees:shape_fees(AccountId, Year, Month, CarrierDoc, OnbillGlobalVars),
+    OnbillResellerVars = onbill_util:reseller_vars(AccountId),
+    VatUpdatedFeesList = fees:shape_fees(AccountId, Year, Month, CarrierDoc, OnbillResellerVars),
     Totals = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
                                                         {TN_Acc + props:get_value(<<"cost_netto">>, X)
                                                          ,VAT_Acc + props:get_value(<<"vat_line_total">>, X)
@@ -123,7 +123,7 @@ generate_docs(_, _, _, Carrier, _, {TotalNetto, TotalVAT, TotalBrutto}) when Tot
     lager:debug("Skipping generate_docs for ~p because of zero usage: TotalNetto: ~p, TotalVAT: ~p, TotalBrutto: ~p",[Carrier, TotalNetto, TotalVAT, TotalBrutto]);
 generate_docs(AccountId, Year, Month, Carrier, VatUpdatedFeesList, {TotalNetto, TotalVAT, TotalBrutto}) ->
     CarrierDoc = onbill_util:carrier_doc(Carrier),
-    OnbillGlobalVars = onbill_util:global_vars(),
+    OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(TotalBrutto),
     {TotalVatDiv, TotalVatRem} = total_to_words(TotalVAT),
     AccountOnbillDoc = onbill_util:account_doc(AccountId),
@@ -136,8 +136,8 @@ generate_docs(AccountId, Year, Month, Carrier, VatUpdatedFeesList, {TotalNetto, 
            ,{<<"total_brutto">>, onbill_util:price_round(TotalBrutto)}
            ,{<<"total_brutto_div">>, TotalBruttoDiv}
            ,{<<"total_brutto_rem">>, TotalBruttoRem}
-           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillGlobalVars, 0.0)}
-           ,{<<"currency1">>, kz_json:get_value(<<"currency1">>, OnbillGlobalVars)}
+           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillResellerVars, 0.0)}
+           ,{<<"currency1">>, kz_json:get_value(<<"currency1">>, OnbillResellerVars)}
            ,{<<"doc_number">>, <<"13">>}
            ,{<<"agrm_num">>, kz_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccountOnbillDoc)}
            ,{<<"agrm_date">>, kz_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccountOnbillDoc)}
@@ -181,7 +181,7 @@ maybe_aggregate_invoice(AccountId, Year, Month, Carriers) ->
 
 aggregate_invoice(AccountId, Year, Month, Carriers) ->
     Document = <<"aggregated_invoice">>,
-    OnbillGlobalVars = onbill_util:global_vars(),
+    OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     MainCarrier = onbill_util:get_main_carrier(Carriers),
     MainCarrierDoc = onbill_util:carrier_doc(MainCarrier),
     AccountOnbillDoc = onbill_util:account_doc(AccountId),
@@ -195,7 +195,7 @@ aggregate_invoice(AccountId, Year, Month, Carriers) ->
            ,{<<"total_netto">>, onbill_util:price_round(TotalNetto)}
            ,{<<"total_vat">>, onbill_util:price_round(TotalVAT)}
            ,{<<"total_brutto">>, onbill_util:price_round(TotalBrutto)}
-           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillGlobalVars, 0.0)}
+           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillResellerVars, 0.0)}
            ,{<<"total_vat_div">>, TotalVatDiv}
            ,{<<"total_vat_rem">>, TotalVatRem}
            ,{<<"total_brutto_div">>, TotalBruttoDiv}
@@ -228,7 +228,7 @@ maybe_per_minute_report(AccountId, Year, Month, Carrier) ->
 
 per_minute_report(AccountId, Year, Month, Carrier, CallsJObjs, CallsTotalSec, CallsTotalSumm) when CallsTotalSumm > 0.0 ->
     Document = <<"calls_report">>,
-    OnbillGlobalVars = onbill_util:global_vars(),
+    OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     CarrierDoc = onbill_util:carrier_doc(Carrier),
     AccountOnbillDoc = onbill_util:account_doc(AccountId),
     {CallsJObjs, CallsTotalSec, CallsTotalSumm} = fees:per_minute_calls(AccountId, Year, Month, Carrier),
@@ -239,7 +239,7 @@ per_minute_report(AccountId, Year, Month, Carrier, CallsJObjs, CallsTotalSec, Ca
            ,{<<"agrm_num">>, kz_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccountOnbillDoc)}
            ,{<<"agrm_date">>, kz_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccountOnbillDoc)}
            ]
-           ++ fees:vatify_amount(<<"total">>, CallsTotalSumm, OnbillGlobalVars)
+           ++ fees:vatify_amount(<<"total">>, CallsTotalSumm, OnbillResellerVars)
            ++ [{Key, kz_json:get_value(Key, CarrierDoc)} || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
     save_pdf(Vars ++ [{<<"this_document">>, Document}], Document, Carrier, AccountId, Year, Month);

@@ -7,7 +7,6 @@
 -define(APP_VERSION, <<"4.0.0">> ).
 
 -define(ONBILL_DB, <<"onbill">>).
--define(ONBILL_GLOBAL_VARIABLES, <<"onbill_global_variables">>).
 -define(ONBILL_DOC, <<"onbill">>).
 -define(CARRIER_DOC(CarrierName), <<"carrier.", CarrierName/binary>>).
 -define(MOD_CONFIG_CRAWLER, <<(?APP_NAME)/binary, ".account_crawler">>).

@@ -7,7 +7,7 @@
          ,account_carriers_list/1
          ,account_doc/1
          ,carrier_doc/1
-         ,global_vars/0
+         ,reseller_vars/1
          ,maybe_main_carrier/1
          ,get_main_carrier/1
          ,format_datetime/1
@@ -47,9 +47,7 @@ price_round(Price) ->
     round(Price * 100) / 100.
 
 account_carriers_list(AccountId) ->
-    ResellerId = kz_services:find_reseller_id(AccountId),
-    {'ok', ResellerOnbillDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ResellerId),
-    kz_json:get_value(<<"carriers">>, ResellerOnbillDoc, []).
+    kz_json:get_value(<<"carriers">>, reseller_vars(AccountId), []).
 
 account_doc(AccountId) ->
     {'ok', AccountDoc} =  kz_datamgr:open_doc(?ONBILL_DB, AccountId),
@@ -59,8 +57,9 @@ carrier_doc(Carrier) ->
     {'ok', CarrierDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)),
     CarrierDoc.
 
-global_vars() ->
-    {'ok', GlobalVars} =  kz_datamgr:open_doc(?ONBILL_DB, ?ONBILL_GLOBAL_VARIABLES),
+reseller_vars(AccountId) ->
+    ResellerId = kz_services:find_reseller_id(AccountId),
+    {'ok', GlobalVars} =  kz_datamgr:open_doc(?ONBILL_DB, ResellerId),
     GlobalVars.
 
 maybe_main_carrier(Carrier) when is_binary(Carrier) ->

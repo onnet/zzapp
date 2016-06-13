@@ -1,10 +1,10 @@
 -module(cb_onbills).
 
 -export([init/0
-         ,allowed_methods/0, allowed_methods/1, allowed_methods/2
-         ,resource_exists/0, resource_exists/1, resource_exists/2
-         ,content_types_provided/1, content_types_provided/3
-         ,validate/1, validate/2, validate/3
+         ,allowed_methods/0, allowed_methods/1, allowed_methods/2, allowed_methods/3
+         ,resource_exists/0, resource_exists/1, resource_exists/2, resource_exists/3
+         ,content_types_provided/1, content_types_provided/3, content_types_provided/4
+         ,validate/1, validate/2, validate/3, validate/4
         ]).
 
 -include("../../crossbar/src/crossbar.hrl").
@@ -12,6 +12,9 @@
 -define(CB_LIST, <<"onbills/crossbar_listing">>).
 -define(ATTACHMENT, <<"attachment">>).
 -define(GENERATE, <<"generate">>).
+-define(CARRIERS, <<"carriers">>).
+-define(MODB, <<"onbills_modb">>).
+-define(RESELLER_VARIABLES, <<"onbill_reseller_variables">>).
 
 -spec init() -> 'ok'.
 init() ->
@@ -26,37 +29,47 @@ allowed_methods() ->
     [?HTTP_GET].
 allowed_methods(?GENERATE) ->
     [?HTTP_PUT];
-allowed_methods(_) ->
+allowed_methods(?RESELLER_VARIABLES) ->
     [?HTTP_GET].
-allowed_methods(_,?ATTACHMENT) ->
+allowed_methods(?CARRIERS,_) ->
+    [?HTTP_GET];
+allowed_methods(?MODB,_) ->
+    [?HTTP_GET].
+allowed_methods(?CARRIERS,_,?ATTACHMENT) ->
+    [?HTTP_GET];
+allowed_methods(?MODB,_,?ATTACHMENT) ->
     [?HTTP_GET].
 
 -spec resource_exists() -> 'true'.
 -spec resource_exists(path_token()) -> 'true'.
 resource_exists() -> 'true'.
 resource_exists(_) -> 'true'.
-resource_exists(_,?ATTACHMENT) -> 'true';
-resource_exists(_,?GENERATE) -> 'true'.
+resource_exists(?CARRIERS,_) -> 'true';
+resource_exists(?MODB,_) -> 'true'.
+resource_exists(?CARRIERS,_,?ATTACHMENT) -> 'true';
+resource_exists(?MODB,_,?ATTACHMENT) -> 'true'.
 
 -spec content_types_provided(cb_context:context()) -> cb_context:context().
 content_types_provided(Context) ->
     Context.
-content_types_provided(Context,_,?ATTACHMENT) ->
-    CTP = [{'to_binary', [{<<"application">>, <<"pdf">>}]}],
-    cb_context:set_content_types_provided(Context, CTP);
 content_types_provided(Context,_,?GENERATE) ->
     Context.
+content_types_provided(Context,?MODB,_,?ATTACHMENT) ->
+    CTP = [{'to_binary', [{<<"application">>, <<"pdf">>}]}],
+    cb_context:set_content_types_provided(Context, CTP).
 
 -spec validate(cb_context:context()) -> cb_context:context().
 -spec validate(cb_context:context(), path_token()) -> cb_context:context().
 validate(Context) ->
-    validate_onbills(Context, cb_context:req_verb(Context)).
+    validate_onbill(Context, cb_context:req_verb(Context)).
 validate(Context, ?GENERATE) ->
     validate_generate(Context);
 validate(Context, Id) ->
     validate_onbill(Context, Id, cb_context:req_verb(Context)).
-validate(Context, Id, ?ATTACHMENT) ->
-    validate_onbill(Context, Id, ?ATTACHMENT, cb_context:req_verb(Context)).
+validate(Context, ?CARRIERS, Id) ->
+    validate_onbill(Context, ?CARRIERS, Id, cb_context:req_verb(Context)).
+validate(Context,?MODB, Id, ?ATTACHMENT) ->
+    validate_onbill(Context,?MODB, Id, ?ATTACHMENT, cb_context:req_verb(Context)).
 
 -spec validate_generate(cb_context:context()) -> cb_context:context().
 validate_generate(Context) ->
@@ -100,23 +113,34 @@ generate_per_minute_reports(Context, Year, Month) ->
     docs:per_minute_reports(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
     cb_context:set_resp_status(Context, 'success').
 
--spec validate_onbills(cb_context:context(), http_method()) -> cb_context:context().
-validate_onbills(Context, ?HTTP_GET) ->
-    summary(Context).
+-spec validate_onbill(cb_context:context(), http_method()) -> cb_context:context().
+validate_onbill(Context, ?HTTP_GET) ->
+    onbills_modb_summary(Context).
 
 -spec validate_onbill(cb_context:context(), path_token(), http_method()) -> cb_context:context().
+validate_onbill(Context, ?RESELLER_VARIABLES, ?HTTP_GET) ->
+    AccountId = cb_context:account_id(Context),
+    AuthAccountId = cb_context:auth_account_id(Context),
+    case kz_services:is_reseller(AuthAccountId) orelse cb_modules_util:is_superduper_admin(AuthAccountId) of
+        'true' -> read_onbill(AccountId, Context);
+        'false' -> cb_context:add_system_error('forbidden', Context)
+    end;
+
 validate_onbill(Context, Id, ?HTTP_GET) ->
-    read(Id, Context).
+    read_onbill(Id, Context).
 
-validate_onbill(Context, Id, ?ATTACHMENT, ?HTTP_GET) ->
-    load_attachment(Context, Id).
+validate_onbill(_Context, ?CARRIERS, _Id, ?HTTP_GET) ->
+    'ok'.
 
--spec read(ne_binary(), cb_context:context()) -> cb_context:context().
-read(Id, Context) ->
-    crossbar_doc:load(Id, Context).
+validate_onbill(Context,?MODB, Id, ?ATTACHMENT, ?HTTP_GET) ->
+    load_modb_attachment(Context, Id).
 
--spec summary(cb_context:context()) -> cb_context:context().
-summary(Context) ->
+-spec read_onbill(ne_binary(), cb_context:context()) -> cb_context:context().
+read_onbill(Id, Context) ->
+    crossbar_doc:load(Id, cb_context:set_account_db(Context, <<"onbill">>)).
+
+-spec onbills_modb_summary(cb_context:context()) -> cb_context:context().
+onbills_modb_summary(Context) ->
     QueryString = cb_context:query_string(Context),
     {Year, Month} = case (kz_json:get_value(<<"year">>,QueryString) == 'undefined')
                           orelse
@@ -138,7 +162,7 @@ summary(Context) ->
 normalize_view_results(JObj, Acc) ->
     [kz_json:get_value(<<"value">>, JObj)|Acc].
 
-load_attachment(Context0, Id) ->
+load_modb_attachment(Context0, Id) ->
     QueryString = cb_context:query_string(Context0),
     Year = kz_json:get_value(<<"year">>,QueryString),
     Month = kz_json:get_value(<<"month">>,QueryString),
@@ -162,6 +186,5 @@ load_attachment(Context0, Id) ->
                 ,'undefined'
             );
         _ ->
-         %   crossbar_util:response('error', <<"could not find cdr with supplied id">>, 404, Context)
             cb_context:add_system_error('faulty_request', Context0)
     end.

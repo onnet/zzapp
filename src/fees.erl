@@ -10,29 +10,29 @@
 
 shape_fees(AccountId, Year, Month, Carrier) ->
     CarrierDoc =  onbill_util:carrier_doc(Carrier),
-    OnbillGlobalVars = onbill_util:global_vars(),
-    shape_fees(AccountId, Year, Month, CarrierDoc, OnbillGlobalVars).
+    OnbillResellerVars = onbill_util:reseller_vars(AccountId),
+    shape_fees(AccountId, Year, Month, CarrierDoc, OnbillResellerVars).
 
-shape_fees(AccountId, Year, Month, CarrierDoc, OnbillGlobalVars) ->
+shape_fees(AccountId, Year, Month, CarrierDoc, OnbillResellerVars) ->
     FeesList = maybe_monthly_fees(AccountId, CarrierDoc, Year, Month),
-    case kz_json:get_value(<<"vat_disposition">>, OnbillGlobalVars) of
+    case kz_json:get_value(<<"vat_disposition">>, OnbillResellerVars) of
         <<"netto">> ->
-            [enhance_vat_netto(FeeLine, OnbillGlobalVars) ++ enhance_extra_codes(FeeLine, OnbillGlobalVars) || FeeLine <- FeesList];
+            [enhance_vat_netto(FeeLine, OnbillResellerVars) ++ enhance_extra_codes(FeeLine, OnbillResellerVars) || FeeLine <- FeesList];
         <<"brutto">> ->
-            [enhance_vat_brutto(FeeLine, OnbillGlobalVars) ++ enhance_extra_codes(FeeLine, OnbillGlobalVars) || FeeLine <- FeesList];
+            [enhance_vat_brutto(FeeLine, OnbillResellerVars) ++ enhance_extra_codes(FeeLine, OnbillResellerVars) || FeeLine <- FeesList];
         _ ->
-            [enhance_no_or_zero_vat(FeeLine, OnbillGlobalVars) ++ enhance_extra_codes(FeeLine, OnbillGlobalVars) || FeeLine <- FeesList]
+            [enhance_no_or_zero_vat(FeeLine, OnbillResellerVars) ++ enhance_extra_codes(FeeLine, OnbillResellerVars) || FeeLine <- FeesList]
     end.
 
-enhance_extra_codes(FeeLine, OnbillGlobalVars) ->
+enhance_extra_codes(FeeLine, OnbillResellerVars) ->
     Category = props:get_value(<<"category">>, FeeLine),
-    CodesBag = case kz_json:get_value([<<"extra_codes">>, Category], OnbillGlobalVars) of
-                   'undefined' -> kz_json:get_value([<<"extra_codes">>, <<"default">>], OnbillGlobalVars, kz_json:new());
+    CodesBag = case kz_json:get_value([<<"extra_codes">>, Category], OnbillResellerVars) of
+                   'undefined' -> kz_json:get_value([<<"extra_codes">>, <<"default">>], OnbillResellerVars, kz_json:new());
                     FoundBag -> FoundBag
                end,
     [{Key, kz_json:get_value(Key, CodesBag)} || Key <- kz_json:get_keys(CodesBag)].
 
-enhance_no_or_zero_vat(FeeLine, _OnbillGlobalVars) ->
+enhance_no_or_zero_vat(FeeLine, _OnbillResellerVars) ->
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
     NewValues = [{<<"rate_netto">>, onbill_util:price_round(Rate)}
@@ -43,8 +43,8 @@ enhance_no_or_zero_vat(FeeLine, _OnbillGlobalVars) ->
                 ],
     props:set_values(NewValues, FeeLine).
 
-enhance_vat_netto(FeeLine, OnbillGlobalVars) ->
-    VatRate = kz_json:get_value(<<"vat_rate">>, OnbillGlobalVars),
+enhance_vat_netto(FeeLine, OnbillResellerVars) ->
+    VatRate = kz_json:get_value(<<"vat_rate">>, OnbillResellerVars),
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
     VatLineTotal = onbill_util:price_round(Cost * VatRate / 100),
@@ -58,8 +58,8 @@ enhance_vat_netto(FeeLine, OnbillGlobalVars) ->
                 ],
     props:set_values(NewValues, FeeLine).
 
-enhance_vat_brutto(FeeLine, OnbillGlobalVars) ->
-    VatRate = kz_json:get_value(<<"vat_rate">>, OnbillGlobalVars),
+enhance_vat_brutto(FeeLine, OnbillResellerVars) ->
+    VatRate = kz_json:get_value(<<"vat_rate">>, OnbillResellerVars),
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
     VatLineTotal = onbill_util:price_round(Cost * VatRate / (100 + VatRate)),
@@ -329,9 +329,9 @@ aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, 
 aggregated_service_to_line(_, _, _) ->
     [].
 
-vatify_amount(AmountName, Amount, OnbillGlobalVars) ->
-    VatRate = kz_json:get_value(<<"vat_rate">>, OnbillGlobalVars),
-    VatDisposition = kz_json:get_value(<<"vat_disposition">>, OnbillGlobalVars),
+vatify_amount(AmountName, Amount, OnbillResellerVars) ->
+    VatRate = kz_json:get_value(<<"vat_rate">>, OnbillResellerVars),
+    VatDisposition = kz_json:get_value(<<"vat_disposition">>, OnbillResellerVars),
     vatify_amount(AmountName, Amount, VatRate, VatDisposition).
 
 vatify_amount(AmountName, Netto, VatRate, VatDisposition) when VatDisposition == <<"netto">> ->
