@@ -32,7 +32,7 @@ allowed_methods(?GENERATE) ->
 allowed_methods(?RESELLER_VARIABLES) ->
     [?HTTP_GET].
 allowed_methods(?CARRIERS,_) ->
-    [?HTTP_GET];
+    [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?MODB,_) ->
     [?HTTP_GET].
 allowed_methods(?CARRIERS,_,?ATTACHMENT) ->
@@ -129,8 +129,10 @@ validate_onbill(Context, ?RESELLER_VARIABLES, ?HTTP_GET) ->
 validate_onbill(Context, Id, ?HTTP_GET) ->
     read_onbill(Id, Context).
 
-validate_onbill(_Context, ?CARRIERS, _Id, ?HTTP_GET) ->
-    'ok'.
+validate_onbill(Context, ?CARRIERS, Id, ?HTTP_GET) ->
+    read_onbill(<<"carrier.", (kz_util:to_binary(Id))/binary>>, Context);
+validate_onbill(Context, ?CARRIERS, Id, ?HTTP_POST) ->
+    save_onbill(build_carrier_doc_id(Id, Context), Context).
 
 validate_onbill(Context,?MODB, Id, ?ATTACHMENT, ?HTTP_GET) ->
     load_modb_attachment(Context, Id).
@@ -138,6 +140,21 @@ validate_onbill(Context,?MODB, Id, ?ATTACHMENT, ?HTTP_GET) ->
 -spec read_onbill(ne_binary(), cb_context:context()) -> cb_context:context().
 read_onbill(Id, Context) ->
     crossbar_doc:load(Id, cb_context:set_account_db(Context, <<"onbill">>)).
+
+-spec save_onbill(ne_binary(), cb_context:context()) -> cb_context:context().
+save_onbill(Id, Context) ->
+    ReqData = kz_json:delete_key(<<"id">>, cb_context:req_data(Context)),
+    Doc = case kz_datamgr:open_doc(<<"onbill">>, Id) of
+              {'ok', JObj} -> JObj;
+              {error,not_found} -> kz_json:new()
+          end,
+    Values = props:filter_undefined([{<<"_id">>, Id}
+                                    ,{<<"_rev">>, kz_json:get_value(<<"_rev">>, Doc)}
+                                    ,{<<"_attachments">>, kz_json:get_value(<<"_attachments">>, Doc)}
+                                    ]),
+    NewDoc = kz_json:set_values(Values, ReqData),
+    Context1 = cb_context:set_doc(Context, NewDoc),
+    crossbar_doc:save(cb_context:set_account_db(Context1, <<"onbill">>)).
 
 -spec onbills_modb_summary(cb_context:context()) -> cb_context:context().
 onbills_modb_summary(Context) ->
@@ -187,4 +204,13 @@ load_modb_attachment(Context0, Id) ->
             );
         _ ->
             cb_context:add_system_error('faulty_request', Context0)
+    end.
+
+build_carrier_doc_id(Id, Context) ->
+    case cb_modules_util:is_superduper_admin(Context) of
+        'true' ->
+            <<"carrier.", (kz_util:to_binary(Id))/binary>>;
+        'false' ->
+            AccountId = cb_context:account_id(Context),
+            <<"carrier.", (kz_util:to_binary(Id))/binary, ".", AccountId/binary>>
     end.
