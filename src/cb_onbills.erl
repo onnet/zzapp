@@ -30,7 +30,7 @@ allowed_methods() ->
 allowed_methods(?GENERATE) ->
     [?HTTP_PUT];
 allowed_methods(?RESELLER_VARIABLES) ->
-    [?HTTP_GET].
+    [?HTTP_GET, ?HTTP_POST].
 allowed_methods(?CARRIERS,_) ->
     [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?MODB,_) ->
@@ -125,9 +125,16 @@ validate_onbill(Context, ?RESELLER_VARIABLES, ?HTTP_GET) ->
         'true' -> read_onbill(AccountId, Context);
         'false' -> cb_context:add_system_error('forbidden', Context)
     end;
-
-validate_onbill(Context, Id, ?HTTP_GET) ->
-    read_onbill(Id, Context).
+validate_onbill(Context, ?RESELLER_VARIABLES, ?HTTP_POST) ->
+    AccountId = cb_context:account_id(Context),
+    AuthAccountId = cb_context:auth_account_id(Context),
+    case kz_services:is_reseller(AuthAccountId) orelse cb_modules_util:is_superduper_admin(AuthAccountId) of
+        'true' -> save_onbill(AccountId, Context);
+        'false' -> cb_context:add_system_error('forbidden', Context)
+    end;
+validate_onbill(Context, _Id, ?HTTP_GET) ->
+    cb_context:add_system_error('only carrier or reseller docs are implemented for now...', Context).
+%    read_onbill(Id, Context).
 
 validate_onbill(Context, ?CARRIERS, Id, ?HTTP_GET) ->
     read_onbill(<<"carrier.", (kz_util:to_binary(Id))/binary>>, Context);
