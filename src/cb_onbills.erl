@@ -35,7 +35,7 @@ allowed_methods(?CARRIERS,_) ->
     [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?MODB,_) ->
     [?HTTP_GET].
-allowed_methods(?CARRIERS,_,?ATTACHMENT) ->
+allowed_methods(?CARRIERS,_,_) ->
     [?HTTP_GET];
 allowed_methods(?MODB,_,?ATTACHMENT) ->
     [?HTTP_GET].
@@ -46,7 +46,7 @@ resource_exists() -> 'true'.
 resource_exists(_) -> 'true'.
 resource_exists(?CARRIERS,_) -> 'true';
 resource_exists(?MODB,_) -> 'true'.
-resource_exists(?CARRIERS,_,?ATTACHMENT) -> 'true';
+resource_exists(?CARRIERS,_,_) -> 'true';
 resource_exists(?MODB,_,?ATTACHMENT) -> 'true'.
 
 -spec content_types_provided(cb_context:context()) -> cb_context:context().
@@ -54,6 +54,9 @@ content_types_provided(Context) ->
     Context.
 content_types_provided(Context,_,?GENERATE) ->
     Context.
+content_types_provided(Context,?CARRIERS,_,_) ->
+    CTP = [{'to_binary', [{<<"text">>, <<"html">>}]}],
+    cb_context:set_content_types_provided(Context, CTP);
 content_types_provided(Context,?MODB,_,?ATTACHMENT) ->
     CTP = [{'to_binary', [{<<"application">>, <<"pdf">>}]}],
     cb_context:set_content_types_provided(Context, CTP).
@@ -68,6 +71,8 @@ validate(Context, Id) ->
     validate_onbill(Context, Id, cb_context:req_verb(Context)).
 validate(Context, ?CARRIERS, Id) ->
     validate_onbill(Context, ?CARRIERS, Id, cb_context:req_verb(Context)).
+validate(Context,?CARRIERS, Id, AttachmentId) ->
+    validate_onbill(Context,?CARRIERS, Id, AttachmentId, cb_context:req_verb(Context));
 validate(Context,?MODB, Id, ?ATTACHMENT) ->
     validate_onbill(Context,?MODB, Id, ?ATTACHMENT, cb_context:req_verb(Context)).
 
@@ -141,6 +146,8 @@ validate_onbill(Context, ?CARRIERS, Id, ?HTTP_GET) ->
 validate_onbill(Context, ?CARRIERS, Id, ?HTTP_POST) ->
     save_onbill(build_carrier_doc_id(Id, Context), Context).
 
+validate_onbill(Context,?CARRIERS, Id, AttachmentId, ?HTTP_GET) ->
+    load_carrier_attachment(Context, build_carrier_doc_id(Id, Context), <<Id/binary, "_", AttachmentId/binary, ".tpl">>);
 validate_onbill(Context,?MODB, Id, ?ATTACHMENT, ?HTTP_GET) ->
     load_modb_attachment(Context, Id).
 
@@ -221,3 +228,6 @@ build_carrier_doc_id(Id, Context) ->
             AccountId = cb_context:account_id(Context),
             <<"carrier.", (kz_util:to_binary(Id))/binary, ".", AccountId/binary>>
     end.
+
+load_carrier_attachment(Context, DocId, AName) ->
+    crossbar_doc:load_attachment(DocId, AName, [], cb_context:set_account_db(Context, <<"onbill">>)).
