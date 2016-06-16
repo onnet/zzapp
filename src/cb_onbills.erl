@@ -4,6 +4,7 @@
          ,allowed_methods/0, allowed_methods/1, allowed_methods/2, allowed_methods/3
          ,resource_exists/0, resource_exists/1, resource_exists/2, resource_exists/3
          ,content_types_provided/1, content_types_provided/3, content_types_provided/4
+         ,content_types_accepted/4
          ,validate/1, validate/2, validate/3, validate/4
         ]).
 
@@ -15,12 +16,16 @@
 -define(CARRIERS, <<"carriers">>).
 -define(MODB, <<"onbills_modb">>).
 -define(RESELLER_VARIABLES, <<"onbill_reseller_variables">>).
+-define(NOTIFICATION_MIME_TYPES, [{<<"text">>, <<"html">>}
+                               %   ,{<<"text">>, <<"plain">>}
+                                 ]).
 
 -spec init() -> 'ok'.
 init() ->
     _ = crossbar_bindings:bind(<<"*.allowed_methods.onbills">>, ?MODULE, 'allowed_methods'),
     _ = crossbar_bindings:bind(<<"*.resource_exists.onbills">>, ?MODULE, 'resource_exists'),
     _ = crossbar_bindings:bind(<<"*.content_types_provided.onbills">>, ?MODULE, 'content_types_provided'),
+    _ = crossbar_bindings:bind(<<"*.content_types_accepted.onbills">>, ?MODULE, 'content_types_accepted'),
     _ = crossbar_bindings:bind(<<"*.validate.onbills">>, ?MODULE, 'validate').
 
 -spec allowed_methods() -> http_methods().
@@ -36,7 +41,7 @@ allowed_methods(?CARRIERS,_) ->
 allowed_methods(?MODB,_) ->
     [?HTTP_GET].
 allowed_methods(?CARRIERS,_,_) ->
-    [?HTTP_GET];
+    [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?MODB,_,?ATTACHMENT) ->
     [?HTTP_GET].
 
@@ -60,6 +65,20 @@ content_types_provided(Context,?CARRIERS,_,_) ->
 content_types_provided(Context,?MODB,_,?ATTACHMENT) ->
     CTP = [{'to_binary', [{<<"application">>, <<"pdf">>}]}],
     cb_context:set_content_types_provided(Context, CTP).
+
+-spec content_types_accepted(cb_context:context(), path_token(), path_token(), path_token()) -> cb_context:context().
+content_types_accepted(Context, ?CARRIERS,_,_) ->
+    content_types_accepted_for_upload(Context, cb_context:req_verb(Context)).
+
+-spec content_types_accepted_for_upload(cb_context:context(), http_method()) ->
+                                               cb_context:context().
+content_types_accepted_for_upload(Context, ?HTTP_POST) ->
+    CTA = [{'from_binary', ?NOTIFICATION_MIME_TYPES}
+           ,{'from_json', ?JSON_CONTENT_TYPES}
+          ],
+    cb_context:set_content_types_accepted(Context, CTA);
+content_types_accepted_for_upload(Context, _Verb) ->
+    Context.
 
 -spec validate(cb_context:context()) -> cb_context:context().
 -spec validate(cb_context:context(), path_token()) -> cb_context:context().
@@ -148,6 +167,8 @@ validate_onbill(Context, ?CARRIERS, Id, ?HTTP_POST) ->
 
 validate_onbill(Context,?CARRIERS, Id, AttachmentId, ?HTTP_GET) ->
     load_carrier_attachment(Context, build_carrier_doc_id(Id, Context), <<Id/binary, "_", AttachmentId/binary, ".tpl">>);
+validate_onbill(Context,?CARRIERS, Id, AttachmentId, ?HTTP_POST) ->
+    save_carrier_attachment(Context, build_carrier_doc_id(Id, Context), <<Id/binary, "_", AttachmentId/binary, ".tpl">>);
 validate_onbill(Context,?MODB, Id, ?ATTACHMENT, ?HTTP_GET) ->
     load_modb_attachment(Context, Id).
 
@@ -231,3 +252,21 @@ build_carrier_doc_id(Id, Context) ->
 
 load_carrier_attachment(Context, DocId, AName) ->
     crossbar_doc:load_attachment(DocId, AName, [], cb_context:set_account_db(Context, <<"onbill">>)).
+
+save_carrier_attachment(Context, DocId, AName) ->
+    case cb_context:req_files(Context) of
+        [{_FileName, FileJObj}] ->
+            Contents = kz_json:get_value(<<"contents">>, FileJObj),
+            CT = kz_json:get_value([<<"headers">>, <<"content_type">>], FileJObj),
+            crossbar_doc:save_attachment(
+              DocId
+              ,AName
+              ,Contents
+              ,cb_context:set_account_db(Context, <<"onbill">>)
+              ,[{'content_type', kz_util:to_list(CT)}]
+             );
+        _ ->
+            lager:debug("No file uploaded"),
+            cb_context:add_system_error('no file uploaded', Context)
+    end.
+
