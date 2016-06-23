@@ -14,6 +14,8 @@
 -define(ATTACHMENT, <<"attachment">>).
 -define(GENERATE, <<"generate">>).
 -define(CARRIERS, <<"carriers">>).
+-define(CUSTOMERS, <<"customers">>).
+-define(SERVICE_PLANS, <<"onbill_service_plans">>).
 -define(MODB, <<"onbills_modb">>).
 -define(RESELLER_VARIABLES, <<"onbill_reseller_variables">>).
 -define(NOTIFICATION_MIME_TYPES, [{<<"text">>, <<"html">>}
@@ -38,6 +40,10 @@ allowed_methods(?RESELLER_VARIABLES) ->
     [?HTTP_GET, ?HTTP_POST].
 allowed_methods(?CARRIERS,_) ->
     [?HTTP_GET, ?HTTP_POST];
+allowed_methods(?CUSTOMERS,_) ->
+    [?HTTP_GET, ?HTTP_POST];
+allowed_methods(?SERVICE_PLANS,_) ->
+    [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?MODB,_) ->
     [?HTTP_GET].
 allowed_methods(?CARRIERS,_,_) ->
@@ -50,6 +56,8 @@ allowed_methods(?MODB,_,?ATTACHMENT) ->
 resource_exists() -> 'true'.
 resource_exists(_) -> 'true'.
 resource_exists(?CARRIERS,_) -> 'true';
+resource_exists(?CUSTOMERS,_) -> 'true';
+resource_exists(?SERVICE_PLANS,_) -> 'true';
 resource_exists(?MODB,_) -> 'true'.
 resource_exists(?CARRIERS,_,_) -> 'true';
 resource_exists(?MODB,_,?ATTACHMENT) -> 'true'.
@@ -89,7 +97,11 @@ validate(Context, ?GENERATE) ->
 validate(Context, Id) ->
     validate_onbill(Context, Id, cb_context:req_verb(Context)).
 validate(Context, ?CARRIERS, Id) ->
-    validate_onbill(Context, ?CARRIERS, Id, cb_context:req_verb(Context)).
+    validate_onbill(Context, ?CARRIERS, Id, cb_context:req_verb(Context));
+validate(Context, ?CUSTOMERS, Id) ->
+    validate_onbill(Context, ?CUSTOMERS, Id, cb_context:req_verb(Context));
+validate(Context, ?SERVICE_PLANS, Id) ->
+    validate_onbill(Context, ?SERVICE_PLANS, Id, cb_context:req_verb(Context)).
 validate(Context,?CARRIERS, Id, AttachmentId) ->
     validate_onbill(Context,?CARRIERS, Id, AttachmentId, cb_context:req_verb(Context));
 validate(Context,?MODB, Id, ?ATTACHMENT) ->
@@ -163,7 +175,15 @@ validate_onbill(Context, _Id, ?HTTP_GET) ->
 validate_onbill(Context, ?CARRIERS, Id, ?HTTP_GET) ->
     read_onbill(<<"carrier.", (kz_util:to_binary(Id))/binary>>, Context);
 validate_onbill(Context, ?CARRIERS, Id, ?HTTP_POST) ->
-    save_onbill(build_carrier_doc_id(Id, Context), Context).
+    save_onbill(build_carrier_doc_id(Id, Context), Context);
+validate_onbill(Context, ?CUSTOMERS, Id, ?HTTP_GET) ->
+    read_onbill(Id, Context);
+validate_onbill(Context, ?CUSTOMERS, Id, ?HTTP_POST) ->
+    save_onbill(Id, Context);
+validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_GET) ->
+    crossbar_doc:load(Id, Context, [{'expected_type', <<"service_plan">>}]);
+validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_POST) ->
+    save_account(Id, Context).
 
 validate_onbill(Context,?CARRIERS, Id, AttachmentId, ?HTTP_GET) ->
     load_carrier_attachment(Context, build_carrier_doc_id(Id, Context), <<Id/binary, "_", AttachmentId/binary, ".tpl">>);
@@ -178,18 +198,23 @@ read_onbill(Id, Context) ->
 
 -spec save_onbill(ne_binary(), cb_context:context()) -> cb_context:context().
 save_onbill(Id, Context) ->
+    save(Id, <<"onbill">>, Context).
+
+-spec save_account(ne_binary(), cb_context:context()) -> cb_context:context().
+save_account(Id, Context) ->
+    save(Id, kz_util:format_account_id(cb_context:account_id(Context),'encoded'), Context).
+
+-spec save(ne_binary(), ne_binary(), cb_context:context()) -> cb_context:context().
+save(Id, DbName, Context) ->
     ReqData = kz_json:delete_key(<<"id">>, cb_context:req_data(Context)),
-    Doc = case kz_datamgr:open_doc(<<"onbill">>, Id) of
+    Doc = case kz_datamgr:open_doc(DbName, Id) of
               {'ok', JObj} -> JObj;
-              {error,not_found} -> kz_json:new()
+              {error,not_found} -> kz_json:set_value(<<"_id">>, Id, kz_json:new())
           end,
-    Values = props:filter_undefined([{<<"_id">>, Id}
-                                    ,{<<"_rev">>, kz_json:get_value(<<"_rev">>, Doc)}
-                                    ,{<<"_attachments">>, kz_json:get_value(<<"_attachments">>, Doc)}
-                                    ]),
+    Values = kz_json:to_proplist(kz_doc:private_fields(Doc)),
     NewDoc = kz_json:set_values(Values, ReqData),
     Context1 = cb_context:set_doc(Context, NewDoc),
-    crossbar_doc:save(cb_context:set_account_db(Context1, <<"onbill">>)).
+    crossbar_doc:save(cb_context:set_account_db(Context1, DbName)).
 
 -spec onbills_modb_summary(cb_context:context()) -> cb_context:context().
 onbills_modb_summary(Context) ->
