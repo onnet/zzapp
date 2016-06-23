@@ -183,7 +183,7 @@ validate_onbill(Context, ?CUSTOMERS, Id, ?HTTP_POST) ->
 validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_GET) ->
     crossbar_doc:load(Id, Context, [{'expected_type', <<"service_plan">>}]);
 validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_POST) ->
-    save_account(Id, Context).
+    save_account(Id, <<"service_plan">>, Context).
 
 validate_onbill(Context,?CARRIERS, Id, AttachmentId, ?HTTP_GET) ->
     load_carrier_attachment(Context, build_carrier_doc_id(Id, Context), <<Id/binary, "_", AttachmentId/binary, ".tpl">>);
@@ -200,16 +200,24 @@ read_onbill(Id, Context) ->
 save_onbill(Id, Context) ->
     save(Id, <<"onbill">>, Context).
 
--spec save_account(ne_binary(), cb_context:context()) -> cb_context:context().
-save_account(Id, Context) ->
-    save(Id, kz_util:format_account_id(cb_context:account_id(Context),'encoded'), Context).
+-spec save_account(ne_binary(), ne_binary(), cb_context:context()) -> cb_context:context().
+save_account(Id, Type, Context) ->
+    save(Id, kz_util:format_account_id(cb_context:account_id(Context),'encoded'), Type, Context).
 
 -spec save(ne_binary(), ne_binary(), cb_context:context()) -> cb_context:context().
 save(Id, DbName, Context) ->
+    save(Id, DbName, 'undefined', Context).
+
+-spec save(ne_binary(), ne_binary(), ne_binary()|atom(), cb_context:context()) -> cb_context:context().
+save(Id, DbName, Type, Context) ->
     ReqData = kz_json:delete_key(<<"id">>, cb_context:req_data(Context)),
     Doc = case kz_datamgr:open_doc(DbName, Id) of
               {'ok', JObj} -> JObj;
-              {error,not_found} -> kz_json:set_value(<<"_id">>, Id, kz_json:new())
+              {error,not_found} ->
+                  InitValues = props:filter_undefined([{<<"_id">>, Id}
+                                                  ,{<<"pvt_type">>, Type}
+                                                  ]),
+                  kz_json:set_values(InitValues, kz_json:new())
           end,
     Values = kz_json:to_proplist(kz_doc:private_fields(Doc)),
     NewDoc = kz_json:set_values(Values, ReqData),
