@@ -18,6 +18,8 @@
 -define(SERVICE_PLANS, <<"onbill_service_plans">>).
 -define(MODB, <<"onbills_modb">>).
 -define(RESELLER_VARIABLES, <<"onbill_reseller_variables">>).
+-define(ALL_CHILDREN, <<"all_children">>).
+-define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
 -define(NOTIFICATION_MIME_TYPES, [{<<"text">>, <<"html">>}
                                %   ,{<<"text">>, <<"plain">>}
                                  ]).
@@ -34,8 +36,6 @@ init() ->
 -spec allowed_methods(path_token()) -> http_methods().
 allowed_methods() ->
     [?HTTP_GET].
-allowed_methods(?GENERATE) ->
-    [?HTTP_PUT];
 allowed_methods(?RESELLER_VARIABLES) ->
     [?HTTP_GET, ?HTTP_POST].
 allowed_methods(?CARRIERS,_) ->
@@ -44,6 +44,8 @@ allowed_methods(?CUSTOMERS,_) ->
     [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?SERVICE_PLANS,_) ->
     [?HTTP_GET, ?HTTP_POST];
+allowed_methods(?GENERATE,_) ->
+    [?HTTP_PUT];
 allowed_methods(?MODB,_) ->
     [?HTTP_GET].
 allowed_methods(?CARRIERS,_,_) ->
@@ -58,6 +60,7 @@ resource_exists(_) -> 'true'.
 resource_exists(?CARRIERS,_) -> 'true';
 resource_exists(?CUSTOMERS,_) -> 'true';
 resource_exists(?SERVICE_PLANS,_) -> 'true';
+resource_exists(?GENERATE,_) -> 'true';
 resource_exists(?MODB,_) -> 'true'.
 resource_exists(?CARRIERS,_,_) -> 'true';
 resource_exists(?MODB,_,?ATTACHMENT) -> 'true'.
@@ -92,10 +95,10 @@ content_types_accepted_for_upload(Context, _Verb) ->
 -spec validate(cb_context:context(), path_token()) -> cb_context:context().
 validate(Context) ->
     validate_onbill(Context, cb_context:req_verb(Context)).
-validate(Context, ?GENERATE) ->
-    validate_generate(Context);
 validate(Context, Id) ->
     validate_onbill(Context, Id, cb_context:req_verb(Context)).
+validate(Context, ?GENERATE, Id) ->
+    validate_generate(Context, Id, cb_context:req_verb(Context));
 validate(Context, ?CARRIERS, Id) ->
     validate_onbill(Context, ?CARRIERS, Id, cb_context:req_verb(Context));
 validate(Context, ?CUSTOMERS, Id) ->
@@ -107,19 +110,20 @@ validate(Context,?CARRIERS, Id, AttachmentId) ->
 validate(Context,?MODB, Id, ?ATTACHMENT) ->
     validate_onbill(Context,?MODB, Id, ?ATTACHMENT, cb_context:req_verb(Context)).
 
--spec validate_generate(cb_context:context()) -> cb_context:context().
-validate_generate(Context) ->
+-spec validate_generate(cb_context:context(), ne_binary(), http_method()) -> cb_context:context().
+validate_generate(Context, DocsAccountId, ?HTTP_PUT) ->
     Year = kz_json:get_float_value(<<"year">>, cb_context:req_data(Context)),
     Month = kz_json:get_float_value(<<"month">>, cb_context:req_data(Context)),
-    validate_generate(Context, Year, Month).
+    validate_generate(Context, DocsAccountId, Year, Month).
 
-validate_generate(Context, Year, Month) when is_number(Year) andalso is_number(Month) ->
+validate_generate(Context, DocsAccountId, Year, Month) when is_number(Year) andalso is_number(Month) ->
     case kz_json:get_value(<<"doc_type">>, cb_context:req_data(Context)) of
-        "calls_reports" -> generate_per_minute_reports(Context, Year, Month);
-        _ -> maybe_generate_billing_docs(Context, Year, Month)
+        "calls_reports" -> generate_per_minute_reports(Context, DocsAccountId, Year, Month);
+     %  "calls_reports" -> generate_billing_docs(Context, DocsAccountId, Year, Month, 'per_minute_reports');
+        _ -> maybe_generate_billing_docs(Context, DocsAccountId, Year, Month, 'generate_docs')
     end;
 
-validate_generate(Context, _, _) ->
+validate_generate(Context, _, _, _) ->
     Message = <<"Year and Month required">>,
     cb_context:add_validation_error(
       <<"Year and month">>
@@ -128,25 +132,49 @@ validate_generate(Context, _, _) ->
       ,Context
      ).
 
-maybe_generate_billing_docs(Context, Year, Month) ->
+maybe_generate_billing_docs(Context, DocsAccountId, Year, Month, FunName) ->
     case cb_modules_util:is_superduper_admin(Context) of
         'true' ->
-            generate_billing_docs(Context, Year, Month);
+            generate_billing_docs(Context, DocsAccountId, Year, Month, FunName);
         'false' ->
             case kz_services:is_reseller(cb_context:auth_account_id(Context)) of
-                'true' -> generate_billing_docs(Context, Year, Month);
+                'true' -> generate_billing_docs(Context, DocsAccountId, Year, Month, FunName);
                 'false' -> cb_context:add_system_error('forbidden', Context)
             end
     end.
 
-generate_billing_docs(Context, Year, Month) ->
-    AccountId = cb_context:account_id(Context),
-    docs:generate_docs(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
-    cb_context:set_resp_status(Context, 'success').
+maybe_spawn_generate_billing_docs(AccountId, Year, Month, FunName, N) ->
+    case onbill_util:is_billable(AccountId) of
+        'true' ->
+            spawn(fun() ->
+                      timer:sleep(N * 2000),
+                      docs:FunName(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month))
+                  end),
+            N+1;
+        'false' -> N
+    end.
 
-generate_per_minute_reports(Context, Year, Month) ->
-    AccountId = cb_context:account_id(Context),
-    docs:per_minute_reports(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
+generate_billing_docs(Context, ?ALL_CHILDREN, Year, Month, FunName) ->
+    ResellerId = cb_context:account_id(Context),
+    case get_children_list(ResellerId) of
+        {'ok', Accounts} ->
+            Res = lists:foldl(fun(X, N) -> maybe_spawn_generate_billing_docs(kz_json:get_value(<<"id">>, X), Year, Month, FunName, N) end, 1, Accounts),
+            cb_context:set_resp_status(Context, 'success');
+        {'error', _Reason} ->
+            cb_context:add_system_error('error', Context)
+    end;
+generate_billing_docs(Context, DocsAccountId, Year, Month, FunName) ->
+    ResellerId = cb_context:account_id(Context),
+    case validate_relationship(DocsAccountId, ResellerId) of
+        'true' ->
+            _ = docs:FunName(DocsAccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
+            cb_context:set_resp_status(Context, 'success');
+        'false' ->
+            cb_context:add_system_error('forbidden', Context)
+    end.
+
+generate_per_minute_reports(Context, DocsAccountId, Year, Month) ->
+    docs:per_minute_reports(DocsAccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
     cb_context:set_resp_status(Context, 'success').
 
 -spec validate_onbill(cb_context:context(), http_method()) -> cb_context:context().
@@ -302,4 +330,21 @@ save_carrier_attachment(Context, DocId, AName) ->
             lager:debug("No file uploaded"),
             cb_context:add_system_error('no file uploaded', Context)
     end.
+
+-spec validate_relationship(ne_binary(), ne_binary()) -> boolean().
+validate_relationship(ChildId, ResellerId) ->
+    case get_children_list(ResellerId) of
+        {'ok', Accounts} ->
+            AccountIds = lists:map(fun(Account) -> kz_json:get_value(<<"id">>, Account) end, Accounts),
+            lists:member(ChildId, AccountIds);
+        {'error', _Reason} = E ->
+            lager:info("failed to load children. error: ~p", [E]),
+            'false'
+    end.
+
+get_children_list(ResellerId) ->
+    ViewOpts = [{'startkey', [ResellerId]}
+               ,{'endkey', [ResellerId, kz_json:new()]}
+               ],
+    kz_datamgr:get_results(?KZ_ACCOUNTS_DB, ?ACC_CHILDREN_LIST, ViewOpts).
 

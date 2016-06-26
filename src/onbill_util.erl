@@ -11,6 +11,7 @@
          ,maybe_main_carrier/1
          ,get_main_carrier/1
          ,format_datetime/1
+         ,is_billable/1
         ]).
 
 -include("onbill.hrl").
@@ -84,3 +85,9 @@ format_datetime(TStamp) ->
     {{Year, Month, Day}, {Hour, Minute, Second}} = calendar:gregorian_seconds_to_datetime(TStamp),
     StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])),
     kz_util:to_binary(StrTime).
+
+is_billable(AccountId) ->
+    case kz_datamgr:open_doc(?ONBILL_DB, AccountId) of
+        {'ok', _} -> 'true';
+        _ -> 'false'
+    end.
