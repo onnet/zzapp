@@ -158,7 +158,7 @@ generate_billing_docs(Context, ?ALL_CHILDREN, Year, Month, FunName) ->
     ResellerId = cb_context:account_id(Context),
     case get_children_list(ResellerId) of
         {'ok', Accounts} ->
-            Res = lists:foldl(fun(X, N) -> maybe_spawn_generate_billing_docs(kz_json:get_value(<<"id">>, X), Year, Month, FunName, N) end, 1, Accounts),
+            _ = lists:foldl(fun(X, N) -> maybe_spawn_generate_billing_docs(kz_json:get_value(<<"id">>, X), Year, Month, FunName, N) end, 1, Accounts),
             cb_context:set_resp_status(Context, 'success');
         {'error', _Reason} ->
             cb_context:add_system_error('error', Context)
