@@ -81,7 +81,7 @@ maybe_monthly_fees(AccountId, CarrierDoc, Year, Month) ->
 
 monthly_fees(AccountId, Year, Month) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-    _ = onbill_util:maybe_add_design_doc(Modb),
+    _ = onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
     RawTableId = ets:new(erlang:binary_to_atom(<<AccountId/binary, "-raw">>, 'latin1'), [duplicate_bag]),
     ResultTableId = ets:new(erlang:binary_to_atom(<<AccountId/binary, "-result">>, 'latin1'), [bag]),
     case kz_datamgr:get_results(Modb, <<"onbills/daily_fees">>, []) of

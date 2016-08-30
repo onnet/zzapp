@@ -1,7 +1,7 @@
 -module(onbill_util).
 
 -export([check_db/1
-         ,maybe_add_design_doc/1
+         ,maybe_add_design_doc/2
          ,get_attachment/2
          ,price_round/1
          ,account_carriers_list/1
@@ -26,14 +26,14 @@ do_check_db(Db, 'false') ->
     lager:debug("create Db ~p", [Db]),
     _ = kz_datamgr:db_create(Db).
 
--spec maybe_add_design_doc(ne_binary()) -> 'ok' | {'error', 'not_found'}.
-maybe_add_design_doc(Modb) ->
-    case kz_datamgr:lookup_doc_rev(Modb, <<"_design/onbills">>) of
+-spec maybe_add_design_doc(ne_binary(), ne_binary()) -> 'ok' | {'error', 'not_found'}.
+maybe_add_design_doc(DbName, ViewName) ->
+    case kz_datamgr:lookup_doc_rev(DbName, <<"_design/", ViewName/binary>>) of
         {'error', 'not_found'} ->
-            lager:warning("adding onbill views to modb: ~s", [Modb]),
-            kz_datamgr:revise_doc_from_file(Modb
+            lager:warning("adding onbill views to modb: ~s", [DbName]),
+            kz_datamgr:revise_doc_from_file(DbName
                                            ,'onbill'
-                                           ,<<"views/onbills.json">>
+                                           ,<<"views/", ViewName/binary, ".json">>
                                           );
         {'ok', _ } -> 'ok'
     end.

@@ -267,7 +267,7 @@ onbills_modb_summary(Context) ->
                     end,
     AccountId = cb_context:account_id(Context),
     Modb = kazoo_modb:get_modb(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
-    onbill_util:maybe_add_design_doc(Modb),
+    onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
     Context1 = cb_context:set_account_db(Context, Modb),
     crossbar_doc:load_view(?CB_LIST, [], Context1, fun normalize_view_results/2).
 
