@@ -133,7 +133,7 @@ validate_generate(Context, _, _, _) ->
      ).
 
 maybe_generate_billing_docs(Context, DocsAccountId, Year, Month, FunName) ->
-    case cb_modules_util:is_superduper_admin(Context) of
+    case cb_context:is_superduper_admin(Context) of
         'true' ->
             generate_billing_docs(Context, DocsAccountId, Year, Month, FunName);
         'false' ->
@@ -185,14 +185,14 @@ validate_onbill(Context, ?HTTP_GET) ->
 validate_onbill(Context, ?RESELLER_VARIABLES, ?HTTP_GET) ->
     AccountId = cb_context:account_id(Context),
     AuthAccountId = cb_context:auth_account_id(Context),
-    case kz_services:is_reseller(AuthAccountId) orelse cb_modules_util:is_superduper_admin(AuthAccountId) of
+    case kz_services:is_reseller(AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId) of
         'true' -> read_onbill(AccountId, Context);
         'false' -> cb_context:add_system_error('forbidden', Context)
     end;
 validate_onbill(Context, ?RESELLER_VARIABLES, ?HTTP_POST) ->
     AccountId = cb_context:account_id(Context),
     AuthAccountId = cb_context:auth_account_id(Context),
-    case kz_services:is_reseller(AuthAccountId) orelse cb_modules_util:is_superduper_admin(AuthAccountId) of
+    case kz_services:is_reseller(AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId) of
         'true' -> save_onbill(AccountId, Context);
         'false' -> cb_context:add_system_error('forbidden', Context)
     end;
@@ -303,7 +303,7 @@ load_modb_attachment(Context0, Id) ->
     end.
 
 build_carrier_doc_id(Id, Context) ->
-    case cb_modules_util:is_superduper_admin(Context) of
+    case cb_context:is_superduper_admin(Context) of
         'true' ->
             <<"carrier.", (kz_util:to_binary(Id))/binary>>;
         'false' ->
