@@ -11,11 +11,13 @@
 -include("../../crossbar/src/crossbar.hrl").
 
 -define(CB_LIST, <<"onbills/crossbar_listing">>).
+-define(PERIODIC_FEES_LIST, <<"onbills/periodic_fees_listing">>).
 -define(ATTACHMENT, <<"attachment">>).
 -define(GENERATE, <<"generate">>).
 -define(CARRIERS, <<"carriers">>).
 -define(CUSTOMERS, <<"customers">>).
 -define(SERVICE_PLANS, <<"onbill_service_plans">>).
+-define(PERIODIC_FEES, <<"periodic_fees">>).
 -define(MODB, <<"onbills_modb">>).
 -define(RESELLER_VARIABLES, <<"onbill_reseller_variables">>).
 -define(ALL_CHILDREN, <<"all_children">>).
@@ -36,6 +38,8 @@ init() ->
 -spec allowed_methods(path_token()) -> http_methods().
 allowed_methods() ->
     [?HTTP_GET].
+allowed_methods(?PERIODIC_FEES) ->
+    [?HTTP_GET, ?HTTP_PUT];
 allowed_methods(?RESELLER_VARIABLES) ->
     [?HTTP_GET, ?HTTP_POST].
 allowed_methods(?CARRIERS,_) ->
@@ -43,6 +47,8 @@ allowed_methods(?CARRIERS,_) ->
 allowed_methods(?CUSTOMERS,_) ->
     [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?SERVICE_PLANS,_) ->
+    [?HTTP_GET, ?HTTP_POST];
+allowed_methods(?PERIODIC_FEES,_) ->
     [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?GENERATE,_) ->
     [?HTTP_PUT];
@@ -60,6 +66,7 @@ resource_exists(_) -> 'true'.
 resource_exists(?CARRIERS,_) -> 'true';
 resource_exists(?CUSTOMERS,_) -> 'true';
 resource_exists(?SERVICE_PLANS,_) -> 'true';
+resource_exists(?PERIODIC_FEES,_) -> 'true';
 resource_exists(?GENERATE,_) -> 'true';
 resource_exists(?MODB,_) -> 'true'.
 resource_exists(?CARRIERS,_,_) -> 'true';
@@ -104,7 +111,9 @@ validate(Context, ?CARRIERS, Id) ->
 validate(Context, ?CUSTOMERS, Id) ->
     validate_onbill(Context, ?CUSTOMERS, Id, cb_context:req_verb(Context));
 validate(Context, ?SERVICE_PLANS, Id) ->
-    validate_onbill(Context, ?SERVICE_PLANS, Id, cb_context:req_verb(Context)).
+    validate_onbill(Context, ?SERVICE_PLANS, Id, cb_context:req_verb(Context));
+validate(Context, ?PERIODIC_FEES, Id) ->
+    validate_onbill(Context, ?PERIODIC_FEES, Id, cb_context:req_verb(Context)).
 validate(Context,?CARRIERS, Id, AttachmentId) ->
     validate_onbill(Context,?CARRIERS, Id, AttachmentId, cb_context:req_verb(Context));
 validate(Context,?MODB, Id, ?ATTACHMENT) ->
@@ -196,6 +205,13 @@ validate_onbill(Context, ?RESELLER_VARIABLES, ?HTTP_POST) ->
         'true' -> save_onbill(AccountId, Context);
         'false' -> cb_context:add_system_error('forbidden', Context)
     end;
+validate_onbill(Context, ?PERIODIC_FEES, ?HTTP_GET) ->
+    _AccountId = cb_context:account_id(Context),
+    AuthAccountId = cb_context:auth_account_id(Context),
+    case kz_services:is_reseller(AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId) of
+        'true' -> crossbar_doc:load_view(?PERIODIC_FEES_LIST, [], Context, fun normalize_view_results/2);
+        'false' -> cb_context:add_system_error('forbidden', Context)
+    end;
 validate_onbill(Context, _Id, ?HTTP_GET) ->
     cb_context:add_system_error('only carrier or reseller docs are implemented for now...', Context).
 %    read_onbill(Id, Context).
@@ -211,7 +227,9 @@ validate_onbill(Context, ?CUSTOMERS, Id, ?HTTP_POST) ->
 validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_GET) ->
     crossbar_doc:load(Id, Context, [{'expected_type', <<"service_plan">>}]);
 validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_POST) ->
-    save_account(Id, <<"service_plan">>, Context).
+    save_account(Id, <<"service_plan">>, Context);
+validate_onbill(Context, ?PERIODIC_FEES, Id, ?HTTP_GET) ->
+    crossbar_doc:load(Id, Context, [{'expected_type', <<"periodic_fee">>}]).
 
 validate_onbill(Context,?CARRIERS, Id, AttachmentId, ?HTTP_GET) ->
     load_carrier_attachment(Context, build_carrier_doc_id(Id, Context), <<Id/binary, "_", AttachmentId/binary, ".tpl">>);
