@@ -212,6 +212,21 @@ validate_onbill(Context, ?PERIODIC_FEES, ?HTTP_GET) ->
         'true' -> crossbar_doc:load_view(?PERIODIC_FEES_LIST, [], Context, fun normalize_view_results/2);
         'false' -> cb_context:add_system_error('forbidden', Context)
     end;
+validate_onbill(Context, ?PERIODIC_FEES, ?HTTP_PUT) ->
+    _AccountId = cb_context:account_id(Context),
+    AuthAccountId = cb_context:auth_account_id(Context),
+    case kz_services:is_reseller(AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId) of
+        'true' ->
+            ReqData = cb_context:req_data(Context),
+            Id = kz_doc:id(ReqData, kz_datamgr:get_uuid()),
+            Values = props:filter_undefined([{<<"_id">>, Id}
+                                            ,{<<"pvt_type">>, <<"periodic_fee">>}
+                                            ]),
+            NewDoc = kz_json:set_values(Values, ReqData),
+            Context1 = cb_context:set_doc(Context, NewDoc),
+            crossbar_doc:save(Context1);
+        'false' -> cb_context:add_system_error('forbidden', Context)
+    end;
 validate_onbill(Context, _Id, ?HTTP_GET) ->
     cb_context:add_system_error('only carrier or reseller docs are implemented for now...', Context).
 %    read_onbill(Id, Context).
