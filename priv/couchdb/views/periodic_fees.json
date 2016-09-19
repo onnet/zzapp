@@ -1,0 +1,13 @@
+{
+    "_id": "_design/periodic_fees",
+    "language": "javascript",
+    "views": {
+        "crossbar_listing": {
+            "map": "function(doc) { if (doc.pvt_type != 'periodic_fee' || doc.pvt_deleted || doc.enabled == false) return; emit(doc._id, {'id': doc._id, 'service_plan_id': doc.service_plan_id, 'service_id': doc.service_id, 'service_starts': doc.service_starts, 'service_ends': doc.service_ends}); }"
+        },
+        "usage": {
+            "map": "function(doc) { if (doc.pvt_type != 'periodic_fee' || doc.pvt_deleted || doc.enabled == false) return; emit(doc.service_id, 1); }",
+            "reduce": "_sum"
+        }
+    }
+}

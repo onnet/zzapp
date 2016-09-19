@@ -12,6 +12,7 @@
          ,get_main_carrier/1
          ,format_datetime/1
          ,is_billable/1
+         ,validate_relationship/2
         ]).
 
 -include("onbill.hrl").
@@ -91,3 +92,21 @@ is_billable(AccountId) ->
         {'ok', _} -> 'true';
         _ -> 'false'
     end.
+
+-spec validate_relationship(ne_binary(), ne_binary()) -> boolean().
+validate_relationship(ChildId, ResellerId) ->
+    case get_children_list(ResellerId) of
+        {'ok', Accounts} ->
+            AccountIds = lists:map(fun(Account) -> kz_json:get_value(<<"id">>, Account) end, Accounts),
+            lists:member(ChildId, AccountIds);
+        {'error', _Reason} = E ->
+            lager:info("failed to load children. error: ~p", [E]),
+            'false'
+    end.
+
+get_children_list(ResellerId) ->
+    ViewOpts = [{'startkey', [ResellerId]}
+               ,{'endkey', [ResellerId, kz_json:new()]}
+               ],
+    kz_datamgr:get_results(?KZ_ACCOUNTS_DB, ?ACC_CHILDREN_LIST, ViewOpts).
+

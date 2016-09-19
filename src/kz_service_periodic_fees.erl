@@ -27,11 +27,11 @@ reconcile(Services) ->
   lager:info("IAM kz_service_fees reconcile1 Services: ~p",[Services]),
     AccountId = kz_services:account_id(Services),
     AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
-    _ = onbill_util:maybe_add_design_doc(AccountDb, <<"onbill_services">>),
+    _ = onbill_util:maybe_add_design_doc(AccountDb, <<"periodic_fees">>),
     ViewOptions = ['reduce'
                   ,'group'
                   ],
-    case kz_datamgr:get_results(AccountDb, <<"onbills/periodic_fees">>, ViewOptions) of
+    case kz_datamgr:get_results(AccountDb, <<"periodic_fees/usage">>, ViewOptions) of
         {'error', _R} ->
             lager:debug("unable to get current fees in service: ~p", [_R]),
             Services;

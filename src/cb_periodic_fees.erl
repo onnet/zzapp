@@ -8,9 +8,7 @@
 
 -include("../../crossbar/src/crossbar.hrl").
 
--define(PERIODIC_FEES_LIST, <<"onbills/periodic_fees_listing">>).
--define(PERIODIC_FEES, <<"periodic_fees">>).
--define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
+-define(CB_PERIODIC_FEES, <<"periodic_fees/crossbar_listing">>).
 
 -spec init() -> 'ok'.
 init() ->
@@ -45,7 +43,7 @@ validate(Context, Id) ->
 
 -spec validate_periodic_fees(cb_context:context(), path_token()) -> cb_context:context().
 validate_periodic_fees(Context, ?HTTP_GET) ->
-    crossbar_doc:load_view(?PERIODIC_FEES_LIST, [], Context, fun normalize_view_results/2);
+    crossbar_doc:load_view(?CB_PERIODIC_FEES, [], Context, fun normalize_view_results/2);
 validate_periodic_fees(Context, ?HTTP_PUT) ->
     save_periodic_fees(Context).
 
@@ -72,6 +70,7 @@ save_periodic_fees(Context, Id) ->
                                     ,{<<"pvt_type">>, <<"periodic_fee">>}
                                     ]),
     NewDoc = kz_json:set_values(Values, ReqData),
+    kz_services:save_as_dirty(AccountId),
     crossbar_doc:save(cb_context:set_doc(Context, NewDoc)).
 
 -spec normalize_view_results(kz_json:object(), kz_json:objects()) -> kz_json:objects().
@@ -82,22 +81,4 @@ normalize_view_results(JObj, Acc) ->
 maybe_valid_relationship(Context) ->
     AccountId = cb_context:account_id(Context),
     AuthAccountId = cb_context:auth_account_id(Context),
-    validate_relationship(AccountId, AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId).
-
--spec validate_relationship(ne_binary(), ne_binary()) -> boolean().
-validate_relationship(ChildId, ResellerId) ->
-    case get_children_list(ResellerId) of
-        {'ok', Accounts} ->
-            AccountIds = lists:map(fun(Account) -> kz_json:get_value(<<"id">>, Account) end, Accounts),
-            lists:member(ChildId, AccountIds);
-        {'error', _Reason} = E ->
-            lager:info("failed to load children. error: ~p", [E]),
-            'false'
-    end.
-
-get_children_list(ResellerId) ->
-    ViewOpts = [{'startkey', [ResellerId]}
-               ,{'endkey', [ResellerId, kz_json:new()]}
-               ],
-    kz_datamgr:get_results(?KZ_ACCOUNTS_DB, ?ACC_CHILDREN_LIST, ViewOpts).
-
+    onbill_util:validate_relationship(AccountId, AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId).

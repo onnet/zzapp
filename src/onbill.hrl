@@ -17,6 +17,7 @@
 -define(DEFAULT_REGEX, <<"^\\d*$">>).
 -define(START_DATE(Month, Year), <<"01.",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>).
 -define(END_DATE(Month, Year), <<(kz_util:to_binary(calendar:last_day_of_the_month(Year, Month)))/binary,".",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>).
+-define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
 
 -define(ONBILL_HRL, 'true').
 -endif.
