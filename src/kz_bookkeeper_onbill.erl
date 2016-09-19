@@ -33,7 +33,7 @@ sync(_Timestamp, _Year, _Month, _Day, [], _AccountId, Acc, _Items) when Acc == 0
     'ok';
 sync(Timestamp, Year, Month, Day, [], AccountId, Acc, Items) ->
     lager:debug("sync Daily fee check NEEDED. Total: ~p",[Acc]),
-    DailyFeeId = prepare_dailyfee_doc_name(Month, Day),
+    DailyFeeId = prepare_dailyfee_doc_name(Year, Month, Day),
     case kazoo_modb:open_doc(AccountId, DailyFeeId, Year, Month) of
         {'error', 'not_found'} -> create_dailyfee_doc(Timestamp, Year, Month, Day, Acc, Items, AccountId);
         {'ok', DFDoc} -> maybe_update_dailyfee_doc(Timestamp, Year, Month, Acc, DFDoc, Items, AccountId)
@@ -198,15 +198,16 @@ handle_quick_sale_response(BtTransaction) ->
     %% https://www.braintreepayments.com/docs/ruby/reference/processor_responses
     kz_util:to_integer(RespCode) < 2000.
 
-prepare_dailyfee_doc_name(M, D) ->
+prepare_dailyfee_doc_name(Y, M, D) ->
+    Year = kz_util:to_binary(Y),
     Month = kz_util:pad_month(M),
     Day = kz_util:pad_month(D),
-    <<"dailyfee-", Month/binary, Day/binary>>.
+    <<"dailyfee-", Year/binary, Month/binary, Day/binary>>.
 
 create_dailyfee_doc(Timestamp, Year, Month, Day, Amount, Items, AccountId) ->
-    Updates = [{<<"_id">>, prepare_dailyfee_doc_name(Month, Day)}
+    Updates = [{<<"_id">>, prepare_dailyfee_doc_name(Year, Month, Day)}
                ,{<<"pvt_type">>, <<"debit">>}
-               ,{<<"description">>, <<"daily_fee ", (prepare_dailyfee_doc_name(Month, Day))/binary>>}
+               ,{<<"description">>, <<"daily_fee ", (prepare_dailyfee_doc_name(Year, Month, Day))/binary>>}
                ,{<<"pvt_reason">>, <<"daily_fee">>}
                ,{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
                ,{[<<"pvt_metadata">>,<<"items_history">>,kz_util:to_binary(Timestamp),<<"monthly_amount">>], wht_util:dollars_to_units(Amount)}
