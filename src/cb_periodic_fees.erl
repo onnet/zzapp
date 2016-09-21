@@ -33,17 +33,22 @@ resource_exists(_) -> 'true'.
 validate(Context) ->
     case maybe_valid_relationship(Context) of
         'true' -> validate_periodic_fees(Context, cb_context:req_verb(Context));
-        'false' ->  cb_context:add_system_error('forbidden', Context)
+        'false' -> cb_context:add_system_error('forbidden', Context)
     end.
 validate(Context, Id) ->
     case maybe_valid_relationship(Context) of
         'true' -> validate_periodic_fees(Context, Id, cb_context:req_verb(Context));
-        'false' ->  cb_context:add_system_error('forbidden', Context)
+        'false' -> cb_context:add_system_error('forbidden', Context)
     end.
 
 -spec validate_periodic_fees(cb_context:context(), path_token()) -> cb_context:context().
 validate_periodic_fees(Context, ?HTTP_GET) ->
-    crossbar_doc:load_view(?CB_PERIODIC_FEES, [], Context, fun normalize_view_results/2);
+    case cb_context:req_value(Context, <<"active_only">>) of
+        <<"true">> ->
+            crossbar_doc:load_view(?CB_PERIODIC_FEES, [], Context, fun onbill_util:normalize_view_active_results/2);
+        _ ->
+            crossbar_doc:load_view(?CB_PERIODIC_FEES, [], Context, fun onbill_util:normalize_view_results/2)
+    end;
 validate_periodic_fees(Context, ?HTTP_PUT) ->
     save_periodic_fees(Context).
 
@@ -70,12 +75,11 @@ save_periodic_fees(Context, Id) ->
                                     ,{<<"pvt_type">>, <<"periodic_fee">>}
                                     ]),
     NewDoc = kz_json:set_values(Values, ReqData),
+    Context2 = crossbar_doc:save(cb_context:set_doc(Context, NewDoc)),
+    %% Don't want to extend crossbar_services now
+    _ = kz_services:reconcile(AccountId),
     kz_services:save_as_dirty(AccountId),
-    crossbar_doc:save(cb_context:set_doc(Context, NewDoc)).
-
--spec normalize_view_results(kz_json:object(), kz_json:objects()) -> kz_json:objects().
-normalize_view_results(JObj, Acc) ->
-    [kz_json:get_value(<<"value">>, JObj)|Acc].
+    Context2.
 
 -spec maybe_valid_relationship(cb_context:context()) -> boolean().
 maybe_valid_relationship(Context) ->

@@ -268,11 +268,7 @@ onbills_modb_summary(Context) ->
     Modb = kazoo_modb:get_modb(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
     onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
     Context1 = cb_context:set_account_db(Context, Modb),
-    crossbar_doc:load_view(?CB_LIST, [], Context1, fun normalize_view_results/2).
-
--spec normalize_view_results(kz_json:object(), kz_json:objects()) -> kz_json:objects().
-normalize_view_results(JObj, Acc) ->
-    [kz_json:get_value(<<"value">>, JObj)|Acc].
+    crossbar_doc:load_view(?CB_LIST, [], Context1, fun onbill_util:normalize_view_results/2).
 
 load_modb_attachment(Context0, Id) ->
     QueryString = cb_context:query_string(Context0),

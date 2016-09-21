@@ -13,6 +13,9 @@
          ,format_datetime/1
          ,is_billable/1
          ,validate_relationship/2
+         ,normalize_view_results/2
+         ,normalize_view_active_results/2
+         ,maybe_fee_active/2
         ]).
 
 -include("onbill.hrl").
@@ -109,4 +112,22 @@ get_children_list(ResellerId) ->
                ,{'endkey', [ResellerId, kz_json:new()]}
                ],
     kz_datamgr:get_results(?KZ_ACCOUNTS_DB, ?ACC_CHILDREN_LIST, ViewOpts).
+
+-spec normalize_view_results(kz_json:object(), kz_json:objects()) -> kz_json:objects().
+normalize_view_results(JObj, Acc) ->
+    [kz_json:get_value(<<"value">>, JObj)|Acc].
+
+-spec normalize_view_active_results(kz_json:object(), kz_json:objects()) -> kz_json:objects().
+normalize_view_active_results(JObj, Acc) ->
+    case maybe_fee_active(kz_util:current_tstamp(), JObj) of
+        'true' ->
+            [kz_json:get_value(<<"value">>, JObj)|Acc];
+        'false' ->
+            Acc
+    end.
+
+maybe_fee_active(LookupTstamp, Fee) ->
+    LookupTstamp > kz_json:get_value([<<"value">>, <<"service_starts">>], Fee)
+    andalso
+    LookupTstamp < kz_json:get_value([<<"value">>, <<"service_ends">>], Fee).
 
