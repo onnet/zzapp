@@ -16,6 +16,7 @@
          ,normalize_view_results/2
          ,normalize_view_active_results/2
          ,maybe_fee_active/2
+         ,next_month/2
         ]).
 
 -include("onbill.hrl").
@@ -130,4 +131,10 @@ maybe_fee_active(LookupTstamp, Fee) ->
     LookupTstamp > kz_json:get_value([<<"value">>, <<"service_starts">>], Fee)
     andalso
     LookupTstamp < kz_json:get_value([<<"value">>, <<"service_ends">>], Fee).
+
+-spec next_month(kz_year(), kz_month()) -> {kz_year(), kz_month()}.
+next_month(Year, 12) ->
+    {Year + 1, 1};
+next_month(Year, Month) ->
+    {Year, Month + 1}.
 

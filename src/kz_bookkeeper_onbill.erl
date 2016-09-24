@@ -202,7 +202,7 @@ prepare_dailyfee_doc_name(Y, M, D) ->
     Year = kz_util:to_binary(Y),
     Month = kz_util:pad_month(M),
     Day = kz_util:pad_month(D),
-    <<"dailyfee-", Year/binary, Month/binary, Day/binary>>.
+    <<Year/binary, Month/binary, Day/binary, "-dailyfee">>.
 
 create_dailyfee_doc(Timestamp, Year, Month, Day, Amount, Items, AccountId) ->
     Updates = [{<<"_id">>, prepare_dailyfee_doc_name(Year, Month, Day)}
@@ -243,8 +243,15 @@ populate_modb_with_fees(AccountId, Year, Month) ->
 
 populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
     Timestamp = calendar:datetime_to_gregorian_seconds({{Year, Month, Day},{3,0,0}}),
-    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-    {'ok', ServicesJObj} = kazoo_modb:open_doc(Modb, <<"services_bom">>), 
+    {CurrYear, CurrMonth, _} = erlang:date(),
+    {'ok', ServicesJObj} = case {Year, Month} of
+                               {CurrYear, CurrMonth} ->
+                                   kz_datamgr:open_doc(<<"services">>, AccountId);
+                               _ ->
+                                   {Y, M} = onbill_util:next_month(Year, Month),
+                                   Modb = kazoo_modb:get_modb(AccountId, Y, M),
+                                   kazoo_modb:open_doc(Modb, <<"services_bom">>)
+                           end,
     {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
     ItemList = kz_service_items:to_list(Items),
     sync(Timestamp, Year, Month, Day, ItemList, AccountId, 0.0, Items).

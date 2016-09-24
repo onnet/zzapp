@@ -31,7 +31,7 @@ validate(Context, Id) ->
     end.
 
 -spec validate_periodic_fees(cb_context:context(), ne_binary(), path_token()) -> cb_context:context().
-validate_periodic_fees(Context, <<Year:4/binary, Month:2/binary, "-dailyfee">> = Id, ?HTTP_GET) ->
+validate_periodic_fees(Context, <<Year:4/binary, Month:2/binary, _:2/binary, "-dailyfee">> = Id, ?HTTP_GET) ->
     leak_job_fields(crossbar_doc:load(Id
                                      ,cb_context:set_account_modb(Context, kz_util:to_integer(Year), kz_util:to_integer(Month))
                                      ,[{'expected_type', <<"debit">>}]
