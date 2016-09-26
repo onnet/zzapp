@@ -32,7 +32,11 @@ resource_exists(_) -> 'true'.
 -spec validate(cb_context:context(), path_token()) -> cb_context:context().
 validate(Context) ->
     case maybe_valid_relationship(Context) of
-        'true' -> validate_periodic_fees(Context, cb_context:req_verb(Context));
+        'true' ->
+            AccountId = cb_context:account_id(Context),
+            AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
+            _ = onbill_util:maybe_add_design_doc(AccountDb, <<"periodic_fees">>),
+            validate_periodic_fees(Context, cb_context:req_verb(Context));
         'false' -> cb_context:add_system_error('forbidden', Context)
     end.
 validate(Context, Id) ->
