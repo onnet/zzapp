@@ -85,6 +85,7 @@ save_periodic_fees(Context, Id) ->
     kz_services:save_as_dirty(AccountId),
     Context2.
 
+%% maybe use kz_util:is_in_account_hierarchy/3
 -spec maybe_valid_relationship(cb_context:context()) -> boolean().
 maybe_valid_relationship(Context) ->
     AccountId = cb_context:account_id(Context),

@@ -21,7 +21,6 @@
 %%--------------------------------------------------------------------
 -spec reconcile(kz_services:services()) -> kz_services:services().
 reconcile(Services) ->
-  lager:info("IAM kz_service_fees reconcile1 Services: ~p",[Services]),
     AccountId = kz_services:account_id(Services),
     AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
     _ = onbill_util:maybe_add_design_doc(AccountDb, <<"periodic_fees">>),

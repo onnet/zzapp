@@ -22,7 +22,6 @@
 
 -spec sync(kz_service_item:items(), ne_binary()) -> 'ok'.
 sync(Items, AccountId) ->
-lager:info("IAM2 stock Items: ~p",[Items]),
     Timestamp = kz_util:current_tstamp(),
     {Year, Month, Day} = erlang:date(),
     ItemList = kz_service_items:to_list(Items),
@@ -58,18 +57,6 @@ sync(Timestamp, Year, Month, Day, [ServiceItem|ServiceItems], AccountId, Acc, It
             ItemCost = Rate * Quantity,
             % Will implement discounts later, just a test for now
             SubTotal = Acc + ItemCost,
-
-            lager:debug("IAM sync full service item found: ~p", [ServiceItem]),
-            lager:debug("IAM sync full service item PlanId: ~p, AddOnId: ~p", [PlanId, AddOnId]),
-            lager:debug("IAM sync full service item Quantity: ~p", [Quantity]),
-            lager:debug("IAM sync full service item Rate: ~p", [Rate]),
-            lager:debug("IAM sync full service item SingleDiscount: ~p", [SingleDiscount]),
-            lager:debug("IAM sync full service item SingleDiscountRate: ~p", [SingleDiscountRate]),
-            lager:debug("IAM sync full service item CumulativeDiscount: ~p", [CumulativeDiscount]),
-            lager:debug("IAM sync full service item CumulativeDiscountRate: ~p", [CumulativeDiscountRate]),
-            lager:debug("IAM sync full service item ItemCost: ~p", [ItemCost]),
-            lager:debug("IAM sync full service item SubTotal: ~p", [SubTotal]),
-
             sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, SubTotal, Items)
     end.
 
@@ -205,9 +192,17 @@ prepare_dailyfee_doc_name(Y, M, D) ->
     <<Year/binary, Month/binary, Day/binary, "-dailyfee">>.
 
 create_dailyfee_doc(Timestamp, Year, Month, Day, Amount, Items, AccountId) ->
+    MonthStrBin = kz_util:to_binary(httpd_util:month(Month)),
     Updates = [{<<"_id">>, prepare_dailyfee_doc_name(Year, Month, Day)}
                ,{<<"pvt_type">>, <<"debit">>}
-               ,{<<"description">>, <<"daily_fee ", (prepare_dailyfee_doc_name(Year, Month, Day))/binary>>}
+               ,{<<"description">>, <<(kz_util:to_binary(Day))/binary
+                                      ," "
+                                      ,MonthStrBin/binary
+                                      ," "
+                                      ,(kz_util:to_binary(Year))/binary
+                                      ," daily fee"
+                                    >>
+                }
                ,{<<"pvt_reason">>, <<"daily_fee">>}
                ,{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
                ,{[<<"pvt_metadata">>,<<"items_history">>,kz_util:to_binary(Timestamp),<<"monthly_amount">>], wht_util:dollars_to_units(Amount)}
