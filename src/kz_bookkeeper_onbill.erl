@@ -47,13 +47,13 @@ sync(Timestamp, Year, Month, Day, [ServiceItem|ServiceItems], AccountId, Acc, It
         {_, 'undefined'} ->
             lager:debug("sync service item had no add on id: ~p", [ServiceItem]),
             sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, Acc, Items);
-        {PlanId, AddOnId}->
+        {_PlanId, _AddOnId}->
             Quantity = kz_service_item:quantity(ServiceItem),
             Rate = kz_service_item:rate(ServiceItem),
-            SingleDiscount = kz_service_item:single_discount(ServiceItem),
-            SingleDiscountRate = kz_service_item:single_discount_rate(ServiceItem),
-            CumulativeDiscount = kz_service_item:cumulative_discount(ServiceItem),
-            CumulativeDiscountRate = kz_service_item:cumulative_discount_rate(ServiceItem),
+            _SingleDiscount = kz_service_item:single_discount(ServiceItem),
+            _SingleDiscountRate = kz_service_item:single_discount_rate(ServiceItem),
+            _CumulativeDiscount = kz_service_item:cumulative_discount(ServiceItem),
+            _CumulativeDiscountRate = kz_service_item:cumulative_discount_rate(ServiceItem),
             ItemCost = Rate * Quantity,
             % Will implement discounts later, just a test for now
             SubTotal = Acc + ItemCost,
