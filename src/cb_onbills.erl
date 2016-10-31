@@ -212,7 +212,9 @@ validate_onbill(Context, ?CUSTOMERS, Id, ?HTTP_GET) ->
                        ,{fun cb_context:set_resp_data/2, kz_json:public_fields(JObj)}
                        ]);
 validate_onbill(Context, ?CUSTOMERS, Id, ?HTTP_POST) ->
-    save_onbill(Id, Context);
+    AccDoc = cb_context:account_doc(cb_context:set_account_id(Context, Id)),
+    JObj = kz_json:set_value(<<"pvt_onbill">>, cb_context:req_data(Context), AccDoc),
+    crossbar_doc:save(cb_context:set_doc(Context, JObj));
 validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_GET) ->
     crossbar_doc:load(Id, Context, [{'expected_type', <<"service_plan">>}]);
 validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_POST) ->
