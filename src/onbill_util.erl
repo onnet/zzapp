@@ -5,7 +5,7 @@
          ,get_attachment/2
          ,price_round/1
          ,account_carriers_list/1
-         ,account_doc/1
+         ,account_vars/1
          ,carrier_doc/1
          ,reseller_vars/1
          ,maybe_main_carrier/1
@@ -55,9 +55,8 @@ price_round(Price) ->
 account_carriers_list(AccountId) ->
     kz_json:get_value(<<"carriers">>, reseller_vars(AccountId), []).
 
-account_doc(AccountId) ->
-    {'ok', AccountDoc} =  kz_datamgr:open_doc(?ONBILL_DB, AccountId),
-    AccountDoc.
+account_vars(AccountId) ->
+    kz_json:get_value(<<"pvt_onbill">>, kz_account:fetch(AccountId)).
 
 carrier_doc(Carrier) ->
     {'ok', CarrierDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)),

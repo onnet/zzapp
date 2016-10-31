@@ -126,7 +126,7 @@ generate_docs(AccountId, Year, Month, Carrier, VatUpdatedFeesList, {TotalNetto, 
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(TotalBrutto),
     {TotalVatDiv, TotalVatRem} = total_to_words(TotalVAT),
-    AccountOnbillDoc = onbill_util:account_doc(AccountId),
+    AccountOnbillDoc = onbill_util:account_vars(AccountId),
     Vars = [{<<"monthly_fees">>, VatUpdatedFeesList}
            ,{<<"account_addr">>, address_to_line(AccountOnbillDoc)}
            ,{<<"total_netto">>, onbill_util:price_round(TotalNetto)}
@@ -173,7 +173,7 @@ address_join([Head|Tail], Sep) ->
   lists:foldl(fun (Value, Acc) -> <<Acc/binary, Sep/binary, Value/binary>> end, Head, Tail).
 
 maybe_aggregate_invoice(AccountId, Year, Month, Carriers) ->
-    AccountOnbillDoc = onbill_util:account_doc(AccountId),
+    AccountOnbillDoc = onbill_util:account_vars(AccountId),
     case kz_json:get_value(<<"aggregate_invoice">>, AccountOnbillDoc) of
         'true' -> aggregate_invoice(AccountId, Year, Month, Carriers);
         _ -> 'ok'
@@ -184,7 +184,7 @@ aggregate_invoice(AccountId, Year, Month, Carriers) ->
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     MainCarrier = onbill_util:get_main_carrier(Carriers),
     MainCarrierDoc = onbill_util:carrier_doc(MainCarrier),
-    AccountOnbillDoc = onbill_util:account_doc(AccountId),
+    AccountOnbillDoc = onbill_util:account_vars(AccountId),
     {AggregatedVars, TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(Carrier, Acc) -> aggregate_data(AccountId, Year, Month, Carrier, Acc) end, {[], 0, 0, 0}, Carriers),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(TotalBrutto),
     {TotalVatDiv, TotalVatRem} = total_to_words(TotalVAT),
@@ -230,7 +230,7 @@ per_minute_report(AccountId, Year, Month, Carrier, CallsJObjs, CallsTotalSec, Ca
     Document = <<"calls_report">>,
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     CarrierDoc = onbill_util:carrier_doc(Carrier),
-    AccountOnbillDoc = onbill_util:account_doc(AccountId),
+    AccountOnbillDoc = onbill_util:account_vars(AccountId),
     {CallsJObjs, CallsTotalSec, CallsTotalSumm} = fees:per_minute_calls(AccountId, Year, Month, Carrier),
     Vars = [{<<"per_minute_calls">>, CallsJObjs}
            ,{<<"doc_date">>, ?END_DATE(Month, Year)}

@@ -204,11 +204,13 @@ validate_onbill(Context, ?CARRIERS, Id, ?HTTP_GET) ->
 validate_onbill(Context, ?CARRIERS, Id, ?HTTP_POST) ->
     save_onbill(build_carrier_doc_id(Id, Context), Context);
 validate_onbill(Context, ?CUSTOMERS, Id, ?HTTP_GET) ->
-  %  read_onbill(Id, Context);
-  lager:info("IAM before CustomerDoc"),
-    CustomerDoc = cb_context:account_doc(cb_context:set_account_id(Context, Id)),
-  lager:info("IAM CustomerDoc: ~p",[CustomerDoc]),
-    cb_context:set_doc(Context, CustomerDoc);
+    AccDoc = cb_context:account_doc(cb_context:set_account_id(Context, Id)),
+    JObj = kz_json:get_value(<<"pvt_onbill">>, AccDoc),
+    cb_context:setters(Context
+                      ,[{fun cb_context:set_doc/2, JObj}
+                       ,{fun cb_context:set_resp_status/2, 'success'}
+                       ,{fun cb_context:set_resp_data/2, kz_json:public_fields(JObj)}
+                       ]);
 validate_onbill(Context, ?CUSTOMERS, Id, ?HTTP_POST) ->
     save_onbill(Id, Context);
 validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_GET) ->
