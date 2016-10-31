@@ -204,7 +204,11 @@ validate_onbill(Context, ?CARRIERS, Id, ?HTTP_GET) ->
 validate_onbill(Context, ?CARRIERS, Id, ?HTTP_POST) ->
     save_onbill(build_carrier_doc_id(Id, Context), Context);
 validate_onbill(Context, ?CUSTOMERS, Id, ?HTTP_GET) ->
-    read_onbill(Id, Context);
+  %  read_onbill(Id, Context);
+  lager:info("IAM before CustomerDoc"),
+    CustomerDoc = cb_context:account_doc(cb_context:set_account_id(Context, Id)),
+  lager:info("IAM CustomerDoc: ~p",[CustomerDoc]),
+    cb_context:set_doc(Context, CustomerDoc);
 validate_onbill(Context, ?CUSTOMERS, Id, ?HTTP_POST) ->
     save_onbill(Id, Context);
 validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_GET) ->
