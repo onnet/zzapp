@@ -14,7 +14,6 @@
 -define(ATTACHMENT, <<"attachment">>).
 -define(GENERATE, <<"generate">>).
 -define(CARRIERS, <<"carriers">>).
--define(CUSTOMERS, <<"customers">>).
 -define(SERVICE_PLANS, <<"onbill_service_plans">>).
 -define(MODB, <<"onbills_modb">>).
 -define(RESELLER_VARIABLES, <<"onbill_reseller_variables">>).
@@ -40,8 +39,6 @@ allowed_methods(?RESELLER_VARIABLES) ->
     [?HTTP_GET, ?HTTP_POST].
 allowed_methods(?CARRIERS,_) ->
     [?HTTP_GET, ?HTTP_POST];
-allowed_methods(?CUSTOMERS,_) ->
-    [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?SERVICE_PLANS,_) ->
     [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?GENERATE,_) ->
@@ -58,7 +55,6 @@ allowed_methods(?MODB,_,?ATTACHMENT) ->
 resource_exists() -> 'true'.
 resource_exists(_) -> 'true'.
 resource_exists(?CARRIERS,_) -> 'true';
-resource_exists(?CUSTOMERS,_) -> 'true';
 resource_exists(?SERVICE_PLANS,_) -> 'true';
 resource_exists(?GENERATE,_) -> 'true';
 resource_exists(?MODB,_) -> 'true'.
@@ -101,8 +97,6 @@ validate(Context, ?GENERATE, Id) ->
     validate_generate(Context, Id, cb_context:req_verb(Context));
 validate(Context, ?CARRIERS, Id) ->
     validate_onbill(Context, ?CARRIERS, Id, cb_context:req_verb(Context));
-validate(Context, ?CUSTOMERS, Id) ->
-    validate_onbill(Context, ?CUSTOMERS, Id, cb_context:req_verb(Context));
 validate(Context, ?SERVICE_PLANS, Id) ->
     validate_onbill(Context, ?SERVICE_PLANS, Id, cb_context:req_verb(Context)).
 validate(Context,?CARRIERS, Id, AttachmentId) ->
@@ -203,18 +197,6 @@ validate_onbill(Context, ?CARRIERS, Id, ?HTTP_GET) ->
     read_onbill(<<"carrier.", (kz_util:to_binary(Id))/binary>>, Context);
 validate_onbill(Context, ?CARRIERS, Id, ?HTTP_POST) ->
     save_onbill(build_carrier_doc_id(Id, Context), Context);
-validate_onbill(Context, ?CUSTOMERS, Id, ?HTTP_GET) ->
-    AccDoc = cb_context:account_doc(cb_context:set_account_id(Context, Id)),
-    JObj = kz_json:get_value(<<"pvt_onbill">>, AccDoc),
-    cb_context:setters(Context
-                      ,[{fun cb_context:set_doc/2, JObj}
-                       ,{fun cb_context:set_resp_status/2, 'success'}
-                       ,{fun cb_context:set_resp_data/2, kz_json:public_fields(JObj)}
-                       ]);
-validate_onbill(Context, ?CUSTOMERS, Id, ?HTTP_POST) ->
-    AccDoc = cb_context:account_doc(cb_context:set_account_id(Context, Id)),
-    JObj = kz_json:set_value(<<"pvt_onbill">>, cb_context:req_data(Context), AccDoc),
-    crossbar_doc:save(cb_context:set_doc(Context, JObj));
 validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_GET) ->
     crossbar_doc:load(Id, Context, [{'expected_type', <<"service_plan">>}]);
 validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_POST) ->

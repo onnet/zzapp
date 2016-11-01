@@ -1,3 +1,11 @@
+%%%----------------------------------------------------------------------------
+%%%
+%%% Saves/retrieves account variables used for accounting docs generation
+%%% These variables are injected into template on each erlydtl doc generation,
+%%% so each var added here could be used in doc template
+%%%
+%%%----------------------------------------------------------------------------
+
 -module(cb_onbill_customers).
 
 -export([init/0
