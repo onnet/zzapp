@@ -1,3 +1,10 @@
+%%%-----------------------------------------------------------
+%%%
+%%% Just to be able to edit retrieve transaction over API
+%%% Didn't found this functionality in stock cb_transactions
+%%%
+%%%-----------------------------------------------------------
+
 -module(cb_onbill_transactions).
 
 -export([init/0
@@ -59,4 +66,3 @@ leak_job_fields(Context) ->
                                     );
         _Status -> Context
     end.
-
