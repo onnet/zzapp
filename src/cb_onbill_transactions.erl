@@ -1,6 +1,6 @@
 %%%-----------------------------------------------------------
 %%%
-%%% Just to be able to edit retrieve transaction over API
+%%% Just to be able to retrieve transaction over API
 %%% Didn't found this functionality in stock cb_transactions
 %%%
 %%%-----------------------------------------------------------
