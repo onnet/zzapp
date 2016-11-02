@@ -42,7 +42,10 @@ validate(Context) ->
 
 validate_onbill(Context, ?HTTP_GET) ->
     AccDoc = cb_context:account_doc(Context),
-    JObj = kz_json:get_value(<<"pvt_onbill">>, AccDoc),
+    JObj = case kz_json:get_value(<<"pvt_onbill_account_vars">>, AccDoc) of
+                'undefined' -> kz_json:new();
+                AccJObj -> AccJObj
+           end,
     cb_context:setters(Context
                       ,[{fun cb_context:set_doc/2, JObj}
                        ,{fun cb_context:set_resp_status/2, 'success'}
@@ -50,5 +53,5 @@ validate_onbill(Context, ?HTTP_GET) ->
                        ]);
 validate_onbill(Context, ?HTTP_POST) ->
     AccDoc = cb_context:account_doc(Context),
-    JObj = kz_json:set_value(<<"pvt_onbill">>, cb_context:req_data(Context), AccDoc),
+    JObj = kz_json:set_value(<<"pvt_onbill_account_vars">>, cb_context:req_data(Context), AccDoc),
     crossbar_doc:save(cb_context:set_doc(Context, JObj)).

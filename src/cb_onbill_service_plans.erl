@@ -20,10 +20,10 @@
 
 -spec init() -> 'ok'.
 init() ->
-    _ = crossbar_bindings:bind(<<"*.allowed_methods.onbill_customers">>, ?MODULE, 'allowed_methods'),
-    _ = crossbar_bindings:bind(<<"*.resource_exists.onbill_customers">>, ?MODULE, 'resource_exists'),
-    _ = crossbar_bindings:bind(<<"*.content_types_provided.onbill_customers">>, ?MODULE, 'content_types_provided'),
-    _ = crossbar_bindings:bind(<<"*.validate.onbill_customers">>, ?MODULE, 'validate').
+    _ = crossbar_bindings:bind(<<"*.allowed_methods.onbill_service_plans">>, ?MODULE, 'allowed_methods'),
+    _ = crossbar_bindings:bind(<<"*.resource_exists.onbill_service_plans">>, ?MODULE, 'resource_exists'),
+    _ = crossbar_bindings:bind(<<"*.content_types_provided.onbill_service_plans">>, ?MODULE, 'content_types_provided'),
+    _ = crossbar_bindings:bind(<<"*.validate.onbill_service_plans">>, ?MODULE, 'validate').
 
 -spec allowed_methods(path_token()) -> http_methods().
 allowed_methods(_) ->
