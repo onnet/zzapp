@@ -56,7 +56,8 @@ account_carriers_list(AccountId) ->
     kz_json:get_value(<<"carriers">>, reseller_vars(AccountId), []).
 
 account_vars(AccountId) ->
-    kz_json:get_value(<<"pvt_onbill_account_vars">>, kz_account:fetch(AccountId)).
+    {'ok', AccountDoc} = kz_account:fetch(AccountId),
+    kz_json:get_value(<<"pvt_onbill_account_vars">>, AccountDoc).
 
 carrier_doc(Carrier) ->
     {'ok', CarrierDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)),
@@ -64,8 +65,8 @@ carrier_doc(Carrier) ->
 
 reseller_vars(AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
-    {'ok', GlobalVars} =  kz_datamgr:open_doc(?ONBILL_DB, ResellerId),
-    GlobalVars.
+    {'ok', ResellerDoc} = kz_account:fetch(ResellerId),
+    kz_json:get_value(<<"pvt_onbill_reseller_vars">>, ResellerDoc).
 
 maybe_main_carrier(Carrier) when is_binary(Carrier) ->
     maybe_main_carrier(carrier_doc(Carrier));
