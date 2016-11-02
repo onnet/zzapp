@@ -14,7 +14,6 @@
 -define(ATTACHMENT, <<"attachment">>).
 -define(GENERATE, <<"generate">>).
 -define(CARRIERS, <<"carriers">>).
--define(SERVICE_PLANS, <<"onbill_service_plans">>).
 -define(MODB, <<"onbills_modb">>).
 -define(RESELLER_VARIABLES, <<"onbill_reseller_variables">>).
 -define(ALL_CHILDREN, <<"all_children">>).
@@ -39,8 +38,6 @@ allowed_methods(?RESELLER_VARIABLES) ->
     [?HTTP_GET, ?HTTP_POST].
 allowed_methods(?CARRIERS,_) ->
     [?HTTP_GET, ?HTTP_POST];
-allowed_methods(?SERVICE_PLANS,_) ->
-    [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?GENERATE,_) ->
     [?HTTP_PUT];
 allowed_methods(?MODB,_) ->
@@ -55,7 +52,6 @@ allowed_methods(?MODB,_,?ATTACHMENT) ->
 resource_exists() -> 'true'.
 resource_exists(_) -> 'true'.
 resource_exists(?CARRIERS,_) -> 'true';
-resource_exists(?SERVICE_PLANS,_) -> 'true';
 resource_exists(?GENERATE,_) -> 'true';
 resource_exists(?MODB,_) -> 'true'.
 resource_exists(?CARRIERS,_,_) -> 'true';
@@ -96,9 +92,7 @@ validate(Context, Id) ->
 validate(Context, ?GENERATE, Id) ->
     validate_generate(Context, Id, cb_context:req_verb(Context));
 validate(Context, ?CARRIERS, Id) ->
-    validate_onbill(Context, ?CARRIERS, Id, cb_context:req_verb(Context));
-validate(Context, ?SERVICE_PLANS, Id) ->
-    validate_onbill(Context, ?SERVICE_PLANS, Id, cb_context:req_verb(Context)).
+    validate_onbill(Context, ?CARRIERS, Id, cb_context:req_verb(Context)).
 validate(Context,?CARRIERS, Id, AttachmentId) ->
     validate_onbill(Context,?CARRIERS, Id, AttachmentId, cb_context:req_verb(Context));
 validate(Context,?MODB, Id, ?ATTACHMENT) ->
@@ -196,11 +190,7 @@ validate_onbill(Context, _Id, ?HTTP_GET) ->
 validate_onbill(Context, ?CARRIERS, Id, ?HTTP_GET) ->
     read_onbill(<<"carrier.", (kz_util:to_binary(Id))/binary>>, Context);
 validate_onbill(Context, ?CARRIERS, Id, ?HTTP_POST) ->
-    save_onbill(build_carrier_doc_id(Id, Context), Context);
-validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_GET) ->
-    crossbar_doc:load(Id, Context, [{'expected_type', <<"service_plan">>}]);
-validate_onbill(Context, ?SERVICE_PLANS, Id, ?HTTP_POST) ->
-    save_account(Id, <<"service_plan">>, Context).
+    save_onbill(build_carrier_doc_id(Id, Context), Context).
 
 validate_onbill(Context,?CARRIERS, Id, AttachmentId, ?HTTP_GET) ->
     load_carrier_attachment(Context, build_carrier_doc_id(Id, Context), <<Id/binary, "_", AttachmentId/binary, ".tpl">>);
@@ -216,10 +206,6 @@ read_onbill(Id, Context) ->
 -spec save_onbill(ne_binary(), cb_context:context()) -> cb_context:context().
 save_onbill(Id, Context) ->
     save(Id, <<"onbill">>, Context).
-
--spec save_account(ne_binary(), ne_binary(), cb_context:context()) -> cb_context:context().
-save_account(Id, Type, Context) ->
-    save(Id, kz_util:format_account_id(cb_context:account_id(Context),'encoded'), Type, Context).
 
 -spec save(ne_binary(), ne_binary(), cb_context:context()) -> cb_context:context().
 save(Id, DbName, Context) ->
