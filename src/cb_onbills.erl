@@ -4,7 +4,6 @@
          ,allowed_methods/0, allowed_methods/2, allowed_methods/3
          ,resource_exists/0, resource_exists/1, resource_exists/2, resource_exists/3
          ,content_types_provided/1, content_types_provided/3, content_types_provided/4
-         ,content_types_accepted/4
          ,validate/1, validate/3, validate/4
         ]).
 
@@ -13,7 +12,6 @@
 -define(CB_LIST, <<"onbills/crossbar_listing">>).
 -define(ATTACHMENT, <<"attachment">>).
 -define(GENERATE, <<"generate">>).
--define(CARRIERS, <<"carriers">>).
 -define(MODB, <<"onbills_modb">>).
 -define(ALL_CHILDREN, <<"all_children">>).
 -define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
@@ -26,7 +24,6 @@ init() ->
     _ = crossbar_bindings:bind(<<"*.allowed_methods.onbills">>, ?MODULE, 'allowed_methods'),
     _ = crossbar_bindings:bind(<<"*.resource_exists.onbills">>, ?MODULE, 'resource_exists'),
     _ = crossbar_bindings:bind(<<"*.content_types_provided.onbills">>, ?MODULE, 'content_types_provided'),
-    _ = crossbar_bindings:bind(<<"*.content_types_accepted.onbills">>, ?MODULE, 'content_types_accepted'),
     _ = crossbar_bindings:bind(<<"*.validate.onbills">>, ?MODULE, 'validate').
 
 -spec allowed_methods() -> http_methods().
@@ -34,14 +31,10 @@ init() ->
 -spec allowed_methods(path_token(),path_token(),path_token()) -> http_methods().
 allowed_methods() ->
     [?HTTP_GET].
-allowed_methods(?CARRIERS,_) ->
-    [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?GENERATE,_) ->
     [?HTTP_PUT];
 allowed_methods(?MODB,_) ->
     [?HTTP_GET].
-allowed_methods(?CARRIERS,_,_) ->
-    [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?MODB,_,?ATTACHMENT) ->
     [?HTTP_GET].
 
@@ -49,10 +42,8 @@ allowed_methods(?MODB,_,?ATTACHMENT) ->
 -spec resource_exists(path_token()) -> 'true'.
 resource_exists() -> 'true'.
 resource_exists(_) -> 'true'.
-resource_exists(?CARRIERS,_) -> 'true';
 resource_exists(?GENERATE,_) -> 'true';
 resource_exists(?MODB,_) -> 'true'.
-resource_exists(?CARRIERS,_,_) -> 'true';
 resource_exists(?MODB,_,?ATTACHMENT) -> 'true'.
 
 -spec content_types_provided(cb_context:context()) -> cb_context:context().
@@ -60,26 +51,9 @@ content_types_provided(Context) ->
     Context.
 content_types_provided(Context,_,?GENERATE) ->
     Context.
-content_types_provided(Context,?CARRIERS,_,_) ->
-    CTP = [{'to_binary', [{<<"text">>, <<"html">>}]}],
-    cb_context:set_content_types_provided(Context, CTP);
 content_types_provided(Context,?MODB,_,?ATTACHMENT) ->
     CTP = [{'to_binary', [{<<"application">>, <<"pdf">>}]}],
     cb_context:set_content_types_provided(Context, CTP).
-
--spec content_types_accepted(cb_context:context(), path_token(), path_token(), path_token()) -> cb_context:context().
-content_types_accepted(Context, ?CARRIERS,_,_) ->
-    content_types_accepted_for_upload(Context, cb_context:req_verb(Context)).
-
--spec content_types_accepted_for_upload(cb_context:context(), http_method()) ->
-                                               cb_context:context().
-content_types_accepted_for_upload(Context, ?HTTP_POST) ->
-    CTA = [{'from_binary', ?NOTIFICATION_MIME_TYPES}
-           ,{'from_json', ?JSON_CONTENT_TYPES}
-          ],
-    cb_context:set_content_types_accepted(Context, CTA);
-content_types_accepted_for_upload(Context, _Verb) ->
-    Context.
 
 -spec validate(cb_context:context()) -> cb_context:context().
 -spec validate(cb_context:context(), path_token(), path_token()) -> cb_context:context().
@@ -87,11 +61,7 @@ content_types_accepted_for_upload(Context, _Verb) ->
 validate(Context) ->
     validate_onbill(Context, cb_context:req_verb(Context)).
 validate(Context, ?GENERATE, Id) ->
-    validate_generate(Context, Id, cb_context:req_verb(Context));
-validate(Context, ?CARRIERS, Id) ->
-    validate_onbill(Context, ?CARRIERS, Id, cb_context:req_verb(Context)).
-validate(Context,?CARRIERS, Id, AttachmentId) ->
-    validate_onbill(Context,?CARRIERS, Id, AttachmentId, cb_context:req_verb(Context));
+    validate_generate(Context, Id, cb_context:req_verb(Context)).
 validate(Context,?MODB, Id, ?ATTACHMENT) ->
     validate_onbill(Context,?MODB, Id, ?ATTACHMENT, cb_context:req_verb(Context)).
 
@@ -166,45 +136,8 @@ generate_per_minute_reports(Context, DocsAccountId, Year, Month) ->
 validate_onbill(Context, ?HTTP_GET) ->
     onbills_modb_summary(Context).
 
-validate_onbill(Context, ?CARRIERS, Id, ?HTTP_GET) ->
-    read_onbill(<<"carrier.", (kz_util:to_binary(Id))/binary>>, Context);
-validate_onbill(Context, ?CARRIERS, Id, ?HTTP_POST) ->
-    save_onbill(build_carrier_doc_id(Id, Context), Context).
-
-validate_onbill(Context,?CARRIERS, Id, AttachmentId, ?HTTP_GET) ->
-    load_carrier_attachment(Context, build_carrier_doc_id(Id, Context), <<Id/binary, "_", AttachmentId/binary, ".tpl">>);
-validate_onbill(Context,?CARRIERS, Id, AttachmentId, ?HTTP_POST) ->
-    save_carrier_attachment(Context, build_carrier_doc_id(Id, Context), <<Id/binary, "_", AttachmentId/binary, ".tpl">>);
 validate_onbill(Context,?MODB, Id, ?ATTACHMENT, ?HTTP_GET) ->
     load_modb_attachment(Context, Id).
-
--spec read_onbill(ne_binary(), cb_context:context()) -> cb_context:context().
-read_onbill(Id, Context) ->
-    crossbar_doc:load(Id, cb_context:set_account_db(Context, <<"onbill">>)).
-
--spec save_onbill(ne_binary(), cb_context:context()) -> cb_context:context().
-save_onbill(Id, Context) ->
-    save(Id, <<"onbill">>, Context).
-
--spec save(ne_binary(), ne_binary(), cb_context:context()) -> cb_context:context().
-save(Id, DbName, Context) ->
-    save(Id, DbName, 'undefined', Context).
-
--spec save(ne_binary(), ne_binary(), ne_binary()|atom(), cb_context:context()) -> cb_context:context().
-save(Id, DbName, Type, Context) ->
-    ReqData = kz_json:delete_key(<<"id">>, cb_context:req_data(Context)),
-    Doc = case kz_datamgr:open_doc(DbName, Id) of
-              {'ok', JObj} -> JObj;
-              {error,not_found} ->
-                  InitValues = props:filter_undefined([{<<"_id">>, Id}
-                                                  ,{<<"pvt_type">>, Type}
-                                                  ]),
-                  kz_json:set_values(InitValues, kz_json:new())
-          end,
-    Values = kz_json:to_proplist(kz_doc:private_fields(Doc)),
-    NewDoc = kz_json:set_values(Values, ReqData),
-    Context1 = cb_context:set_doc(Context, NewDoc),
-    crossbar_doc:save(cb_context:set_account_db(Context1, DbName)).
 
 -spec onbills_modb_summary(cb_context:context()) -> cb_context:context().
 onbills_modb_summary(Context) ->
@@ -235,7 +168,10 @@ load_modb_attachment(Context0, Id) ->
     case onbill_util:get_attachment(Id, Modb) of
         {'ok', Attachment} ->
             cb_context:set_resp_etag(
-                cb_context:set_resp_headers(cb_context:setters(Context,[{fun cb_context:set_resp_data/2, Attachment},{fun cb_context:set_resp_etag/2, 'undefined'}])
+                cb_context:set_resp_headers(cb_context:setters(Context
+                                                              ,[{fun cb_context:set_resp_data/2, Attachment}
+                                                               ,{fun cb_context:set_resp_etag/2, 'undefined'}
+                                                               ])
                                             ,[{<<"Content-Disposition">>, <<"attachment; filename="
                                                                             ,(kz_util:to_binary(Id))/binary
                                                                             ,"-"
@@ -250,35 +186,6 @@ load_modb_attachment(Context0, Id) ->
             );
         _ ->
             cb_context:add_system_error('faulty_request', Context0)
-    end.
-
-build_carrier_doc_id(Id, Context) ->
-    case cb_context:is_superduper_admin(Context) of
-        'true' ->
-            <<"carrier.", (kz_util:to_binary(Id))/binary>>;
-        'false' ->
-            AccountId = cb_context:account_id(Context),
-            <<"carrier.", (kz_util:to_binary(Id))/binary, ".", AccountId/binary>>
-    end.
-
-load_carrier_attachment(Context, DocId, AName) ->
-    crossbar_doc:load_attachment(DocId, AName, [], cb_context:set_account_db(Context, <<"onbill">>)).
-
-save_carrier_attachment(Context, DocId, AName) ->
-    case cb_context:req_files(Context) of
-        [{_FileName, FileJObj}] ->
-            Contents = kz_json:get_value(<<"contents">>, FileJObj),
-            CT = kz_json:get_value([<<"headers">>, <<"content_type">>], FileJObj),
-            crossbar_doc:save_attachment(
-              DocId
-              ,AName
-              ,Contents
-              ,cb_context:set_account_db(Context, <<"onbill">>)
-              ,[{'content_type', kz_util:to_list(CT)}]
-             );
-        _ ->
-            lager:debug("No file uploaded"),
-            cb_context:add_system_error('no file uploaded', Context)
     end.
 
 -spec validate_relationship(ne_binary(), ne_binary()) -> boolean().
