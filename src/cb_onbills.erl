@@ -1,11 +1,11 @@
 -module(cb_onbills).
 
 -export([init/0
-         ,allowed_methods/0, allowed_methods/1, allowed_methods/2, allowed_methods/3
+         ,allowed_methods/0, allowed_methods/2, allowed_methods/3
          ,resource_exists/0, resource_exists/1, resource_exists/2, resource_exists/3
          ,content_types_provided/1, content_types_provided/3, content_types_provided/4
          ,content_types_accepted/4
-         ,validate/1, validate/2, validate/3, validate/4
+         ,validate/1, validate/3, validate/4
         ]).
 
 -include("../../crossbar/src/crossbar.hrl").
@@ -15,7 +15,6 @@
 -define(GENERATE, <<"generate">>).
 -define(CARRIERS, <<"carriers">>).
 -define(MODB, <<"onbills_modb">>).
--define(RESELLER_VARIABLES, <<"onbill_reseller_variables">>).
 -define(ALL_CHILDREN, <<"all_children">>).
 -define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
 -define(NOTIFICATION_MIME_TYPES, [{<<"text">>, <<"html">>}
@@ -31,11 +30,10 @@ init() ->
     _ = crossbar_bindings:bind(<<"*.validate.onbills">>, ?MODULE, 'validate').
 
 -spec allowed_methods() -> http_methods().
--spec allowed_methods(path_token()) -> http_methods().
+-spec allowed_methods(path_token(),path_token()) -> http_methods().
+-spec allowed_methods(path_token(),path_token(),path_token()) -> http_methods().
 allowed_methods() ->
     [?HTTP_GET].
-allowed_methods(?RESELLER_VARIABLES) ->
-    [?HTTP_GET, ?HTTP_POST].
 allowed_methods(?CARRIERS,_) ->
     [?HTTP_GET, ?HTTP_POST];
 allowed_methods(?GENERATE,_) ->
@@ -84,11 +82,10 @@ content_types_accepted_for_upload(Context, _Verb) ->
     Context.
 
 -spec validate(cb_context:context()) -> cb_context:context().
--spec validate(cb_context:context(), path_token()) -> cb_context:context().
+-spec validate(cb_context:context(), path_token(), path_token()) -> cb_context:context().
+-spec validate(cb_context:context(), path_token(), path_token(), path_token()) -> cb_context:context().
 validate(Context) ->
     validate_onbill(Context, cb_context:req_verb(Context)).
-validate(Context, Id) ->
-    validate_onbill(Context, Id, cb_context:req_verb(Context)).
 validate(Context, ?GENERATE, Id) ->
     validate_generate(Context, Id, cb_context:req_verb(Context));
 validate(Context, ?CARRIERS, Id) ->
@@ -168,24 +165,6 @@ generate_per_minute_reports(Context, DocsAccountId, Year, Month) ->
 -spec validate_onbill(cb_context:context(), http_method()) -> cb_context:context().
 validate_onbill(Context, ?HTTP_GET) ->
     onbills_modb_summary(Context).
-
--spec validate_onbill(cb_context:context(), path_token(), http_method()) -> cb_context:context().
-validate_onbill(Context, ?RESELLER_VARIABLES, ?HTTP_GET) ->
-    AccountId = cb_context:account_id(Context),
-    AuthAccountId = cb_context:auth_account_id(Context),
-    case kz_services:is_reseller(AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId) of
-        'true' -> read_onbill(AccountId, Context);
-        'false' -> cb_context:add_system_error('forbidden', Context)
-    end;
-validate_onbill(Context, ?RESELLER_VARIABLES, ?HTTP_POST) ->
-    AccountId = cb_context:account_id(Context),
-    AuthAccountId = cb_context:auth_account_id(Context),
-    case kz_services:is_reseller(AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId) of
-        'true' -> save_onbill(AccountId, Context);
-        'false' -> cb_context:add_system_error('forbidden', Context)
-    end;
-validate_onbill(Context, _Id, ?HTTP_GET) ->
-    cb_context:add_system_error('only carrier or reseller docs are implemented for now...', Context).
 
 validate_onbill(Context, ?CARRIERS, Id, ?HTTP_GET) ->
     read_onbill(<<"carrier.", (kz_util:to_binary(Id))/binary>>, Context);
@@ -318,4 +297,3 @@ get_children_list(ResellerId) ->
                ,{'endkey', [ResellerId, kz_json:new()]}
                ],
     kz_datamgr:get_results(?KZ_ACCOUNTS_DB, ?ACC_CHILDREN_LIST, ViewOpts).
-
