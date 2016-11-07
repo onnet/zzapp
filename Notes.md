@@ -26,7 +26,7 @@ kz_bookkeeper_onbill.erl:
 - OnBill bookkeeper
 
 kz_service_periodic_fees.erl:
-- calculates periodic fees usage on reconcile
+- calculates periodic fees usage
 
 onbill_daily_sync.erl:
 - daily crawler intended to count daily fee at least once per day
