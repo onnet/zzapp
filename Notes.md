@@ -2,6 +2,10 @@
 
 ### Brief files description.
 
+cb_onbill_carriers.erl:
+- edit cariers docs;
+- carriers docs intended to store carriers variables used upon documents generating, plus templates for these docs.
+
 cb_onbill_customers.erl:
 - read/edit onbill account's variables used for monthly documents generating;
 - this data located in account's doc "pvt_onbill_account_vars" section.
