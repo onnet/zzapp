@@ -1,3 +1,7 @@
+<head>
+  <meta charset="UTF-8">
+</head>
+
 <br />
 <h1 ALIGN=CENTER>АКТ оказания услуг </h1>
 <h4 ALIGN=CENTER>по Договору № {{ doc_pref }}{{ doc_number }}-{{ doc_ind }} от {{ doc_date }}<br />

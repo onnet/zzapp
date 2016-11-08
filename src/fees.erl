@@ -142,7 +142,7 @@ get_per_minute_regexes(AccountId, CarrierDoc) ->
     end.
 
 get_other_carriers_regexes(Carriers, AccountId) when length(Carriers) > 1 ->
-    [get_carrier_regexes(Carrier, AccountId) || Carrier <- Carriers, not onbill_util:maybe_main_carrier(Carrier)];
+    [get_carrier_regexes(Carrier, AccountId) || Carrier <- Carriers, not onbill_util:maybe_main_carrier(Carrier, AccountId)];
 get_other_carriers_regexes(_,_) ->
     {<<"^\\d*$">>, <<"^\\d*$">>}.
 

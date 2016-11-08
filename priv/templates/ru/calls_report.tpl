@@ -1,3 +1,7 @@
+<head>
+  <meta charset="UTF-8">
+</head>
+
 <TABLE style="width: 197mm;" BORDER="0" CELLPADDING="0" CELLSPACING="0">
 <TR>
 <TD>Поставщик:</TD>
