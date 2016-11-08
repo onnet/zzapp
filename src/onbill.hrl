@@ -8,7 +8,7 @@
 
 -define(ONBILL_DB, <<"onbill">>).
 -define(ONBILL_DOC, <<"onbill">>).
--define(CARRIER_DOC(CarrierName), <<"carrier.", CarrierName/binary>>).
+-define(CARRIER_DOC(CarrierName), <<"onbill_carrier.", CarrierName/binary>>).
 -define(MOD_CONFIG_CRAWLER, <<(?APP_NAME)/binary, ".account_crawler">>).
 -define(SYSTEM_CONFIG_DB, <<"system_config">>).
 -define(DOC_NAME_FORMAT(Carrier, TemplateID), <<Carrier/binary, "_", TemplateId/binary>>).

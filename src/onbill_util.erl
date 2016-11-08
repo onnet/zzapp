@@ -1,35 +1,24 @@
 -module(onbill_util).
 
--export([check_db/1
-         ,maybe_add_design_doc/2
-         ,get_attachment/2
-         ,price_round/1
-         ,account_carriers_list/1
-         ,account_vars/1
-         ,carrier_doc/1
-         ,reseller_vars/1
-         ,maybe_main_carrier/1
-         ,get_main_carrier/1
-         ,format_datetime/1
-         ,is_billable/1
-         ,validate_relationship/2
-         ,normalize_view_results/2
-         ,normalize_view_active_results/2
-         ,maybe_fee_active/2
-         ,next_month/2
+-export([maybe_add_design_doc/2
+        ,get_attachment/2
+        ,price_round/1
+        ,account_carriers_list/1
+        ,account_vars/1
+        ,carrier_doc/2
+        ,reseller_vars/1
+        ,maybe_main_carrier/2
+        ,get_main_carrier/2
+        ,format_datetime/1
+        ,is_billable/1
+        ,validate_relationship/2
+        ,normalize_view_results/2
+        ,normalize_view_active_results/2
+        ,maybe_fee_active/2
+        ,next_month/2
         ]).
 
 -include("onbill.hrl").
-
--spec check_db(ne_binary()) -> 'ok'.
-check_db(Db) when is_binary(Db) ->
-    do_check_db(Db, kz_datamgr:db_exists(Db)).
-
--spec do_check_db(ne_binary(), boolean()) -> 'ok'.
-do_check_db(_Db, 'true') -> 'ok';
-do_check_db(Db, 'false') ->
-    lager:debug("create Db ~p", [Db]),
-    _ = kz_datamgr:db_create(Db).
 
 -spec maybe_add_design_doc(ne_binary(), ne_binary()) -> 'ok' | {'error', 'not_found'}.
 maybe_add_design_doc(DbName, ViewName) ->
@@ -59,8 +48,10 @@ account_vars(AccountId) ->
     {'ok', AccountDoc} = kz_account:fetch(AccountId),
     kz_json:get_value(<<"pvt_onbill_account_vars">>, AccountDoc).
 
-carrier_doc(Carrier) ->
-    {'ok', CarrierDoc} =  kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)),
+carrier_doc(Carrier, AccountId) ->
+    ResellerId = kz_services:find_reseller_id(AccountId),
+    DbName = kz_util:format_account_id(ResellerId,'encoded'),
+    {'ok', CarrierDoc} =  kz_datamgr:open_doc(DbName, ?CARRIER_DOC(Carrier)),
     CarrierDoc.
 
 reseller_vars(AccountId) ->
@@ -68,23 +59,23 @@ reseller_vars(AccountId) ->
     {'ok', ResellerDoc} = kz_account:fetch(ResellerId),
     kz_json:get_value(<<"pvt_onbill_reseller_vars">>, ResellerDoc).
 
-maybe_main_carrier(Carrier) when is_binary(Carrier) ->
-    maybe_main_carrier(carrier_doc(Carrier));
-maybe_main_carrier(CarrierDoc) ->
+maybe_main_carrier(Carrier, AccountId) when is_binary(Carrier) ->
+    maybe_main_carrier(carrier_doc(Carrier, AccountId), AccountId);
+maybe_main_carrier(CarrierDoc, _) ->
     case kz_json:get_value(<<"carrier_type">>, CarrierDoc) of
         <<"main">> -> 'true';
         _ -> 'false'
     end.
 
-get_main_carrier([Carrier]) ->
+get_main_carrier([Carrier],_) ->
     Carrier;
-get_main_carrier([Carrier|T]) ->
-    case maybe_main_carrier(Carrier) of
+get_main_carrier([Carrier|T], AccountId) ->
+    case maybe_main_carrier(Carrier, AccountId) of
         'true' -> Carrier;
-        _ -> get_main_carrier(T)
+        _ -> get_main_carrier(T, AccountId)
     end;
-get_main_carrier(AccountId) ->
-    get_main_carrier(account_carriers_list(AccountId)).
+get_main_carrier(AccountId, _) ->
+    get_main_carrier(account_carriers_list(AccountId), AccountId).
 
 format_datetime(TStamp) ->
     {{Year, Month, Day}, {Hour, Minute, Second}} = calendar:gregorian_seconds_to_datetime(TStamp),
@@ -92,10 +83,7 @@ format_datetime(TStamp) ->
     kz_util:to_binary(StrTime).
 
 is_billable(AccountId) ->
-    case kz_datamgr:open_doc(?ONBILL_DB, AccountId) of
-        {'ok', _} -> 'true';
-        _ -> 'false'
-    end.
+    kz_account:is_enabled(kz_account:fetch(AccountId)).
 
 -spec validate_relationship(ne_binary(), ne_binary()) -> boolean().
 validate_relationship(ChildId, ResellerId) ->

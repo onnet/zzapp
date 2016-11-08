@@ -6,12 +6,14 @@
 
 -include("onbill.hrl").
 
-get_template(TemplateId, Carrier) ->
-    case kz_datamgr:fetch_attachment(?ONBILL_DB, ?CARRIER_DOC(Carrier), <<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".tpl">>) of
+get_template(TemplateId, Carrier, AccountId) ->
+    ResellerId = kz_services:find_reseller_id(AccountId),
+    DbName = kz_util:format_account_id(ResellerId,'encoded'),
+    case kz_datamgr:fetch_attachment(DbName, ?CARRIER_DOC(Carrier), <<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".tpl">>) of
         {'ok', Template} -> Template;
         {error, not_found} ->
             Template = default_template(TemplateId, Carrier),
-            case kz_datamgr:open_doc(?ONBILL_DB, ?CARRIER_DOC(Carrier)) of
+            case kz_datamgr:open_doc(DbName, ?CARRIER_DOC(Carrier)) of
                 {'ok', _} ->
                     'ok';
                 {'error', 'not_found'} ->
@@ -20,9 +22,9 @@ get_template(TemplateId, Carrier) ->
                                                  ,{<<"callee_number_regex">>,<<"^\\d*$">>}
                                                 ]
                                                 ,kz_json:new()),
-                    kz_datamgr:ensure_saved(?ONBILL_DB, NewDoc)
+                    kz_datamgr:ensure_saved(DbName, NewDoc)
             end,
-            kz_datamgr:put_attachment(?ONBILL_DB
+            kz_datamgr:put_attachment(DbName
                                      ,?CARRIER_DOC(Carrier)
                                      ,<<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".tpl">>
                                      ,Template
@@ -41,9 +43,9 @@ default_template(TemplateId, Carrier) ->
             Data
     end.
 
-prepare_tpl(Vars, TemplateId, Carrier) ->
+prepare_tpl(Vars, TemplateId, Carrier, AccountId) ->
     ErlyMod = erlang:binary_to_atom(?DOC_NAME_FORMAT(Carrier, TemplateId), 'latin1'),
-    try erlydtl:compile_template(get_template(TemplateId, Carrier), ErlyMod, [{'out_dir', 'false'},'return']) of
+    try erlydtl:compile_template(get_template(TemplateId, Carrier, AccountId), ErlyMod, [{'out_dir', 'false'},'return']) of
         {ok, ErlyMod} -> render_tpl(ErlyMod, Vars);
         {ok, ErlyMod,[]} -> render_tpl(ErlyMod, Vars); 
         {'ok', ErlyMod, Warnings} ->
@@ -66,7 +68,7 @@ create_pdf(Vars, TemplateId, Carrier, AccountId) ->
     Prefix = <<AccountId/binary, "-", (?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, "-", Rand/binary>>,
     HTMLFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".html">>]),
     PDFFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".pdf">>]),
-    HTMLTpl = prepare_tpl(Vars, TemplateId, Carrier),
+    HTMLTpl = prepare_tpl(Vars, TemplateId, Carrier, AccountId),
     file:write_file(HTMLFile, HTMLTpl),
     Cmd = <<(?HTML_TO_PDF(TemplateId, Carrier))/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
     case os:cmd(kz_util:to_list(Cmd)) of
@@ -87,8 +89,13 @@ save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->
     {'ok', PDF_Data} = create_pdf(Vars, TemplateId, Carrier, AccountId),
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     NewDoc = case kz_datamgr:open_doc(Modb, ?DOC_NAME_FORMAT(Carrier, TemplateId)) of
-        {ok, Doc} -> kz_json:set_values(Vars, Doc);
-        {'error', 'not_found'} -> kz_json:set_values(Vars ++ [{<<"_id">>, ?DOC_NAME_FORMAT(Carrier, TemplateId)}, {<<"pvt_type">>, ?ONBILL_DOC}], kz_json:new()) 
+        {ok, Doc} ->
+            kz_json:set_values(Vars, Doc);
+        {'error', 'not_found'} ->
+            kz_json:set_values(Vars ++ [{<<"_id">>, ?DOC_NAME_FORMAT(Carrier, TemplateId)}
+                                       ,{<<"pvt_type">>, ?ONBILL_DOC}
+                                       ]
+                              ,kz_json:new()) 
     end,
     kz_datamgr:ensure_saved(Modb, NewDoc),
     kz_datamgr:put_attachment(Modb
@@ -105,7 +112,7 @@ generate_docs(AccountId, Year, Month) ->
     maybe_aggregate_invoice(AccountId, Year, Month, Carriers).
 
 generate_docs(AccountId, Year, Month, Carrier) ->
-    CarrierDoc = onbill_util:carrier_doc(Carrier),
+    CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     VatUpdatedFeesList = fees:shape_fees(AccountId, Year, Month, CarrierDoc, OnbillResellerVars),
     Totals = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
@@ -122,7 +129,7 @@ generate_docs(AccountId, Year, Month, Carrier) ->
 generate_docs(_, _, _, Carrier, _, {TotalNetto, TotalVAT, TotalBrutto}) when TotalNetto =< 0.0 orelse TotalVAT =< 0.0 orelse TotalBrutto =< 0.0 ->
     lager:debug("Skipping generate_docs for ~p because of zero usage: TotalNetto: ~p, TotalVAT: ~p, TotalBrutto: ~p",[Carrier, TotalNetto, TotalVAT, TotalBrutto]);
 generate_docs(AccountId, Year, Month, Carrier, VatUpdatedFeesList, {TotalNetto, TotalVAT, TotalBrutto}) ->
-    CarrierDoc = onbill_util:carrier_doc(Carrier),
+    CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(TotalBrutto),
     {TotalVatDiv, TotalVatRem} = total_to_words(TotalVAT),
@@ -182,8 +189,8 @@ maybe_aggregate_invoice(AccountId, Year, Month, Carriers) ->
 aggregate_invoice(AccountId, Year, Month, Carriers) ->
     Document = <<"aggregated_invoice">>,
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
-    MainCarrier = onbill_util:get_main_carrier(Carriers),
-    MainCarrierDoc = onbill_util:carrier_doc(MainCarrier),
+    MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
+    MainCarrierDoc = onbill_util:carrier_doc(MainCarrier, AccountId),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
     {AggregatedVars, TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(Carrier, Acc) -> aggregate_data(AccountId, Year, Month, Carrier, Acc) end, {[], 0, 0, 0}, Carriers),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(TotalBrutto),
@@ -229,7 +236,7 @@ maybe_per_minute_report(AccountId, Year, Month, Carrier) ->
 per_minute_report(AccountId, Year, Month, Carrier, CallsJObjs, CallsTotalSec, CallsTotalSumm) when CallsTotalSumm > 0.0 ->
     Document = <<"calls_report">>,
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
-    CarrierDoc = onbill_util:carrier_doc(Carrier),
+    CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
     {CallsJObjs, CallsTotalSec, CallsTotalSumm} = fees:per_minute_calls(AccountId, Year, Month, Carrier),
     Vars = [{<<"per_minute_calls">>, CallsJObjs}

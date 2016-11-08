@@ -9,7 +9,7 @@
 -include("onbill.hrl").
 
 shape_fees(AccountId, Year, Month, Carrier) ->
-    CarrierDoc =  onbill_util:carrier_doc(Carrier),
+    CarrierDoc =  onbill_util:carrier_doc(Carrier, AccountId),
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     shape_fees(AccountId, Year, Month, CarrierDoc, OnbillResellerVars).
 
@@ -74,7 +74,7 @@ enhance_vat_brutto(FeeLine, OnbillResellerVars) ->
     props:set_values(NewValues, FeeLine).
 
 maybe_monthly_fees(AccountId, CarrierDoc, Year, Month) ->
-    case onbill_util:maybe_main_carrier(CarrierDoc) of
+    case onbill_util:maybe_main_carrier(CarrierDoc, AccountId) of
         'true' -> monthly_fees(AccountId, Year, Month) ++ process_per_minute_calls(AccountId, Year, Month, CarrierDoc);
         _ -> process_per_minute_calls(AccountId, Year, Month, CarrierDoc)
     end.
@@ -96,7 +96,7 @@ monthly_fees(AccountId, Year, Month) ->
     services_to_proplist(ServicesList, Year, Month).
 
 process_per_minute_calls(AccountId, Year, Month, Carrier) when is_binary(Carrier) ->
-    process_per_minute_calls(AccountId, Year, Month, onbill_util:carrier_doc(Carrier));
+    process_per_minute_calls(AccountId, Year, Month, onbill_util:carrier_doc(Carrier, AccountId));
 process_per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, []) of
@@ -120,7 +120,7 @@ process_per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
     end.
 
 per_minute_calls(AccountId, Year, Month, Carrier) when is_binary(Carrier) ->
-    per_minute_calls(AccountId, Year, Month, onbill_util:carrier_doc(Carrier));
+    per_minute_calls(AccountId, Year, Month, onbill_util:carrier_doc(Carrier, AccountId));
 per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, ['descending']) of
@@ -133,22 +133,22 @@ per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
     end.
 
 get_per_minute_regexes(AccountId, CarrierDoc) ->
-    case onbill_util:maybe_main_carrier(CarrierDoc) of
+    case onbill_util:maybe_main_carrier(CarrierDoc, AccountId) of
         'true' ->
             Carriers = onbill_util:account_carriers_list(AccountId),
-            get_other_carriers_regexes(Carriers);
+            get_other_carriers_regexes(Carriers, AccountId);
         _ -> 
-            get_carrier_regexes(CarrierDoc)
+            get_carrier_regexes(CarrierDoc, AccountId)
     end.
 
-get_other_carriers_regexes(Carriers) when length(Carriers) > 1 ->
-    [get_carrier_regexes(Carrier) || Carrier <- Carriers, not onbill_util:maybe_main_carrier(Carrier)];
-get_other_carriers_regexes(_) ->
+get_other_carriers_regexes(Carriers, AccountId) when length(Carriers) > 1 ->
+    [get_carrier_regexes(Carrier, AccountId) || Carrier <- Carriers, not onbill_util:maybe_main_carrier(Carrier)];
+get_other_carriers_regexes(_,_) ->
     {<<"^\\d*$">>, <<"^\\d*$">>}.
 
-get_carrier_regexes(Carrier) when is_binary(Carrier) ->    
-    get_carrier_regexes(onbill_util:carrier_doc(Carrier));    
-get_carrier_regexes(CarrierDoc) ->    
+get_carrier_regexes(Carrier, AccountId) when is_binary(Carrier) ->    
+    get_carrier_regexes(onbill_util:carrier_doc(Carrier, AccountId), AccountId);    
+get_carrier_regexes(CarrierDoc,_) ->    
     {kz_json:get_value(<<"caller_number_regex">>, CarrierDoc, <<"^\\d*$">>)
     ,kz_json:get_value(<<"called_number_regex">>, CarrierDoc, <<"^\\d*$">>)
     }.
