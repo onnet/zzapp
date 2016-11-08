@@ -18,7 +18,8 @@
 -include("../../crossbar/src/crossbar.hrl").
 
 -define(CARRIER_DOC_TYPE, <<"onbill_carrier">>).
-
+-define(TEMPLATE_NAME(Id, AttachmentId), <<Id/binary, "_", AttachmentId/binary, ".tpl">>).
+-define(CARRIER_DOC_ID(Id), <<"onbill_carrier.", (kz_util:to_binary(Id))/binary>>).
 -define(MIME_TYPES, [{<<"text">>, <<"html">>}]).
 
 -spec init() -> 'ok'.
@@ -72,15 +73,15 @@ validate(Context, Id, AttachmentId) ->
 
 -spec validate_onbill(cb_context:context(), path_token(), http_method()) -> cb_context:context().
 validate_onbill(Context, Id, ?HTTP_GET) ->
-    crossbar_doc:load(carrier_doc_id(Id, Context), Context, [{'expected_type', ?CARRIER_DOC_TYPE}]);
+    crossbar_doc:load(?CARRIER_DOC_ID(Id), Context, [{'expected_type', ?CARRIER_DOC_TYPE}]);
 validate_onbill(Context, Id, ?HTTP_POST) ->
-    save(carrier_doc_id(Id, Context), Context).
+    save(?CARRIER_DOC_ID(Id), Context).
 
 -spec validate_onbill(cb_context:context(), path_token(), path_token(), http_method()) -> cb_context:context().
 validate_onbill(Context, Id, AttachmentId, ?HTTP_GET) ->
-    load_carrier_attachment(Context, carrier_doc_id(Id, Context), <<Id/binary, "_", AttachmentId/binary, ".tpl">>);
+    crossbar_doc:load_attachment(?CARRIER_DOC_ID(Id), ?TEMPLATE_NAME(Id, AttachmentId), [], Context);
 validate_onbill(Context, Id, AttachmentId, ?HTTP_POST) ->
-    save_carrier_attachment(Context, carrier_doc_id(Id, Context), <<Id/binary, "_", AttachmentId/binary, ".tpl">>).
+    save_carrier_attachment(Context, ?CARRIER_DOC_ID(Id), ?TEMPLATE_NAME(Id, AttachmentId)).
 
 -spec save(ne_binary(), cb_context:context()) -> cb_context:context().
 save(Id, Context) ->
@@ -95,9 +96,6 @@ save(Id, Context) ->
     NewDoc = kz_json:merge_recursive(ReqData, Doc),
     Context1 = crossbar_doc:save(cb_context:set_doc(Context, NewDoc)),
     cb_context:set_resp_data(Context1, ReqData).
-
-load_carrier_attachment(Context, DocId, AName) ->
-    crossbar_doc:load_attachment(DocId, AName, [], Context).
 
 save_carrier_attachment(Context, DocId, AName) ->
     case cb_context:req_files(Context) of
@@ -115,6 +113,3 @@ save_carrier_attachment(Context, DocId, AName) ->
             lager:debug("No file uploaded"),
             cb_context:add_system_error('no file uploaded', Context)
     end.
-
-carrier_doc_id(Id, _Context) ->
-    <<"onbill_carrier.", (kz_util:to_binary(Id))/binary>>.
