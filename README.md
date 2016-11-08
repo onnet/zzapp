@@ -1,2 +1,2 @@
 # onbill
-Onnet billing Kazoo whapp
+Onnet billing Kazoo app
