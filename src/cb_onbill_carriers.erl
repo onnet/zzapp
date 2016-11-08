@@ -17,7 +17,8 @@
 
 -include("../../crossbar/src/crossbar.hrl").
 
--define(CARRIER_DOC_TYPE, <<"carrier">>).
+-define(CARRIER_DOC_TYPE, <<"onbill_carrier">>).
+
 -define(MIME_TYPES, [{<<"text">>, <<"html">>}]).
 
 -spec init() -> 'ok'.
@@ -73,7 +74,7 @@ validate(Context, Id, AttachmentId) ->
 validate_onbill(Context, Id, ?HTTP_GET) ->
     crossbar_doc:load(carrier_doc_id(Id, Context), Context, [{'expected_type', ?CARRIER_DOC_TYPE}]);
 validate_onbill(Context, Id, ?HTTP_POST) ->
-    save(Id, kz_util:format_account_id(cb_context:account_id(Context),'encoded'), Context).
+    save(carrier_doc_id(Id, Context), Context).
 
 -spec validate_onbill(cb_context:context(), path_token(), path_token(), http_method()) -> cb_context:context().
 validate_onbill(Context, Id, AttachmentId, ?HTTP_GET) ->
@@ -81,21 +82,30 @@ validate_onbill(Context, Id, AttachmentId, ?HTTP_GET) ->
 validate_onbill(Context, Id, AttachmentId, ?HTTP_POST) ->
     save_carrier_attachment(Context, carrier_doc_id(Id, Context), <<Id/binary, "_", AttachmentId/binary, ".tpl">>).
 
--spec save(ne_binary(), ne_binary(), cb_context:context()) -> cb_context:context().
-save(Id, DbName, Context) ->
-    ReqData = kz_json:delete_key(<<"id">>, cb_context:req_data(Context)),
-    Doc = case kz_datamgr:open_doc(DbName, Id) of
-              {'ok', JObj} -> JObj;
-              {error,not_found} ->
-                  InitValues = props:filter_undefined([{<<"_id">>, Id}
-                                                  ,{<<"pvt_type">>, ?CARRIER_DOC_TYPE}
-                                                  ]),
-                  kz_json:set_values(InitValues, kz_json:new())
-          end,
-    Values = kz_json:to_proplist(kz_doc:private_fields(Doc)),
-    NewDoc = kz_json:set_values(Values, ReqData),
-    Context1 = cb_context:set_doc(Context, NewDoc),
-    crossbar_doc:save(cb_context:set_account_db(Context1, DbName)).
+-spec save(ne_binary(), cb_context:context()) -> cb_context:context().
+save(_Id, Context) ->
+ %   Doc = cb_context:doc(Context),
+ %   ReqData = cb_context:req_data(Context),
+ %   NewDoc = kz_json:set_value(?PVT_OBJECT, ReqData, Doc),
+ %   Context1 = crossbar_doc:save(cb_context:set_doc(Context, NewDoc)),
+ %   cb_context:set_resp_data(Context1, ReqData).
+
+  %  ReqData = kz_json:delete_key(<<"id">>, cb_context:req_data(Context)),
+  %  DbName = kz_util:format_account_id(cb_context:account_id(Context),'encoded'),
+  %  Doc = case kz_datamgr:open_doc(DbName, Id) of
+  %            {'ok', JObj} -> JObj;
+  %            {error,not_found} ->
+  %                InitValues = props:filter_undefined([{<<"_id">>, Id}
+  %                                                ,{<<"pvt_type">>, ?CARRIER_DOC_TYPE}
+  %                                                ]),
+  %                kz_json:set_values(InitValues, kz_json:new())
+  %        end,
+  %  Values = kz_json:to_proplist(kz_doc:private_fields(Doc)),
+  %  NewDoc = kz_json:set_values(Values, ReqData),
+  %  Context1 = cb_context:set_doc(Context, NewDoc),
+  %  crossbar_doc:save(Context1).
+    ReqData = cb_context:req_data(Context),
+    crossbar_doc:save(cb_context:set_doc(Context, ReqData)).
 
 load_carrier_attachment(Context, DocId, AName) ->
     crossbar_doc:load_attachment(DocId, AName, [], Context).
@@ -118,4 +128,4 @@ save_carrier_attachment(Context, DocId, AName) ->
     end.
 
 carrier_doc_id(Id, _Context) ->
-    <<"carrier.", (kz_util:to_binary(Id))/binary>>.
+    <<"onbill_carrier.", (kz_util:to_binary(Id))/binary>>.
