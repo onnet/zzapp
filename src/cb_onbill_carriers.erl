@@ -83,29 +83,18 @@ validate_onbill(Context, Id, AttachmentId, ?HTTP_POST) ->
     save_carrier_attachment(Context, carrier_doc_id(Id, Context), <<Id/binary, "_", AttachmentId/binary, ".tpl">>).
 
 -spec save(ne_binary(), cb_context:context()) -> cb_context:context().
-save(_Id, Context) ->
- %   Doc = cb_context:doc(Context),
- %   ReqData = cb_context:req_data(Context),
- %   NewDoc = kz_json:set_value(?PVT_OBJECT, ReqData, Doc),
- %   Context1 = crossbar_doc:save(cb_context:set_doc(Context, NewDoc)),
- %   cb_context:set_resp_data(Context1, ReqData).
-
-  %  ReqData = kz_json:delete_key(<<"id">>, cb_context:req_data(Context)),
-  %  DbName = kz_util:format_account_id(cb_context:account_id(Context),'encoded'),
-  %  Doc = case kz_datamgr:open_doc(DbName, Id) of
-  %            {'ok', JObj} -> JObj;
-  %            {error,not_found} ->
-  %                InitValues = props:filter_undefined([{<<"_id">>, Id}
-  %                                                ,{<<"pvt_type">>, ?CARRIER_DOC_TYPE}
-  %                                                ]),
-  %                kz_json:set_values(InitValues, kz_json:new())
-  %        end,
-  %  Values = kz_json:to_proplist(kz_doc:private_fields(Doc)),
-  %  NewDoc = kz_json:set_values(Values, ReqData),
-  %  Context1 = cb_context:set_doc(Context, NewDoc),
-  %  crossbar_doc:save(Context1).
+save(Id, Context) ->
     ReqData = cb_context:req_data(Context),
-    crossbar_doc:save(cb_context:set_doc(Context, ReqData)).
+    DbName = kz_util:format_account_id(cb_context:account_id(Context),'encoded'),
+    Doc = case kz_datamgr:open_doc(DbName, Id) of
+              {'ok', JObj} ->
+                  JObj;
+              {error,not_found} ->
+                  kz_json:set_value(<<"_id">>, Id, kz_json:new())
+          end,
+    NewDoc = kz_json:merge_recursive(ReqData, Doc),
+    Context1 = crossbar_doc:save(cb_context:set_doc(Context, NewDoc)),
+    cb_context:set_resp_data(Context1, ReqData).
 
 load_carrier_attachment(Context, DocId, AName) ->
     crossbar_doc:load_attachment(DocId, AName, [], Context).
