@@ -40,6 +40,7 @@
        "account_name": "ЗАО «Тест»",
        "account_inn": 1234567890,
        "account_kpp": "098765",
+       "aggregate_invoice": true,
        "agrm": {
            "onnet": {
                "number": "1-test",
