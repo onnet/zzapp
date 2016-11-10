@@ -1,0 +1,13 @@
+{
+   "_id": "_design/doc_numbering",
+   "_rev": "7-60fc14dc89e70dbf918185c2bf8e49a5",
+   "language": "javascript",
+   "views": {
+       "recent_number": {
+           "map": "function(doc) { if (doc.pvt_type != 'onbill_doc' || doc.pvt_deleted) return; emit([doc.carrier, doc.onbill_doc_type, doc.number_assigned], doc.number_assigned); }"
+       },
+       "number_lookup": {
+           "map": "function(doc) { if (doc.pvt_type != 'onbill_doc' || doc.pvt_deleted) return; emit([doc.carrier, doc.onbill_doc_type, doc.month_assigned, doc.account_id], doc.number_assigned); }"
+       }
+   }
+}
