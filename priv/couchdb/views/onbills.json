@@ -3,7 +3,7 @@
     "language": "javascript",
     "views": {
         "crossbar_listing": {
-            "map": "function(doc) { if (doc.pvt_type != 'onbill' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name, oper_name_short: doc.oper_name_short, total_netto: doc.total_netto, total_vat: doc.total_vat, total_brutto: doc.total_brutto, doc_date:doc.doc_date, type: doc.this_document}); }"
+            "map": "function(doc) { if (doc.pvt_type != 'onbill' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name, oper_name_short: doc.oper_name_short, total_netto: doc.total_netto, total_vat: doc.total_vat, total_brutto: doc.total_brutto, doc_date:doc.doc_date, type: doc.onbill_doc_type}); }"
         },
         "daily_fees": {
             "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason != 'daily_fee' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"

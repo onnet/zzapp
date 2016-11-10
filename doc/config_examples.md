@@ -68,7 +68,7 @@
    "per_minute_item_name": "Местные вызовы СПб",
    "oper_name_short": "ЗАО «ОнНет комьюникейшнс»",
    "oper_signatory": "ОПЕРАТОР",
-   "documents": [
+   "onbill_doc_types": [
        "invoice",
        "act"
    ],
@@ -126,7 +126,7 @@
    "oper_signatory": "ОПЕРАТОР",
    "caller_number_regex": "^7812\\d*$",
    "called_number_regex": "^(?!7812)\\d*$",
-   "documents": [
+   "onbill_doc_types": [
        "invoice",
        "act"
    ],

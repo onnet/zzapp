@@ -1,6 +1,7 @@
 -module(onbill_util).
 
--export([maybe_add_design_doc/2
+-export([check_db/1
+        ,maybe_add_design_doc/2
         ,get_attachment/2
         ,price_round/1
         ,account_carriers_list/1
@@ -19,6 +20,16 @@
         ]).
 
 -include("onbill.hrl").
+
+-spec check_db(ne_binary()) -> 'ok'.
+check_db(Db) when is_binary(Db) ->
+    do_check_db(Db, kz_datamgr:db_exists(Db)).
+
+-spec do_check_db(ne_binary(), boolean()) -> 'ok'.
+do_check_db(_Db, 'true') -> 'ok';
+do_check_db(Db, 'false') ->
+    lager:debug("create Db ~p", [Db]),
+    _ = kz_datamgr:db_create(Db).
 
 -spec maybe_add_design_doc(ne_binary(), ne_binary()) -> 'ok' | {'error', 'not_found'}.
 maybe_add_design_doc(DbName, ViewName) ->

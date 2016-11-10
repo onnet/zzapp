@@ -10,6 +10,7 @@
 -define(ONBILL_DOC, <<"onbill">>).
 -define(CARRIER_DOC(CarrierName), <<"onbill_carrier.", CarrierName/binary>>).
 -define(MOD_CONFIG_CRAWLER, <<(?APP_NAME)/binary, ".account_crawler">>).
+-define(DOC_NUMBER_DOC(ResellerId, Year), <<(?APP_NAME)/binary, "-", ResellerId/binary, "-", (kz_util:to_binary(Year))/binary>>).
 -define(SYSTEM_CONFIG_DB, <<"system_config">>).
 -define(DOC_NAME_FORMAT(Carrier, TemplateID), <<Carrier/binary, "_", TemplateId/binary>>).
 -define(HTML_TO_PDF(TemplateId), <<"php applications/onbill/priv/templates/ru/", TemplateId/binary, ".php">>).
