@@ -1,6 +1,5 @@
 {
    "_id": "_design/doc_numbering",
-   "_rev": "7-60fc14dc89e70dbf918185c2bf8e49a5",
    "language": "javascript",
    "views": {
        "recent_number": {
