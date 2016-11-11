@@ -44,7 +44,7 @@ maybe_get_new_number(AccountId, Carrier, DocType, Year, Month) ->
     case no_docs_in_year_since_month(AccountId, Carrier, DocType, NextMonthYear, NextMonth)
            andalso no_docs_in_year_since_month(AccountId, Carrier, DocType, NextMonthYear+1, 1)
     of
-        'true' -> get_new_number(AccountId, Carrier, DocType, Year, Month);
+        'true' -> get_new_number(AccountId, Carrier, DocType, Year);
         'false' -> {'error', 'period_closed'}
     end.
 
@@ -61,8 +61,8 @@ no_docs_in_year_since_month(AccountId, Carrier, DocType, Year, Month) ->
         E -> E
     end.
 
-get_new_number(AccountId, Carrier, DocType, Year, Month) ->
-    case get_recent_number(AccountId, Carrier, DocType, Year, Month) of
+get_new_number(AccountId, Carrier, DocType, Year) ->
+    case get_recent_number(AccountId, Carrier, DocType, Year) of
         {'ok', RecentNumber} -> {'ok', RecentNumber + 1};
         E -> E
     end.
@@ -73,7 +73,14 @@ get_new_number(AccountId, Carrier, DocType, Year, Month) ->
 %% - couninious numbering (if all existing documents should be numbered sequentially throughout)
 %%
 
-get_recent_number(AccountId, Carrier, DocType, Year, _Month) ->
+get_recent_number(AccountId, Carrier, DocType, Year) ->
+    case get_year_recent_number(AccountId, Carrier, DocType, Year) of
+        {'ok', 0} -> maybe_continious_numbering(AccountId, Carrier, DocType, Year);
+        {'ok', RecentDocNum} -> {'ok', RecentDocNum};
+        E -> E
+    end.
+
+get_year_recent_number(AccountId, Carrier, DocType, Year) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     DbName = ?DOC_NUMBER_DOC(ResellerId, Year),
     _ = onbill_util:check_db(DbName),
@@ -86,4 +93,10 @@ get_recent_number(AccountId, Carrier, DocType, Year, _Month) ->
         {'ok', []} -> {'ok', 0};
         {'ok', [JObj]} -> {'ok', kz_json:get_integer_value(<<"value">>,JObj)};
         E -> E
+    end.
+
+maybe_continious_numbering(AccountId, Carrier, DocType, Year) ->
+    case kz_json:is_true(<<"continious_doc_numbering">>, onbill_util:carrier_doc(Carrier, AccountId)) of
+        'true' -> get_year_recent_number(AccountId, Carrier, DocType, Year-1);
+        'false' -> {'ok', 0}
     end.
