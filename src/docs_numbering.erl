@@ -1,6 +1,6 @@
 -module(docs_numbering).
 
--export([get_number/5
+-export([get_binary_number/5
         ,number_lookup/5
         ]).
 
@@ -11,6 +11,13 @@
 -define(NUMBER_LOOKUP_VIEW, <<(?VIEW_NAME)/binary, "/number_lookup">>).
 -define(DOCS_LOOKUP_VIEW, <<(?VIEW_NAME)/binary, "/docs_lookup">>).
 -define(NUMBER_DOC_ID(Carrier, DocType, DocNumber), <<(?TO_BIN(Carrier))/binary,".",(?TO_BIN(DocType))/binary,".", (?TO_BIN(DocNumber))/binary>>).
+
+
+get_binary_number(AccountId, Carrier, DocType, Year, Month) ->
+    case get_number(AccountId, Carrier, DocType, Year, Month) of
+        {'ok', Number} -> ?TO_BIN(Number);
+        _E -> <<"ERROR WRONG NUMBER">>
+    end.
 
 get_number(AccountId, Carrier, DocType, Year, Month) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
@@ -103,6 +110,7 @@ get_year_recent_number(AccountId, Carrier, DocType, Year) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
     _ = onbill_util:check_db(DbName),
+    onbill_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
     Opts = [{'startkey', [Carrier,DocType, 999999]}
            ,{'endkey', [Carrier,DocType, 0]}
            ,'descending'
@@ -116,6 +124,14 @@ get_year_recent_number(AccountId, Carrier, DocType, Year) ->
 
 maybe_continious_numbering(AccountId, Carrier, DocType, Year) ->
     case kz_json:is_true(<<"continious_doc_numbering">>, onbill_util:carrier_doc(Carrier, AccountId)) of
-        'true' -> get_year_recent_number(AccountId, Carrier, DocType, Year-1);
-        'false' -> {'ok', 0}
+        'true' ->
+            ResellerId = kz_services:find_reseller_id(AccountId),
+            case kz_datamgr:db_exists(?DOCS_NUMBER_DB(ResellerId, Year-1)) of
+                'true' ->
+                    get_year_recent_number(AccountId, Carrier, DocType, Year-1);
+                'false' ->
+                    {'ok', 0}
+            end;
+        'false' ->
+            {'ok', 0}
     end.

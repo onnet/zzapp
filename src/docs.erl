@@ -160,7 +160,7 @@ generate_docs(AccountId, Year, Month, Carrier, VatUpdatedFeesList, {TotalNetto, 
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
     _ = [save_pdf(Vars
                     ++ [{<<"onbill_doc_type">>, DocType}]
-                    ++ [{<<"doc_number">>, docs_number:get_number(AccountId, Carrier, DocType, Year, Month)}]
+                    ++ [{<<"doc_number">>, docs_numbering:get_binary_number(AccountId, Carrier, DocType, Year, Month)}]
                  ,DocType
                  ,Carrier
                  ,AccountId
