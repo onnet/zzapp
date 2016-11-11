@@ -114,7 +114,7 @@
 {
    "_id": "onbill_carrier.beeline",
    "_rev": "8-ae81f45f8bbf5d8b6511abd4b2e91801",
-   "continious_doc_numbering": false,
+   "continious_doc_numbering": true,
    "oper_name": "Публичное Акционерное Общество «Вымпел-Коммуникации»",
    "oper_addr": "127083, г. Москва, ул. Восьмого марта, д. 10 стр. 14",
    "inn": 7713076301,

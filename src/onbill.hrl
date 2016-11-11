@@ -10,7 +10,7 @@
 -define(ONBILL_DOC, <<"onbill">>).
 -define(CARRIER_DOC(CarrierName), <<"onbill_carrier.", CarrierName/binary>>).
 -define(MOD_CONFIG_CRAWLER, <<(?APP_NAME)/binary, ".account_crawler">>).
--define(DOC_NUMBER_DOC(ResellerId, Year), <<(?APP_NAME)/binary
+-define(DOCS_NUMBER_DB(ResellerId, Year), <<(?APP_NAME)/binary
                                            ,"-"
                                            ,ResellerId/binary
                                            ,"-"
@@ -31,6 +31,7 @@
                                 ,"."
                                 ,(kz_util:to_binary(Year))/binary>>).
 -define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
+-define(TO_BIN(Var), kz_util:to_binary(Var)).
 
 -define(ONBILL_HRL, 'true').
 -endif.

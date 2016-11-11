@@ -10,10 +10,11 @@
 -define(RECENT_NUMBER_VIEW, <<(?VIEW_NAME)/binary, "/recent_number">>).
 -define(NUMBER_LOOKUP_VIEW, <<(?VIEW_NAME)/binary, "/number_lookup">>).
 -define(DOCS_LOOKUP_VIEW, <<(?VIEW_NAME)/binary, "/docs_lookup">>).
+-define(NUMBER_DOC_ID(Carrier, DocType, DocNumber), <<(?TO_BIN(Carrier))/binary,".",(?TO_BIN(DocType))/binary,".", (?TO_BIN(DocNumber))/binary>>).
 
 get_number(AccountId, Carrier, DocType, Year, Month) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
-    DbName = ?DOC_NUMBER_DOC(ResellerId, Year),
+    DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
     _ = onbill_util:check_db(DbName),
     onbill_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
     case number_lookup(AccountId, Carrier, DocType, Year, Month) of
@@ -24,7 +25,7 @@ get_number(AccountId, Carrier, DocType, Year, Month) ->
 
 number_lookup(AccountId, Carrier, DocType, Year, Month) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
-    DbName = ?DOC_NUMBER_DOC(ResellerId, Year),
+    DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
     _ = onbill_util:check_db(DbName),
     onbill_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
     Opts = [{'startkey', [Carrier, DocType, Month, AccountId]}
@@ -44,13 +45,13 @@ maybe_get_new_number(AccountId, Carrier, DocType, Year, Month) ->
     case no_docs_in_year_since_month(AccountId, Carrier, DocType, NextMonthYear, NextMonth)
            andalso no_docs_in_year_since_month(AccountId, Carrier, DocType, NextMonthYear+1, 1)
     of
-        'true' -> get_new_number(AccountId, Carrier, DocType, Year);
+        'true' -> get_new_number(AccountId, Carrier, DocType, Year, Month);
         'false' -> {'error', 'period_closed'}
     end.
 
 no_docs_in_year_since_month(AccountId, Carrier, DocType, Year, Month) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
-    DbName = ?DOC_NUMBER_DOC(ResellerId, Year),
+    DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
     _ = onbill_util:check_db(DbName),
     onbill_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
     Opts = [{'startkey', [Carrier, DocType, Month]}
@@ -61,9 +62,27 @@ no_docs_in_year_since_month(AccountId, Carrier, DocType, Year, Month) ->
         E -> E
     end.
 
-get_new_number(AccountId, Carrier, DocType, Year) ->
+get_new_number(AccountId, Carrier, DocType, Year, Month) ->
     case get_recent_number(AccountId, Carrier, DocType, Year) of
-        {'ok', RecentNumber} -> {'ok', RecentNumber + 1};
+        {'ok', RecentNumber} -> reserve_number(AccountId, Carrier, DocType, Year, Month, RecentNumber + 1, 1);
+        E -> E
+    end.
+
+reserve_number(AccountId, Carrier, DocType, Year, Month, NumberToReserve, Attempt) when Attempt < 3 ->
+    ResellerId = kz_services:find_reseller_id(AccountId),
+    DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
+    Values = [{<<"_id">>, ?NUMBER_DOC_ID(Carrier, DocType, NumberToReserve)}
+             ,{<<"carrier">>, Carrier}
+             ,{<<"account_id">>, AccountId}
+             ,{<<"month_assigned">>, Month}
+             ,{<<"pvt_type">>, <<"onbill_doc">>}
+             ,{<<"onbill_doc_type">>, DocType}
+             ,{<<"number_assigned">>, NumberToReserve}
+             ],
+    NewDoc = kz_json:set_values(Values, kz_json:new()),
+    case kz_datamgr:save_doc(DbName, NewDoc) of
+        {'ok', _} -> get_number(AccountId, Carrier, DocType, Year, Month);
+        {error,conflict} -> reserve_number(AccountId, Carrier, DocType, Year, Month, NumberToReserve, Attempt+1);
         E -> E
     end.
 
@@ -82,7 +101,7 @@ get_recent_number(AccountId, Carrier, DocType, Year) ->
 
 get_year_recent_number(AccountId, Carrier, DocType, Year) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
-    DbName = ?DOC_NUMBER_DOC(ResellerId, Year),
+    DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
     _ = onbill_util:check_db(DbName),
     Opts = [{'startkey', [Carrier,DocType, 999999]}
            ,{'endkey', [Carrier,DocType, 0]}
