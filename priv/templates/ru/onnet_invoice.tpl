@@ -5,7 +5,7 @@
 <table border=0>
 <tr>
 	<td width="80%" align="center">
-<font size=12>СЧЕТ-ФАКТУРА № {{ doc_pref }}{{ doc_number }}-{{ doc_ind }} от {{ doc_date }}<br />
+<font size=12>СЧЕТ-ФАКТУРА № {{ doc_pref }}{{ doc_number }}{{ doc_ind }} от {{ doc_date }}<br />
 ИСПРАВЛЕНИЕ № <u> --- </u> от <u>   -------   </u></font><br />
 за оказанные услуги электросвязи за период: {{ start_date }} - {{ end_date }}</td>
 <td align="right" width="20%">
