@@ -1,12 +1,15 @@
 {
-   "_id": "_design/doc_numbering",
-   "language": "javascript",
-   "views": {
-       "recent_number": {
-           "map": "function(doc) { if (doc.pvt_type != 'onbill_doc' || doc.pvt_deleted) return; emit([doc.carrier, doc.onbill_doc_type, doc.number_assigned], doc.number_assigned); }"
-       },
-       "number_lookup": {
-           "map": "function(doc) { if (doc.pvt_type != 'onbill_doc' || doc.pvt_deleted) return; emit([doc.carrier, doc.onbill_doc_type, doc.month_assigned, doc.account_id], doc.number_assigned); }"
-       }
-   }
+    "_id": "_design/docs_numbering",
+    "language": "javascript",
+    "views": {
+        "docs_lookup": {
+            "map": "function(doc) { if (doc.pvt_type != 'onbill_doc' || doc.pvt_deleted) return; emit([doc.carrier, doc.onbill_doc_type, doc.month_assigned], doc.number_assigned); }"
+        },
+        "number_lookup": {
+            "map": "function(doc) { if (doc.pvt_type != 'onbill_doc' || doc.pvt_deleted) return; emit([doc.carrier, doc.onbill_doc_type, doc.month_assigned, doc.account_id], doc.number_assigned); }"
+        },
+        "recent_number": {
+            "map": "function(doc) { if (doc.pvt_type != 'onbill_doc' || doc.pvt_deleted) return; emit([doc.carrier, doc.onbill_doc_type, doc.number_assigned], doc.number_assigned); }"
+        }
+    }
 }
