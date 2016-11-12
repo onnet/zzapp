@@ -25,3 +25,12 @@ Each carrier can have multiple templates, e.g. invoice, act, calls_report ...
 Documents generating being processed in docs.erl
 
 Documents are stored in account's modbs.
+
+### Documents numbering - docs_numbering.erl
+Currently documents are issued on monthly basis.
+
+So Account can have one document of each type per month.
+
+Ex.: one invoice + one act of work completion + one monthly calls report + etc..
+
+Numbering information is stored in databases separately for each reseller/year
