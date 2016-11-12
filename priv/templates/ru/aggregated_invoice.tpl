@@ -17,7 +17,7 @@
 		Кор. Счет №: {{ oper_corr_number }}
 	</td></tr></table>
 
-<h1 align="center">Счет № %ordernum% от {{ end_date }}</h1>
+<h1 align="center">Счет № {{ doc_number }} от {{ end_date }}</h1>
 <h4 align="center">за оказанные услуги электросвязи за период: {{ start_date }} — {{ end_date }}</h4><br />
 Плательщик: {{ account_name }}<br />
 ИНН/КПП: {{ account_inn }} / {{ account_kpp }}<br />

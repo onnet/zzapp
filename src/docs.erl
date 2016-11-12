@@ -223,10 +223,12 @@ aggregate_invoice(AccountId, Year, Month, Carriers) ->
            ,{<<"total_vat_rem">>, TotalVatRem}
            ,{<<"total_brutto_div">>, TotalBruttoDiv}
            ,{<<"total_brutto_rem">>, TotalBruttoRem}
+           ,{<<"onbill_doc_type">>, DocType}
+           ,{<<"doc_number">>, docs_numbering:get_binary_number(AccountId, MainCarrier, DocType, Year, Month)}
            ]
            ++ [{Key, kz_json:get_value(Key, MainCarrierDoc)} || Key <- kz_json:get_keys(MainCarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
-    save_pdf(Vars ++ [{<<"onbill_doc_type">>, DocType}], DocType, MainCarrier, AccountId, Year, Month).
+    save_pdf(Vars, DocType, MainCarrier, AccountId, Year, Month).
 
 aggregate_data(AccountId, Year, Month, Carrier, {AggrVars, TotalNetto, TotalVAT, TotalBrutto}) ->
     TemplateId = <<"invoice">>,
@@ -261,10 +263,11 @@ per_minute_report(AccountId, Year, Month, Carrier, CallsJObjs, CallsTotalSec, Ca
            ,{<<"end_date">>, ?END_DATE(Month, Year)}
            ,{<<"agrm_num">>, kz_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccountOnbillDoc)}
            ,{<<"agrm_date">>, kz_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccountOnbillDoc)}
+           ,{<<"onbill_doc_type">>, DocType}
            ]
            ++ fees:vatify_amount(<<"total">>, CallsTotalSumm, OnbillResellerVars)
            ++ [{Key, kz_json:get_value(Key, CarrierDoc)} || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
-    save_pdf(Vars ++ [{<<"onbill_doc_type">>, DocType}], DocType, Carrier, AccountId, Year, Month);
+    save_pdf(Vars, DocType, Carrier, AccountId, Year, Month);
 per_minute_report(_, _, _, _, _, _, _) ->
     'ok'.
