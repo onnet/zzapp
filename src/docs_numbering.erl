@@ -13,6 +13,7 @@
 -define(NUMBER_DOC_ID(Carrier, DocType, DocNumber), <<(?TO_BIN(Carrier))/binary,".",(?TO_BIN(DocType))/binary,".", (?TO_BIN(DocNumber))/binary>>).
 
 
+-spec get_binary_number(ne_binary(), ne_binary(), ne_binary(), integer(), integer()) -> ne_binary().
 get_binary_number(AccountId, Carrier, DocType, Year, Month) ->
     case get_number(AccountId, Carrier, DocType, Year, Month) of
         {'ok', Number} -> ?TO_BIN(Number);
@@ -30,6 +31,7 @@ get_number(AccountId, Carrier, DocType, Year, Month) ->
         E -> E
     end.
 
+-spec number_lookup(ne_binary(), ne_binary(), ne_binary(), integer(), integer()) -> {'ok', integer()}|{'error', atom()}.
 number_lookup(AccountId, Carrier, DocType, Year, Month) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),

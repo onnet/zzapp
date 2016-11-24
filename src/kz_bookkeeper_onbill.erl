@@ -232,10 +232,12 @@ update_dailyfee_doc(Timestamp, Year, Month, Amount, DFDoc, Items, AccountId) ->
     NewDoc = kz_json:set_values(Updates, DFDoc),
     kazoo_modb:save_doc(AccountId, NewDoc, Year, Month).
 
+-spec populate_modb_with_fees(ne_binary(), integer(), integer()) -> proplist().
 populate_modb_with_fees(AccountId, Year, Month) ->
     LastMonthDay = calendar:last_day_of_the_month(Year, Month),
     [populate_modb_day_with_fee(AccountId, Year, Month, Day) || Day <- lists:seq(1, LastMonthDay)].
 
+-spec populate_modb_day_with_fee(ne_binary(), integer(), integer(), integer()) -> any().
 populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
     Timestamp = calendar:datetime_to_gregorian_seconds({{Year, Month, Day},{3,0,0}}),
     {CurrYear, CurrMonth, _} = erlang:date(),

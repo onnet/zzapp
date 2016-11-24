@@ -40,6 +40,8 @@ allowed_methods(?MODB,_,?ATTACHMENT) ->
 
 -spec resource_exists() -> 'true'.
 -spec resource_exists(path_token()) -> 'true'.
+-spec resource_exists(path_token(), path_token()) -> 'true'.
+-spec resource_exists(path_token(), path_token(), path_token()) -> 'true'.
 resource_exists() -> 'true'.
 resource_exists(_) -> 'true'.
 resource_exists(?GENERATE,_) -> 'true';
@@ -47,6 +49,8 @@ resource_exists(?MODB,_) -> 'true'.
 resource_exists(?MODB,_,?ATTACHMENT) -> 'true'.
 
 -spec content_types_provided(cb_context:context()) -> cb_context:context().
+-spec content_types_provided(cb_context:context(), path_token(), path_token()) -> cb_context:context().
+-spec content_types_provided(cb_context:context(), path_token(), path_token(), path_token()) -> cb_context:context().
 content_types_provided(Context) ->
     Context.
 content_types_provided(Context,_,?GENERATE) ->

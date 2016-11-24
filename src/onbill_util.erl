@@ -43,33 +43,40 @@ maybe_add_design_doc(DbName, ViewName) ->
         {'ok', _ } -> 'ok'
     end.
 
+-spec get_attachment(ne_binary(), ne_binary()) -> ok.
 get_attachment(AttachmentId, Db) ->
     case kz_datamgr:fetch_attachment(Db, AttachmentId, <<(kz_util:to_binary(AttachmentId))/binary, ".pdf">>) of
         {'ok', _} = OK -> OK;
         E -> E
     end.
 
+-spec price_round(number()) -> number().
 price_round(Price) ->
     round(Price * 100) / 100.
 
+-spec account_carriers_list(ne_binary()) -> list().
 account_carriers_list(AccountId) ->
     kz_json:get_value(<<"carriers">>, reseller_vars(AccountId), []).
 
+-spec account_vars(ne_binary()) -> list().
 account_vars(AccountId) ->
     {'ok', AccountDoc} = kz_account:fetch(AccountId),
     kz_json:get_value(<<"pvt_onbill_account_vars">>, AccountDoc).
 
+-spec carrier_doc(ne_binary(), ne_binary()) -> any().
 carrier_doc(Carrier, AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     DbName = kz_util:format_account_id(ResellerId,'encoded'),
     {'ok', CarrierDoc} =  kz_datamgr:open_doc(DbName, ?CARRIER_DOC(Carrier)),
     CarrierDoc.
 
+-spec reseller_vars(ne_binary()) -> proplist().
 reseller_vars(AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     {'ok', ResellerDoc} = kz_account:fetch(ResellerId),
     kz_json:get_value(<<"pvt_onbill_reseller_vars">>, ResellerDoc).
 
+-spec maybe_main_carrier(ne_binary(), kz_json:object()) -> boolean(). 
 maybe_main_carrier(Carrier, AccountId) when is_binary(Carrier) ->
     maybe_main_carrier(carrier_doc(Carrier, AccountId), AccountId);
 maybe_main_carrier(CarrierDoc, _) ->
@@ -78,6 +85,7 @@ maybe_main_carrier(CarrierDoc, _) ->
         _ -> 'false'
     end.
 
+-spec get_main_carrier(ne_binary()|list(), ne_binary()) -> ne_binary().
 get_main_carrier([Carrier],_) ->
     Carrier;
 get_main_carrier([Carrier|T], AccountId) ->
@@ -88,11 +96,13 @@ get_main_carrier([Carrier|T], AccountId) ->
 get_main_carrier(AccountId, _) ->
     get_main_carrier(account_carriers_list(AccountId), AccountId).
 
+-spec format_datetime(integer()) -> ne_binary().
 format_datetime(TStamp) ->
     {{Year, Month, Day}, {Hour, Minute, Second}} = calendar:gregorian_seconds_to_datetime(TStamp),
     StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])),
     kz_util:to_binary(StrTime).
 
+-spec is_billable(ne_binary()) -> boolean().
 is_billable(AccountId) ->
     kz_account:is_enabled(kz_account:fetch(AccountId)).
 
@@ -126,6 +136,7 @@ normalize_view_active_results(JObj, Acc) ->
             Acc
     end.
 
+-spec maybe_fee_active(integer(), kz_json:object()) -> boolean().
 maybe_fee_active(LookupTstamp, Fee) ->
     LookupTstamp > kz_json:get_value([<<"value">>, <<"service_starts">>], Fee)
     andalso

@@ -8,6 +8,8 @@
 
 -include("onbill.hrl").
 
+-spec shape_fees(ne_binary(), integer(), integer(), ne_binary()) -> 'ok'. 
+-spec shape_fees(ne_binary(), integer(), integer(), ne_binary(), proplist()) -> 'ok'. 
 shape_fees(AccountId, Year, Month, Carrier) ->
     CarrierDoc =  onbill_util:carrier_doc(Carrier, AccountId),
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
@@ -119,6 +121,7 @@ process_per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
                               )
     end.
 
+-spec per_minute_calls(ne_binary(), integer(), integer(), ne_binary()) -> ok.
 per_minute_calls(AccountId, Year, Month, Carrier) when is_binary(Carrier) ->
     per_minute_calls(AccountId, Year, Month, onbill_util:carrier_doc(Carrier, AccountId));
 per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
@@ -329,6 +332,7 @@ aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, 
 aggregated_service_to_line(_, _, _) ->
     [].
 
+-spec vatify_amount(ne_binary(), number(), kz_json:object()) -> 'ok'.
 vatify_amount(AmountName, Amount, OnbillResellerVars) ->
     VatRate = kz_json:get_value(<<"vat_rate">>, OnbillResellerVars),
     VatDisposition = kz_json:get_value(<<"vat_disposition">>, OnbillResellerVars),

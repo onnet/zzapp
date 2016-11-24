@@ -106,6 +106,7 @@ save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->
                             ),
     kz_datamgr:flush_cache_doc(Modb, NewDoc).
 
+-spec generate_docs(ne_binary(), integer(), integer()) -> ok.
 generate_docs(AccountId, Year, Month) ->
     Carriers = onbill_util:account_carriers_list(AccountId),
     _ = [generate_docs(AccountId, Year, Month, Carrier) || Carrier <- Carriers],
@@ -243,6 +244,7 @@ aggregate_data(AccountId, Year, Month, Carrier, {AggrVars, TotalNetto, TotalVAT,
         _ -> {AggrVars, TotalNetto, TotalVAT, TotalBrutto} 
     end.
     
+-spec per_minute_reports(ne_binary(), integer(), integer()) -> 'ok'.
 per_minute_reports(AccountId, Year, Month) ->
     Carriers = onbill_util:account_carriers_list(AccountId),
     _ = [maybe_per_minute_report(AccountId, Year, Month, Carrier) || Carrier <- Carriers].

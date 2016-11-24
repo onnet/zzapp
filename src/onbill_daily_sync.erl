@@ -15,11 +15,13 @@
 -include_lib("kazoo/include/kz_databases.hrl").
 
 -record(state, {}).
+-type state() :: #state{}.
 
 %%%===================================================================
 %%% API
 %%%===================================================================
 
+-spec start_link() -> startlink_ret().
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
 
@@ -27,16 +29,20 @@ start_link() ->
 %%% gen_server callbacks
 %%%===================================================================
 
+-spec init(list()) -> {'ok', state()}.
 init([]) ->
     self() ! 'crawl_accounts',
     {'ok', #state{}}.
 
+-spec handle_call(any(), pid_ref(), state()) -> handle_call_ret_state(state()).
 handle_call(_Request, _From, State) ->
     {'reply', {'error', 'not_implemented'}, State}.
 
+-spec handle_cast(any(), state()) -> handle_cast_ret_state(state()).
 handle_cast(_Msg, State) ->
     {'noreply', State}.
 
+-spec handle_info(any(), state()) -> handle_info_ret_state(state()).
 handle_info('crawl_accounts', _) ->
     _ = case kz_datamgr:all_docs(?KZ_ACCOUNTS_DB) of
             {'ok', JObjs} ->
@@ -66,9 +72,11 @@ handle_info(_Info, State) ->
     lager:debug("unhandled msg: ~p", [_Info]),
     {'noreply', State}.
 
+-spec terminate(any(), any()) -> 'ok'.
 terminate(_Reason, _State) ->
     lager:debug("listener terminating: ~p", [_Reason]).
 
+-spec code_change(any(), state(), any()) -> {'ok', state()}.
 code_change(_OldVsn, State, _Extra) ->
     {'ok', State}.
 
