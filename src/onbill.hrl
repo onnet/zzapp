@@ -9,6 +9,7 @@
 
 -define(ONBILL_DB, <<"onbill">>).
 -define(ONBILL_DOC, <<"onbill">>).
+-define(TO_BIN(Var), kz_util:to_binary(Var)).
 -define(CARRIER_DOC(CarrierName), <<"onbill_carrier.", CarrierName/binary>>).
 -define(MOD_CONFIG_CRAWLER, <<(?APP_NAME)/binary, ".account_crawler">>).
 -define(DOCS_NUMBER_DB(ResellerId, Year), <<(?APP_NAME)/binary
@@ -18,8 +19,13 @@
                                            ,(kz_util:to_binary(Year))/binary>>).
 -define(SYSTEM_CONFIG_DB, <<"system_config">>).
 -define(DOC_NAME_FORMAT(Carrier, TemplateID), <<Carrier/binary, "_", TemplateId/binary>>).
--define(HTML_TO_PDF(TemplateId), <<"php applications/onbill/priv/templates/ru/", TemplateId/binary, ".php">>).
--define(HTML_TO_PDF(TemplateId, Carrier), <<"php applications/onbill/priv/templates/ru/"
+-define(HTML_TO_PDF(TemplateId, CountryCode), <<"php applications/onbill/priv/templates/"
+                                               ,?TO_BIN(CountryCode)/binary
+                                               ,"/"
+                                               ,TemplateId/binary, ".php">>).
+-define(HTML_TO_PDF(TemplateId, Carrier, CountryCode), <<"php applications/onbill/priv/templates/"
+                                           ,?TO_BIN(CountryCode)/binary
+                                           ,"/"
                                            ,Carrier/binary
                                            ,"_"
                                            ,TemplateId/binary
@@ -32,7 +38,6 @@
                                 ,"."
                                 ,(kz_util:to_binary(Year))/binary>>).
 -define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
--define(TO_BIN(Var), kz_util:to_binary(Var)).
 
 -define(ONBILL_HRL, 'true').
 -endif.
