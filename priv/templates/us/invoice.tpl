@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>OnNet Innovations Limited</title>
+    <title>TEst US Invoice</title>
    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet"> 
   <!--   <link rel="stylesheet" href="css/bootstrap.css">  -->
     <style>
@@ -24,7 +24,7 @@
           </h1>
         </div>
         <div class="col-xs-5 text-right">
-          <h1><small style="color: black;">PRO-FORMA INVOICE</small></h1>
+          <h1><small style="color: black;">INVOICE</small></h1>
           <h3><small>#{{ invoicenumber }}</small></h3>
         </div>
       </div>
@@ -52,9 +52,9 @@
             </div>
             <div class="panel-body">
               <p>
-                {{ m.kazoo[{kz_account_doc_field field1="account_address" field2="line1"}] }}<br>
-                {{ m.kazoo[{kz_account_doc_field field1="account_address" field2="line2"}] }}<br>
-                {{ m.kazoo[{kz_account_doc_field field1="account_address" field2="line3"}] }}<br>
+                {{ billing_address.line1 }}<br>
+                {{ billing_address.line2 }}<br>
+                {{ billing_address.line3 }}<br>
               </p>
             </div>
           </div>
@@ -81,12 +81,22 @@
           </tr>
         </thead>
         <tbody>
+          {% for fee_line in monthly_fees %}
           <tr>
-            <td>Account prepayment</td>
-            <td class="text-right">-</td>
-            <td class="text-right">{{ m.config.mod_kazoo.local_currency_sign.value }}{{ amount|format_price }}</td>
-            <td class="text-right">{{ m.config.mod_kazoo.local_currency_sign.value }}{{ amount|format_price }}</td>
+            <td>
+              {{ fee_line.name }} {% if fee_line.period %}{{ fee_line.period }}.{{ fee_line.month_pad }}.{{ fee_line.year }}{% endif %}
+            </td>
+            <td class="text-right">
+              {{ fee_line.quantity }}
+            </td>
+            <td class="text-right">
+              {{ fee_line.rate_netto }}
+            </td>
+            <td class="text-right">
+              {{ fee_line.cost_netto }}
+            </td>
           </tr>
+          {% endfor %}
         </tbody>
       </table>
       <br />
@@ -110,7 +120,7 @@
       </div>
       <br />
       <br />
-      <div class="row">
+      <div class="row" style="page-break-inside: avoid !important;">
         <div class="col-xs-6">
           <div class="panel panel-info">
             <div class="panel-heading">

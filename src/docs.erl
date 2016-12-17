@@ -8,11 +8,12 @@
 
 get_template(TemplateId, Carrier, AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
+    CountryOfResidence = onbill_util:reseller_country_of_residence(AccountId),
     DbName = kz_util:format_account_id(ResellerId,'encoded'),
     case kz_datamgr:fetch_attachment(DbName, ?CARRIER_DOC(Carrier), <<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".tpl">>) of
         {'ok', Template} -> Template;
         {error, not_found} ->
-            Template = default_template(TemplateId, Carrier),
+            Template = default_template(TemplateId, Carrier, CountryOfResidence),
             case kz_datamgr:open_doc(DbName, ?CARRIER_DOC(Carrier)) of
                 {'ok', _} ->
                     'ok';
@@ -33,12 +34,20 @@ get_template(TemplateId, Carrier, AccountId) ->
             Template
     end.
 
-default_template(TemplateId, Carrier) ->
-    CarrierFilePath = <<"applications/onbill/priv/templates/ru/", (?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".tpl">>,
+default_template(TemplateId, Carrier, CountryOfResidence) ->
+    CarrierFilePath = <<"applications/onbill/priv/templates/"
+                       ,CountryOfResidence/binary
+                       ,"/"
+                       ,(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary
+                       ,".tpl">>,
     case file:read_file(CarrierFilePath) of
         {'ok', CarrierData} -> CarrierData;
         _ ->
-            FilePath = <<"applications/onbill/priv/templates/ru/", TemplateId/binary, ".tpl">>,
+            FilePath = <<"applications/onbill/priv/templates/"
+                        ,CountryOfResidence/binary
+                        ,"/"
+                        ,TemplateId/binary
+                        ,".tpl">>,
             {'ok', Data} = file:read_file(FilePath),
             Data
     end.

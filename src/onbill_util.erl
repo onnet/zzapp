@@ -8,6 +8,7 @@
         ,account_vars/1
         ,carrier_doc/2
         ,reseller_vars/1
+        ,reseller_country_of_residence/1
         ,maybe_main_carrier/2
         ,get_main_carrier/2
         ,format_datetime/1
@@ -75,6 +76,10 @@ reseller_vars(AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     {'ok', ResellerDoc} = kz_account:fetch(ResellerId),
     kz_json:get_value(<<"pvt_onbill_reseller_vars">>, ResellerDoc).
+
+-spec reseller_country_of_residence(ne_binary()) -> proplist().
+reseller_country_of_residence(AccountId) ->
+    kz_util:to_lower_binary(kz_json:get_value(<<"iso_code_country_of_residence">>, reseller_vars(AccountId), <<"uk">>)).
 
 -spec maybe_main_carrier(ne_binary(), kz_json:object()) -> boolean(). 
 maybe_main_carrier(Carrier, AccountId) when is_binary(Carrier) ->
