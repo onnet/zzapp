@@ -70,19 +70,15 @@ create_pdf(Vars, TemplateId, Carrier, AccountId) ->
     PDFFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".pdf">>]),
     HTMLTpl = prepare_tpl(Vars, TemplateId, Carrier, AccountId),
     file:write_file(HTMLFile, HTMLTpl),
-    Cmd = <<(?HTML_TO_PDF(TemplateId, Carrier))/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
+    Cmd = <<?HTML_TO_PDF/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
     case os:cmd(kz_util:to_list(Cmd)) of
-        [] -> file:read_file(PDFFile);
-        "\n" -> file:read_file(PDFFile);
-        _ ->
-            CmdDefault = <<(?HTML_TO_PDF(TemplateId))/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
-            case os:cmd(kz_util:to_list(CmdDefault)) of
-                [] -> file:read_file(PDFFile);
-                "\n" -> file:read_file(PDFFile);
-                _R ->
-                    lager:error("failed to exec ~s: ~s", [Cmd, _R]),
-                    {'error', _R}
-            end
+        [] ->
+            file:read_file(PDFFile);
+        "\n" ->
+            file:read_file(PDFFile);
+        _R ->
+            lager:error("failed to exec ~s: ~s", [Cmd, _R]),
+            {'error', _R}
     end.
 
 save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->

@@ -19,17 +19,7 @@
                                            ,(kz_util:to_binary(Year))/binary>>).
 -define(SYSTEM_CONFIG_DB, <<"system_config">>).
 -define(DOC_NAME_FORMAT(Carrier, TemplateID), <<Carrier/binary, "_", TemplateId/binary>>).
--define(HTML_TO_PDF(TemplateId, CountryCode), <<"php applications/onbill/priv/templates/"
-                                               ,?TO_BIN(CountryCode)/binary
-                                               ,"/"
-                                               ,TemplateId/binary, ".php">>).
--define(HTML_TO_PDF(TemplateId, Carrier, CountryCode), <<"php applications/onbill/priv/templates/"
-                                           ,?TO_BIN(CountryCode)/binary
-                                           ,"/"
-                                           ,Carrier/binary
-                                           ,"_"
-                                           ,TemplateId/binary
-                                           ,".php">>).
+-define(HTML_TO_PDF, <<"/usr/local/bin/wkhtmltopdf --quiet">>).
 -define(DEFAULT_REGEX, <<"^\\d*$">>).
 -define(START_DATE(Month, Year), <<"01.",(kz_util:pad_month(Month))/binary,".",(kz_util:to_binary(Year))/binary>>).
 -define(END_DATE(Month, Year), <<(kz_util:to_binary(calendar:last_day_of_the_month(Year, Month)))/binary
