@@ -161,6 +161,18 @@ generate_docs(AccountId, Year, Month, Carrier, VatUpdatedFeesList, {TotalNetto, 
            ,{<<"doc_date">>, ?END_DATE(Month, Year)}
            ,{<<"start_date">>, ?START_DATE(Month, Year)}
            ,{<<"end_date">>, ?END_DATE(Month, Year)}
+           ,{<<"carrier_vars">>, kz_json:set_values([{Key, kz_json:get_value(Key, CarrierDoc)}
+                                                     || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)
+                                                    ]
+                                                   ,kz_json:new()
+                                                   )
+            }
+           ,{<<"account_vars">>, kz_json:set_values([{Key, kz_json:get_value(Key, AccountOnbillDoc)}
+                                                     || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)
+                                                    ]
+                                                   ,kz_json:new()
+                                                   )
+            }
            ] 
            ++ [{Key, kz_json:get_value(Key, CarrierDoc)} || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],

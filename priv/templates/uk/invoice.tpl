@@ -24,8 +24,8 @@
           </h1>
         </div>
         <div class="col-xs-5 text-right">
-          <h1><small style="color: black;">INVOICE</small></h1>
-          <h3><small>#{{ invoicenumber }}</small></h3>
+          <h1><small style="color: black;">INVOICE #{{ doc_pref }}{{ doc_number }}{{ doc_ind }}</small></h1>
+          <h3><small>{{ doc_date }}</small></h3>
         </div>
       </div>
       <br />
@@ -38,9 +38,9 @@
             </div>
             <div class="panel-body">
               <p>
-                Devonshire House<br>
-                60 Goswell Road<br>
-                London, EC1M 7AD<br>
+                {{ carrier_vars.billing_address.line1 }}<br>
+                {{ carrier_vars.billing_address.line2 }}<br>
+                {{ carrier_vars.billing_address.line3 }}<br>
               </p>
             </div>
           </div>
@@ -52,9 +52,9 @@
             </div>
             <div class="panel-body">
               <p>
-                {{ billing_address.line1 }}<br>
-                {{ billing_address.line2 }}<br>
-                {{ billing_address.line3 }}<br>
+                {{ account_vars.billing_address.line1 }}<br>
+                {{ account_vars.billing_address.line2 }}<br>
+                {{ account_vars.billing_address.line3 }}<br>
               </p>
             </div>
           </div>
