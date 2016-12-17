@@ -81,22 +81,12 @@
           </tr>
         </thead>
         <tbody>
-          {% for fee_line in monthly_fees %}
           <tr>
-            <td>
-              {{ fee_line.name }} {% if fee_line.period %}{{ fee_line.period }}.{{ fee_line.month_pad }}.{{ fee_line.year }}{% endif %}
-            </td>
-            <td class="text-right">
-              {{ fee_line.quantity }}
-            </td>
-            <td class="text-right">
-              {{ fee_line.rate_netto }}
-            </td>
-            <td class="text-right">
-              {{ fee_line.cost_netto }}
-            </td>
+            <td>Account prepayment</td>
+            <td class="text-right">-</td>
+            <td class="text-right">{{ m.config.mod_kazoo.local_currency_sign.value }}{{ amount|format_price }}</td>
+            <td class="text-right">{{ m.config.mod_kazoo.local_currency_sign.value }}{{ amount|format_price }}</td>
           </tr>
-          {% endfor %}
         </tbody>
       </table>
       <br />
@@ -120,7 +110,7 @@
       </div>
       <br />
       <br />
-      <div class="row" style="page-break-inside: avoid !important;">
+      <div class="row">
         <div class="col-xs-6">
           <div class="panel panel-info">
             <div class="panel-heading">
