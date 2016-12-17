@@ -62,7 +62,13 @@ account_carriers_list(AccountId) ->
 -spec account_vars(ne_binary()) -> list().
 account_vars(AccountId) ->
     {'ok', AccountDoc} = kz_account:fetch(AccountId),
-    kz_json:get_value(<<"pvt_onbill_account_vars">>, AccountDoc).
+    case kz_json:get_value(<<"pvt_onbill_account_vars">>, AccountDoc) of
+        'undefined' ->
+            lager:info("onbill: pvt_onbill_account_vars not defined"),
+            kz_json:new();
+        Vars ->
+            Vars
+    end.
 
 -spec carrier_doc(ne_binary(), ne_binary()) -> any().
 carrier_doc(Carrier, AccountId) ->
@@ -75,7 +81,13 @@ carrier_doc(Carrier, AccountId) ->
 reseller_vars(AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     {'ok', ResellerDoc} = kz_account:fetch(ResellerId),
-    kz_json:get_value(<<"pvt_onbill_reseller_vars">>, ResellerDoc).
+    case kz_json:get_value(<<"pvt_onbill_reseller_vars">>, ResellerDoc) of
+        'undefined' ->
+            lager:info("onbill: pvt_onbill_reseller_vars not defined"),
+            kz_json:new();
+        Vars ->
+            Vars
+    end.
 
 -spec reseller_country_of_residence(ne_binary()) -> proplist().
 reseller_country_of_residence(AccountId) ->

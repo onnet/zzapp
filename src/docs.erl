@@ -134,7 +134,6 @@ generate_docs(AccountId, Year, Month, Carrier) ->
 
 generate_docs(_, _, _, Carrier, _, {TotalNetto, TotalVAT, TotalBrutto})
     when TotalNetto =< 0.0
-    orelse TotalVAT =< 0.0
     orelse TotalBrutto =< 0.0
 ->
     lager:debug("Skipping generate_docs for ~p because of zero usage: TotalNetto: ~p, TotalVAT: ~p, TotalBrutto: ~p"
