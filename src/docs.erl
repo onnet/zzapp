@@ -155,7 +155,8 @@ generate_docs(AccountId, Year, Month, Carrier, VatUpdatedFeesList, {TotalNetto, 
            ,{<<"total_brutto_div">>, TotalBruttoDiv}
            ,{<<"total_brutto_rem">>, TotalBruttoRem}
            ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillResellerVars, 0.0)}
-           ,{<<"currency1">>, kz_json:get_value(<<"currency1">>, OnbillResellerVars)}
+           ,{<<"currency_short">>, kz_json:get_value(<<"currency_short">>, OnbillResellerVars)}
+           ,{<<"currency_sign">>, kz_json:get_value(<<"currency_sign">>, OnbillResellerVars)}
            ,{<<"agrm_num">>, kz_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccountOnbillDoc)}
            ,{<<"agrm_date">>, kz_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccountOnbillDoc)}
            ,{<<"doc_date">>, ?END_DATE(Month, Year)}
@@ -174,6 +175,7 @@ generate_docs(AccountId, Year, Month, Carrier, VatUpdatedFeesList, {TotalNetto, 
                                                    )
             }
            ] 
+    %%  delete next two lines after adopting templates to carrier_vars and account_vars
            ++ [{Key, kz_json:get_value(Key, CarrierDoc)} || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
     _ = [save_pdf(Vars

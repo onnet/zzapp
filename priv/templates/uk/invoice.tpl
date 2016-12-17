@@ -66,7 +66,7 @@
       <table class="table table-bordered">
         <thead>
           <tr>
-            <th>
+            <th width="52%">
               <h4>Description</h4>
             </th>
             <th>
@@ -90,10 +90,10 @@
               {{ fee_line.quantity }}
             </td>
             <td class="text-right">
-              {{ fee_line.rate_netto }}
+              {{ currency_sign }}{{ fee_line.rate_netto }}
             </td>
             <td class="text-right">
-              {{ fee_line.cost_netto }}
+              {{ currency_sign }}{{ fee_line.cost_netto }}
             </td>
           </tr>
           {% endfor %}
@@ -105,16 +105,16 @@
           <p>
             <strong>
             Total Net Amount : <br>
-            VAT : <br>
+            VAT ({{ vat_rate }}%) : <br>
             Invoice Total : <br>
             </strong>
           </p>
         </div>
         <div class="col-xs-2">
           <strong>
-          {{ m.config.mod_kazoo.local_currency_sign.value }}{{ amount|format_price }} <br>
-          N/A <br>
-          {{ m.config.mod_kazoo.local_currency_sign.value }}{{ amount|format_price }} <br>
+          {{ currency_sign }}{{ total_netto|floatformat:2 }} <br>
+          {% if total_vat %}{{ currency_sign }}{{ total_vat|floatformat:2 }}{% else %}N/A{% endif %} <br>
+          {{ currency_sign }}{{ total_brutto|floatformat:2 }} <br>
           </strong>
         </div>
       </div>
