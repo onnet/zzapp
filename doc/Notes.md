@@ -6,13 +6,9 @@ cb_onbill_carriers.erl:
 - edit cariers docs;
 - carriers docs intended to store carriers variables used upon documents generating, plus templates for these docs.
 
-cb_onbill_customers.erl:
-- read/edit onbill account's variables used for monthly documents generating;
-- this data located in account's doc "pvt_onbill_account_vars" section.
-
-cb_onbill_resellers.erl:
-- read/edit onbill reseller's variables used for monthly documents generating;
-- this data located in account's doc "pvt_onbill_reseller_vars" section.
+cb_onbill_variables.erl:
+- read/edit onbill account's/reseller's variables used for monthly documents generating;
+- this data located in "_id": "onbill" doc.
 
 cb_onbills.erl:
 - access to modb onbill data and different actions like generate docs, etc
