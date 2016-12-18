@@ -59,17 +59,6 @@ price_round(Price) ->
 account_carriers_list(AccountId) ->
     kz_json:get_value(<<"carriers">>, reseller_vars(AccountId), []).
 
--spec account_vars(ne_binary()) -> list().
-account_vars(AccountId) ->
-    {'ok', AccountDoc} = kz_account:fetch(AccountId),
-    case kz_json:get_value(<<"pvt_onbill_account_vars">>, AccountDoc) of
-        'undefined' ->
-            lager:info("onbill: pvt_onbill_account_vars not defined"),
-            kz_json:new();
-        Vars ->
-            Vars
-    end.
-
 -spec carrier_doc(ne_binary(), ne_binary()) -> any().
 carrier_doc(Carrier, AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
@@ -77,17 +66,20 @@ carrier_doc(Carrier, AccountId) ->
     {'ok', CarrierDoc} =  kz_datamgr:open_doc(DbName, ?CARRIER_DOC(Carrier)),
     CarrierDoc.
 
+-spec account_vars(ne_binary()) -> list().
+account_vars(AccountId) ->
+    DbName = kz_util:format_account_id(AccountId,'encoded'),
+    case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
+        {'ok', OnbillDoc} -> OnbillDoc;
+    _ ->
+        lager:info("can't open onbill doc in ~p, please check if it exists",[DbName]),
+        kz_json:new()
+    end.
+
 -spec reseller_vars(ne_binary()) -> proplist().
 reseller_vars(AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
-    {'ok', ResellerDoc} = kz_account:fetch(ResellerId),
-    case kz_json:get_value(<<"pvt_onbill_reseller_vars">>, ResellerDoc) of
-        'undefined' ->
-            lager:info("onbill: pvt_onbill_reseller_vars not defined"),
-            kz_json:new();
-        Vars ->
-            Vars
-    end.
+    account_vars(ResellerId).
 
 -spec reseller_country_of_residence(ne_binary()) -> proplist().
 reseller_country_of_residence(AccountId) ->

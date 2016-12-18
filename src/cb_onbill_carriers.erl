@@ -47,7 +47,7 @@ resource_exists(_,_) -> 'true'.
 content_types_provided(Context,_) ->
     Context.
 content_types_provided(Context,_,_) ->
-    CTP = [{'to_binary', [{<<"text">>, <<"html">>}]}],
+    CTP = [{'to_binary', ?MIME_TYPES}],
     cb_context:set_content_types_provided(Context, CTP).
 
 -spec content_types_accepted(cb_context:context(), path_token(), path_token()) -> cb_context:context().
@@ -93,7 +93,7 @@ save(Id, Context) ->
               {error,not_found} ->
                   kz_json:set_value(<<"_id">>, Id, kz_json:new())
           end,
-    NewDoc = kz_json:merge_recursive(ReqData, Doc),
+    NewDoc = kz_json:merge_recursive(Doc, ReqData),
     Context1 = crossbar_doc:save(cb_context:set_doc(Context, NewDoc)),
     cb_context:set_resp_data(Context1, ReqData).
 
