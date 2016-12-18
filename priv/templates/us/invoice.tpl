@@ -2,9 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>TEst US Invoice</title>
+    <title>{{ oper_name }}</title>
    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet"> 
-  <!--   <link rel="stylesheet" href="css/bootstrap.css">  -->
     <style>
       @import url(https://fonts.googleapis.com/css?family=Special+Elite);
       body, h1, h2, h3, h4, h5, h6{
@@ -20,12 +19,12 @@
       <br />
         <div class="col-xs-7">
           <h1 style="color: #E86110;">
-            OnNet Innovations
+            {{ oper_name }}
           </h1>
         </div>
         <div class="col-xs-5 text-right">
-          <h1><small style="color: black;">INVOICE</small></h1>
-          <h3><small>#{{ invoicenumber }}</small></h3>
+          <h1><small style="color: black;">INVOICE #{{ doc_pref }}{{ doc_number }}{{ doc_ind }}</small></h1>
+          <h3><small>{{ doc_date }}</small></h3>
         </div>
       </div>
       <br />
@@ -34,13 +33,13 @@
         <div class="col-xs-5">
           <div class="panel panel-info">
             <div class="panel-heading">
-              <h4>From: OnNet Innovations</h4>
+              <h4>From: {{ oper_name }}</h4>
             </div>
             <div class="panel-body">
               <p>
-                Devonshire House<br>
-                60 Goswell Road<br>
-                London, EC1M 7AD<br>
+                {{ carrier_vars.billing_address.line1 }}<br>
+                {{ carrier_vars.billing_address.line2 }}<br>
+                {{ carrier_vars.billing_address.line3 }}<br>
               </p>
             </div>
           </div>
@@ -52,9 +51,9 @@
             </div>
             <div class="panel-body">
               <p>
-                {{ billing_address.line1 }}<br>
-                {{ billing_address.line2 }}<br>
-                {{ billing_address.line3 }}<br>
+                {{ account_vars.billing_address.line1 }}<br>
+                {{ account_vars.billing_address.line2 }}<br>
+                {{ account_vars.billing_address.line3 }}<br>
               </p>
             </div>
           </div>
@@ -66,7 +65,7 @@
       <table class="table table-bordered">
         <thead>
           <tr>
-            <th>
+            <th width="52%">
               <h4>Description</h4>
             </th>
             <th>
@@ -90,10 +89,10 @@
               {{ fee_line.quantity }}
             </td>
             <td class="text-right">
-              {{ fee_line.rate_netto }}
+              {{ currency_sign }}{{ fee_line.rate_netto }}
             </td>
             <td class="text-right">
-              {{ fee_line.cost_netto }}
+              {{ currency_sign }}{{ fee_line.cost_netto }}
             </td>
           </tr>
           {% endfor %}
@@ -105,16 +104,16 @@
           <p>
             <strong>
             Total Net Amount : <br>
-            VAT : <br>
+            VAT ({{ vat_rate }}%) : <br>
             Invoice Total : <br>
             </strong>
           </p>
         </div>
         <div class="col-xs-2">
           <strong>
-          {{ m.config.mod_kazoo.local_currency_sign.value }}{{ amount|format_price }} <br>
-          N/A <br>
-          {{ m.config.mod_kazoo.local_currency_sign.value }}{{ amount|format_price }} <br>
+          {{ currency_sign }}{{ total_netto|floatformat:2 }} <br>
+          {% if total_vat %}{{ currency_sign }}{{ total_vat|floatformat:2 }}{% else %}N/A{% endif %} <br>
+          {{ currency_sign }}{{ total_brutto|floatformat:2 }} <br>
           </strong>
         </div>
       </div>
@@ -127,12 +126,19 @@
               <h4>Bank details</h4>
             </div>
             <div class="panel-body">
-              <p>OnNet Innovations Limited</p>
-              <p>NATIONAL WESTMINSTER BANK PLC</p>
-              <p>Sort Code : 56-00-23</p>
-              <p>Account Number : 26045214</p>
-              <p>IBAN : GB50NWBK56002326045214</p>
-              <p>BIC : NWBKGB2L</p>
+              <p>{{ oper_name }}</p>
+              <p>{{ bank_details.line1 }}</p>
+              <p>{{ bank_details.line2 }}</p>
+              <p>{{ bank_details.line3 }}</p>
+              {% if bank_details.line4 %}
+                <p>{{ bank_details.line4 }}</p>
+              {% endif %}
+              {% if bank_details.line5 %}
+                <p>{{ bank_details.line5 }}</p>
+              {% endif %}
+              {% if bank_details.line6 %}
+                <p>{{ bank_details.line6 }}</p>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -143,11 +149,18 @@
                 <h4>Contact Details</h4>
               </div>
               <div class="panel-body">
-                <p>
-                  Email : accounts@onnet.info <br><br>
-                  Telephone : +44 (0) 203 195 0326 <br> <br>
-                  www : https://onnet.info
-                </p>
+              {% if contact_details.line1 %}
+                <p>{{ contact_details.line1 }}</p>
+              {% endif %}
+              {% if contact_details.line2 %}
+                <p>{{ contact_details.line2 }}</p>
+              {% endif %}
+              {% if contact_details.line3 %}
+                <p>{{ contact_details.line3 }}</p>
+              {% endif %}
+              {% if contact_details.line4 %}
+                <p>{{ contact_details.line4 }}</p>
+              {% endif %}
               </div>
             </div>
           </div>

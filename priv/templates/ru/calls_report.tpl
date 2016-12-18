@@ -4,26 +4,26 @@
 
 <TABLE style="width: 197mm;" BORDER="0" CELLPADDING="0" CELLSPACING="0">
 <TR>
-<TD>Поставщик:</TD>
-<TD>{{ oper_name_short }} ИНН: {{ inn }} КПП: {{ kpp }}</TD>
+<TD>Suplier:</TD>
+<TD>{{ oper_name_short }}</TD>
 </TR>
 <TR>
-<TD>Адрес:</TD>
+<TD>Address:</TD>
 <TD>{{ oper_addr }}</TD>
 </TR>
 </TABLE>
 <br />
-<div style="text-align: center;"><strong>Детализация телефонных вызовов {{ account_name }}</strong></div>
-<div style="text-align: center; font-size: 7pt;">Договор № {{ agrm_num }} от {{ agrm_date }}. Период с {{ start_date }} по {{ end_date }}.</div><br />
+<div style="text-align: center;"><strong>Phone calls report for {{ account_name }}</strong></div>
+<div style="text-align: center; font-size: 7pt;">Agreement # {{ agrm_num }} by {{ agrm_date }}. From {{ start_date }} to {{ end_date }}.</div><br />
 <TABLE style="width: 100%;" BORDER="1" CELLPADDING="0" CELLSPACING="0">
 <TR>
-<TD style="width: 4%; font-size: 9pt; vertical-align: bottom; text-align: center">№</TD>
-<TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">Номер А</TD>
-<TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">Номер Б</TD>
-<TD style="width: 22%; font-size: 9pt; vertical-align: bottom; text-align: center">Начало звонка</TD>
-<TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">Длительность, мин.</TD>
-<TD style="width: 43%; font-size: 9pt; vertical-align: bottom; text-align: center">Направление</TD>
-<TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">Сумма, руб.</TD>
+<TD style="width: 4%; font-size: 9pt; vertical-align: bottom; text-align: center">#</TD>
+<TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">From</TD>
+<TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">To</TD>
+<TD style="width: 22%; font-size: 9pt; vertical-align: bottom; text-align: center">Start</TD>
+<TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">Duration</TD>
+<TD style="width: 43%; font-size: 9pt; vertical-align: bottom; text-align: center">Direction</TD>
+<TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">Amount</TD>
 </TR>
 <!-- begin_row -->
 {% for per_minute_call in per_minute_calls %}
@@ -34,7 +34,7 @@
 <TD style="width: 22%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.start_datetime }}</TD>
 <TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.duration }}</TD>
 <TD style="width: 43%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.rate_description }}</TD>
-<TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.cost|floatformat:2 }}</TD>
+<TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">${{ per_minute_call.value.cost|floatformat:2 }}</TD>
 </TR>
 {% endfor %}
 <!-- end_row -->			
@@ -43,10 +43,7 @@
 <!-- end_service -->	
 <TABLE style="width: 100%;" BORDER="0" CELLPADDING="0" CELLSPACING="0">
 <tr>
-<td style="width: 85%; text-align: right;">Итого:<td style="width: 15%; text-align: right;">{{ total_brutto }} руб.</td>
-</tr>
-<tr>
-<td style="width: 85%; text-align: right;">В том числе НДС (18%):</td><td style="width: 15%; text-align: right;">{{ total_vat }} руб.</td>
+<td style="width: 85%; text-align: right;">Total:<td style="width: 15%; text-align: right;">${{ total_brutto }}</td>
 </tr>
 </TABLE>
 <TABLE style="width: 100%;" BORDER="0" CELLPADDING="0" CELLSPACING="0">
@@ -54,12 +51,6 @@
 <td style="width: 50%; text-align: right;"></td><td style="width: 50%; text-align: right;"></td>
 </tr>
 <tr>
-<td style="width: 50%; text-align: left;">Генеральный директор</td><td style="width: 50%; text-align: left;"></td>
-</tr>
-<tr>
-<td style="width: 50%; text-align: left;">ЗАО «ОнНет комьюникейшнс»</td><td style="width: 50%; text-align: center;">Сысоев К.В.</td>
-</tr>
-<tr>
-<td style="width: 50%; text-align: right;">м.п.</td><td style="width: 50%; text-align: left;"></td>
+<td style="width: 50%; text-align: left;">Linkcomtech Dev</td><td style="width: 50%; text-align: center;">Evgeny Yampolsky</td>
 </tr>
 </TABLE>
