@@ -1,6 +1,7 @@
 %%%-----------------------------------------------------------
 %%%
-%%% Saves/retrieves accounts/resellers variables used for accounting docs generation
+%%% Saves/retrieves accounts/resellers variables to/from onbill doc.
+%%% Variables are used for generation of accounting documents (papers)
 %%% These variables are injected into template on each erlydtl doc generation,
 %%% so each var added here could be used in doc template
 %%%
@@ -97,9 +98,6 @@ save(Id, Context) ->
                   kz_json:set_value(<<"_id">>, Id, kz_json:new())
           end,
     NewDoc = kz_json:merge_recursive(Doc, ReqData),
-  lager:info("IAM cb_onbills_variables save ReqData: ~p",[ReqData]),
-  lager:info("IAM cb_onbills_variables save Doc: ~p",[Doc]),
-  lager:info("IAM cb_onbills_variables save NewDoc: ~p",[NewDoc]),
     Context1 = crossbar_doc:save(cb_context:set_doc(Context, NewDoc)),
     cb_context:set_resp_data(Context1, ReqData).
 
