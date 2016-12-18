@@ -66,16 +66,16 @@
         <thead>
           <tr>
             <th width="52%">
-              <h4>Description</h4>
+              <h4>Item</h4>
             </th>
             <th>
-              <h4>Hrs/Qty</h4>
+              <h4>Qty</h4>
             </th>
             <th>
-              <h4>Rate/Price</h4>
+              <h4>Rate</h4>
             </th>
             <th>
-              <h4>Sub Total</h4>
+              <h4>Amount</h4>
             </th>
           </tr>
         </thead>
