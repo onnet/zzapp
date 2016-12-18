@@ -69,13 +69,13 @@
               <h4>Item</h4>
             </th>
             <th>
-              <h4>Qty</h4>
+              <h4 style="text-align: center">Qty</h4>
             </th>
             <th>
-              <h4>Rate</h4>
+              <h4 style="text-align: center">Rate</h4>
             </th>
             <th>
-              <h4>Amount</h4>
+              <h4 style="text-align: center">Amount</h4>
             </th>
           </tr>
         </thead>
