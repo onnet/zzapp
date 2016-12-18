@@ -1,7 +1,8 @@
 
 onbill doc reseller's example
 ```
-    {  "_id": "onbill"
+    {  "_id": "onbill",
+       "iso_code_country_of_residence": "ru",
        "carriers": [
            "onnet",
            "beeline"
@@ -31,7 +32,8 @@ onbill doc reseller's example
 ```
 onbill doc account's example
 ```
-    {  "_id": "onbill"
+    {  "_id": "onbill",
+       "iso_code_country_of_residence": "ru",
        "language": "ru-RU",
        "billing_address": {
            "line1": "191186, Санкт-Петербург",
