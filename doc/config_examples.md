@@ -1,7 +1,7 @@
 
 onbill doc reseller's example
 ```
-   {   "_id": "onbill"
+    {  "_id": "onbill"
        "carriers": [
            "onnet",
            "beeline"
@@ -27,7 +27,7 @@ onbill doc reseller's example
            }
        },
        "currency1": "руб"
-   }
+    }
 ```
 onbill doc account's example
 ```
