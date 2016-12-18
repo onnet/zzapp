@@ -2,9 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>OnNet Innovations Limited UK</title>
+    <title>{{ oper_name }}</title>
    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet"> 
-  <!--   <link rel="stylesheet" href="css/bootstrap.css">  -->
     <style>
       @import url(https://fonts.googleapis.com/css?family=Special+Elite);
       body, h1, h2, h3, h4, h5, h6{
@@ -20,7 +19,7 @@
       <br />
         <div class="col-xs-7">
           <h1 style="color: #E86110;">
-            OnNet Innovations
+            {{ oper_name }}
           </h1>
         </div>
         <div class="col-xs-5 text-right">
@@ -34,7 +33,7 @@
         <div class="col-xs-5">
           <div class="panel panel-info">
             <div class="panel-heading">
-              <h4>From: OnNet Innovations</h4>
+              <h4>From: {{ oper_name }}</h4>
             </div>
             <div class="panel-body">
               <p>
@@ -127,12 +126,19 @@
               <h4>Bank details</h4>
             </div>
             <div class="panel-body">
-              <p>OnNet Innovations Limited</p>
-              <p>NATIONAL WESTMINSTER BANK PLC</p>
-              <p>Sort Code : 56-00-23</p>
-              <p>Account Number : 26045214</p>
-              <p>IBAN : GB50NWBK56002326045214</p>
-              <p>BIC : NWBKGB2L</p>
+              <p>{{ oper_name }}</p>
+              <p>{{ bank_details.line1 }}</p>
+              <p>{{ bank_details.line2 }}</p>
+              <p>{{ bank_details.line3 }}</p>
+              {% if bank_details.line4 %}
+                <p>{{ bank_details.line4 }}</p>
+              {% endif %}
+              {% if bank_details.line5 %}
+                <p>{{ bank_details.line5 }}</p>
+              {% endif %}
+              {% if bank_details.line6 %}
+                <p>{{ bank_details.line6 }}</p>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -143,11 +149,18 @@
                 <h4>Contact Details</h4>
               </div>
               <div class="panel-body">
-                <p>
-                  Email : accounts@onnet.info <br><br>
-                  Telephone : +44 (0) 203 195 0326 <br> <br>
-                  www : https://onnet.info
-                </p>
+              {% if contact_details.line1 %}
+                <p>{{ contact_details.line1 }}</p>
+              {% endif %}
+              {% if contact_details.line2 %}
+                <p>{{ contact_details.line2 }}</p>
+              {% endif %}
+              {% if contact_details.line3 %}
+                <p>{{ contact_details.line3 }}</p>
+              {% endif %}
+              {% if contact_details.line4 %}
+                <p>{{ contact_details.line4 }}</p>
+              {% endif %}
               </div>
             </div>
           </div>
