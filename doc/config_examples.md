@@ -1,6 +1,7 @@
 
+onbill doc reseller's example
 ```
-   "pvt_onbill_reseller_vars": {
+   {   "_id": "onbill"
        "carriers": [
            "onnet",
            "beeline"
@@ -26,11 +27,11 @@
            }
        },
        "currency1": "руб"
-   },
+   }
 ```
-
+onbill doc account's example
 ```
-   "pvt_onbill_account_vars": {
+    {  "_id": "onbill"
        "language": "ru-RU",
        "billing_address": {
            "line1": "191186, Санкт-Петербург",
@@ -51,7 +52,7 @@
                "date": "01.01.2001"
            }
        }
-   },
+   }
 ```
 
 ```
