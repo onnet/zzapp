@@ -18,13 +18,13 @@
       <br />
       <br />
         <div class="col-xs-7">
-          <h1 style="color: #E86110;">
+          <h3 style="color: #E86110;">
             {{ oper_name }}
-          </h1>
+          </h3>
         </div>
         <div class="col-xs-5 text-right">
-          <h1><small style="color: black;">INVOICE #{{ doc_pref }}{{ doc_number }}{{ doc_ind }}</small></h1>
-          <h3><small>{{ doc_date }}</small></h3>
+          <h3><small style="color: black;">INVOICE #{{ doc_pref }}{{ doc_number }}{{ doc_ind }}</small></h3>
+          <h4><small>{{ doc_date }}</small></h4>
         </div>
       </div>
       <br />
@@ -103,8 +103,8 @@
         <div class="col-xs-4 col-xs-offset-6">
           <p>
             <strong>
-            Total Net Amount : <br>
-            VAT ({{ vat_rate }}%) : <br>
+            Subtotal : <br>
+            Sales Tax ({{ vat_rate }}%) : <br>
             Invoice Total : <br>
             </strong>
           </p>
@@ -112,7 +112,7 @@
         <div class="col-xs-2">
           <strong>
           {{ currency_sign }}{{ total_netto|floatformat:2 }} <br>
-          {% if total_vat %}{{ currency_sign }}{{ total_vat|floatformat:2 }}{% else %}N/A{% endif %} <br>
+          {{ currency_sign }}{{ total_vat|floatformat:2 }} <br>
           {{ currency_sign }}{{ total_brutto|floatformat:2 }} <br>
           </strong>
         </div>
