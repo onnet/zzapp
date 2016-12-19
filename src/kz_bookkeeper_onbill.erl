@@ -48,16 +48,46 @@ sync(Timestamp, Year, Month, Day, [ServiceItem|ServiceItems], AccountId, Acc, It
             lager:debug("sync service item had no add on id: ~p", [ServiceItem]),
             sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, Acc, Items);
         {_PlanId, _AddOnId}->
-            Quantity = kz_service_item:quantity(ServiceItem),
-            Rate = kz_service_item:rate(ServiceItem),
-            _SingleDiscount = kz_service_item:single_discount(ServiceItem),
-            _SingleDiscountRate = kz_service_item:single_discount_rate(ServiceItem),
-            _CumulativeDiscount = kz_service_item:cumulative_discount(ServiceItem),
-            _CumulativeDiscountRate = kz_service_item:cumulative_discount_rate(ServiceItem),
-            ItemCost = Rate * Quantity,
-            % Will implement discounts later, just a test for now
-            SubTotal = Acc + ItemCost,
-            sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, SubTotal, Items)
+            case kz_service_item:rate(ServiceItem) of
+                'undefined' ->
+                    lager:debug("no rate for service item: ~p", [kz_service_item:public_json(ServiceItem)]),
+                    sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, Acc, Items);
+                _ -> 
+                    ItemCost = calc_item(ServiceItem, AccountId),
+                    SubTotal = Acc + ItemCost,
+                    sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, SubTotal, Items)
+            end
+    end.
+
+-spec calc_item(kz_service_item:item(), ne_binary()) -> number().
+calc_item(ServiceItem, AccountId) ->
+    try
+        Quantity = kz_service_item:quantity(ServiceItem),
+        Rate = kz_service_item:rate(ServiceItem),
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%   Do not forget to add discount calculations !!!!! %%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        _SingleDiscount = kz_service_item:single_discount(ServiceItem),
+        _SingleDiscountRate = kz_service_item:single_discount_rate(ServiceItem),
+        _CumulativeDiscount = kz_service_item:cumulative_discount(ServiceItem),
+        _CumulativeDiscountRate = kz_service_item:cumulative_discount_rate(ServiceItem),
+        ItemCost = Rate * Quantity,
+        ItemCost
+    catch
+        E:R ->
+            lager:debug("exception syncing acount: ~p : ~p: ~p", [AccountId, E, R]),
+            lager:debug("exception syncing acount: ~p service item: ~p", [AccountId, kz_service_item:public_json(ServiceItem)]),
+            lager:debug("exception syncing acount: ~p service item: ~p", [AccountId, kz_service_item:rate(ServiceItem)]),
+            Subj = io_lib:format("OnBill Bookkeeper syncing problem! AccountId: ~p",[AccountId]),
+            Msg = io_lib:format("Exception syncing AccountId: ~p <br /> Service Item: ~p <br /> Rate: ~p"
+                               ,[AccountId
+                                ,kz_service_item:public_json(ServiceItem)
+                                ,kz_service_item:rate(ServiceItem)
+                                ]),
+            kz_notify:system_alert(Subj, Msg, []),
+            0.0
     end.
 
 -spec is_good_standing(ne_binary()) -> boolean().
