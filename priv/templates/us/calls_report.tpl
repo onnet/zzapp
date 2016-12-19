@@ -157,7 +157,7 @@
 <TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">To</TD>
 <TD style="width: 22%; font-size: 9pt; vertical-align: bottom; text-align: center">Start</TD>
 <TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">Duration</TD>
-<TD style="width: 43%; font-size: 9pt; vertical-align: bottom; text-align: center">Direction</TD>
+<TD style="width: 43%; font-size: 9pt; vertical-align: bottom; text-align: center">Destination</TD>
 <TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">Amount</TD>
 </TR>
 {% for per_minute_call in per_minute_calls %}
