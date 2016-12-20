@@ -229,7 +229,6 @@ create_dailyfee_doc(Timestamp, Year, Month, Day, Amount, Items, AccountId) ->
                                 >>
             }
            ,{<<"pvt_reason">>, <<"daily_fee">>}
-           ,{<<"pvt_days_in_period">>, calendar:last_day_of_the_month(Year, Month)}
            ,{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
            ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"all_items">>], kz_service_items:public_json(Items)}
            ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"daily_calculated_items">>]
@@ -238,6 +237,7 @@ create_dailyfee_doc(Timestamp, Year, Month, Day, Amount, Items, AccountId) ->
            ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"monthly_amount_of_daily_calculated_items">>]
             ,wht_util:dollars_to_units(Amount)
             }
+           ,{[<<"pvt_metadata">>,<<"days_in_period">>], calendar:last_day_of_the_month(Year, Month)}
            ,{<<"pvt_created">>, Timestamp}
            ,{<<"pvt_modified">>, Timestamp}
            ,{<<"pvt_account_id">>, AccountId}
