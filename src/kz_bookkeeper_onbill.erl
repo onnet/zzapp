@@ -22,6 +22,7 @@
 
 -spec sync(kz_service_item:items(), ne_binary()) -> 'ok'.
 sync(Items, AccountId) ->
+  lager:info("IAM sync"),
     Timestamp = kz_util:current_tstamp(),
     {Year, Month, Day} = erlang:date(),
     DailyCountItems = daily_count_items_list(Items, AccountId),
@@ -87,6 +88,7 @@ calc_item(ServiceItem, AccountId) ->
 
 -spec is_good_standing(ne_binary()) -> boolean().
 is_good_standing(AccountId) ->
+  lager:info("IAM is_good_standing"),
     wht_util:current_balance(AccountId) > 0.
 
 -spec transactions(ne_binary(), gregorian_seconds(), gregorian_seconds()) ->
@@ -94,6 +96,7 @@ is_good_standing(AccountId) ->
                           {'error', 'not_found'} |
                           {'error', 'unknown_error'}.
 transactions(AccountId, From, To) ->
+  lager:info("IAM transactions"),
     case kz_transactions:fetch_local(AccountId, From, To) of
         {'error', _Reason}=Error -> Error;
         {'ok', _Transactions}=Res -> Res
@@ -101,7 +104,7 @@ transactions(AccountId, From, To) ->
 
 -spec subscriptions(ne_binary()) -> atom() | kz_json:objects().
 subscriptions(AccountId) ->
-    lager:debug("void subscriptions/1 call. AccountId: ~p",[AccountId]),
+  lager:debug("IAM subscriptions/1 call. AccountId: ~p",[AccountId]),
     [kz_json:new()].
 
 -spec commit_transactions(ne_binary(),kz_transactions:kz_transactions()) -> 'ok' | 'error'.
@@ -110,6 +113,7 @@ commit_transactions(BillingId, Transactions) ->
     commit_transactions(BillingId, Transactions, 3).
 
 commit_transactions(BillingId, Transactions, Try) when Try > 0 ->
+  lager:info("IAM commit_transactions"),
     case kz_datamgr:open_doc(?KZ_SERVICES_DB, BillingId) of
         {'error', _E} ->
             lager:error("could not open services for ~p : ~p retrying...", [BillingId, _E]),
@@ -129,21 +133,26 @@ commit_transactions(BillingId, Transactions, Try) when Try > 0 ->
             end
     end;
 commit_transactions(BillingId, _Transactions, _Try) ->
+  lager:info("IAM commit_transactions"),
     lager:error("too many attempts writing transaction to services in ~p", [BillingId]),
     'error'.
 
 -spec already_charged(ne_binary() | integer() , integer() | kz_json:objects()) -> boolean().
 already_charged(BillingId, Code) when is_integer(Code) ->
+  lager:info("IAM already_charged/2 BillingId: ~p, Code: ~p",[BillingId, Code]),
     kz_bookkeeper_braintree:already_charged(BillingId, Code).
 
 -spec charge_transactions(ne_binary(), kz_json:objects()) -> kz_json:objects().
 charge_transactions(BillingId, Transactions) ->
+  lager:info("IAM charge_transactions/2 BillingId: ~p, Transactions: ~p",[BillingId, Transactions]),
     charge_transactions(BillingId, Transactions, []).
 
 charge_transactions(_, [], FailedTransactionsAcc) ->
+  lager:info("IAM charge_transactions/3 []"),
     FailedTransactionsAcc;
 
 charge_transactions(BillingId, [Transaction|Transactions], FailedTransactionsAcc) ->
+  lager:info("IAM charge_transactions/3 BillingId: ~p, Transaction: ~p",[BillingId, Transactions]),
     Result = case kz_json:get_value(<<"pvt_code">>, Transaction) of
                  ?CODE_TOPUP -> handle_topup(BillingId, Transaction);
                  _ -> handle_charged_transaction(BillingId, Transaction)
