@@ -24,14 +24,15 @@
 sync(Items, AccountId) ->
     Timestamp = kz_util:current_tstamp(),
     {Year, Month, Day} = erlang:date(),
-    ItemList = kz_service_items:to_list(Items),
-    sync(Timestamp, Year, Month, Day, ItemList, AccountId, 0.0, Items).
+    DailyCountItems = daily_count_items_list(Items, AccountId),
+    lager:debug("sync daily count items for: ~p : ~p",[AccountId, DailyCountItems]),
+    sync(Timestamp, Year, Month, Day, DailyCountItems, AccountId, 0.0, Items).
 
 sync(_Timestamp, _Year, _Month, _Day, [], _AccountId, Acc, _Items) when Acc == 0.0 ->
     lager:debug("sync Daily fee check NOT NEEDED. Total: ~p",[Acc]),
     'ok';
 sync(Timestamp, Year, Month, Day, [], AccountId, Acc, Items) ->
-    lager:debug("sync Daily fee check NEEDED. Total: ~p",[Acc]),
+    lager:debug("sync Daily fee calculation finished for ~p. Total: ~p",[AccountId, Acc]),
     DailyFeeId = prepare_dailyfee_doc_name(Year, Month, Day),
     case kazoo_modb:open_doc(AccountId, DailyFeeId, Year, Month) of
         {'error', 'not_found'} -> create_dailyfee_doc(Timestamp, Year, Month, Day, Acc, Items, AccountId);
@@ -48,15 +49,9 @@ sync(Timestamp, Year, Month, Day, [ServiceItem|ServiceItems], AccountId, Acc, It
             lager:debug("sync service item had no add on id: ~p", [ServiceItem]),
             sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, Acc, Items);
         {_PlanId, _AddOnId}->
-            case kz_service_item:rate(ServiceItem) of
-                'undefined' ->
-                    lager:debug("no rate for service item: ~p", [kz_service_item:public_json(ServiceItem)]),
-                    sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, Acc, Items);
-                _ -> 
-                    ItemCost = calc_item(ServiceItem, AccountId),
-                    SubTotal = Acc + ItemCost,
-                    sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, SubTotal, Items)
-            end
+            ItemCost = calc_item(ServiceItem, AccountId),
+            SubTotal = Acc + ItemCost,
+            sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, SubTotal, Items)
     end.
 
 -spec calc_item(kz_service_item:item(), ne_binary()) -> number().
@@ -65,9 +60,9 @@ calc_item(ServiceItem, AccountId) ->
         Quantity = kz_service_item:quantity(ServiceItem),
         Rate = kz_service_item:rate(ServiceItem),
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%   Do not forget to add discount calculations !!!!! %%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%   Do not forget to add discount calculations !!!!! %%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         _SingleDiscount = kz_service_item:single_discount(ServiceItem),
         _SingleDiscountRate = kz_service_item:single_discount_rate(ServiceItem),
@@ -223,26 +218,32 @@ prepare_dailyfee_doc_name(Y, M, D) ->
 
 create_dailyfee_doc(Timestamp, Year, Month, Day, Amount, Items, AccountId) ->
     MonthStrBin = kz_util:to_binary(httpd_util:month(Month)),
-    Updates = [{<<"_id">>, prepare_dailyfee_doc_name(Year, Month, Day)}
-               ,{<<"pvt_type">>, <<"debit">>}
-               ,{<<"description">>, <<(kz_util:to_binary(Day))/binary
-                                      ," "
-                                      ,MonthStrBin/binary
-                                      ," "
-                                      ,(kz_util:to_binary(Year))/binary
-                                      ," daily fee"
-                                    >>
-                }
-               ,{<<"pvt_reason">>, <<"daily_fee">>}
-               ,{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
-               ,{[<<"pvt_metadata">>,<<"items_history">>,kz_util:to_binary(Timestamp),<<"monthly_amount">>], wht_util:dollars_to_units(Amount)}
-               ,{[<<"pvt_metadata">>,<<"items_history">>,kz_util:to_binary(Timestamp)], kz_service_items:public_json(Items)}
-               ,{<<"pvt_created">>, Timestamp}
-               ,{<<"pvt_modified">>, Timestamp}
-               ,{<<"pvt_account_id">>, AccountId}
-               ,{<<"pvt_account_db">>, kazoo_modb:get_modb(AccountId, Year, Month)}
-              ],
-    Doc = kz_json:set_values(Updates, kz_json:new()),
+    Upd = [{<<"_id">>, prepare_dailyfee_doc_name(Year, Month, Day)}
+           ,{<<"pvt_type">>, <<"debit">>}
+           ,{<<"description">>, <<(?TO_BIN(Day))/binary
+                                  ," "
+                                  ,MonthStrBin/binary
+                                  ," "
+                                  ,(?TO_BIN(Year))/binary
+                                  ," daily fee"
+                                >>
+            }
+           ,{<<"pvt_reason">>, <<"daily_fee">>}
+           ,{<<"pvt_days_in_period">>, calendar:last_day_of_the_month(Year, Month)}
+           ,{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
+           ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"all_items">>], kz_service_items:public_json(Items)}
+           ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"daily_calculated_items">>]
+            ,[kz_service_item:public_json(Item) || Item <- daily_count_items_list(Items, AccountId)]
+            }
+           ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"monthly_amount_of_daily_calculated_items">>]
+            ,wht_util:dollars_to_units(Amount)
+            }
+           ,{<<"pvt_created">>, Timestamp}
+           ,{<<"pvt_modified">>, Timestamp}
+           ,{<<"pvt_account_id">>, AccountId}
+           ,{<<"pvt_account_db">>, kazoo_modb:get_modb(AccountId, Year, Month)}
+          ],
+    Doc = kz_json:set_values(Upd, kz_json:new()),
     kazoo_modb:save_doc(AccountId, Doc, Year, Month).
  
 maybe_update_dailyfee_doc(Timestamp, Year, Month, Amount, DFDoc, Items, AccountId) ->
@@ -254,12 +255,17 @@ maybe_update_dailyfee_doc(Timestamp, Year, Month, Amount, DFDoc, Items, AccountI
     end.
 
 update_dailyfee_doc(Timestamp, Year, Month, Amount, DFDoc, Items, AccountId) ->
-    Updates = [{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
-               ,{[<<"pvt_metadata">>,<<"items_history">>,kz_util:to_binary(Timestamp),<<"monthly_amount">>], wht_util:dollars_to_units(Amount)}
-               ,{[<<"pvt_metadata">>,<<"items_history">>,kz_util:to_binary(Timestamp)], kz_service_items:public_json(Items)}
-               ,{<<"pvt_modified">>, Timestamp}
-              ],
-    NewDoc = kz_json:set_values(Updates, DFDoc),
+    Upd = [{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
+           ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"all_items">>], kz_service_items:public_json(Items)}
+           ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"daily_calculated_items">>]
+            ,[kz_service_item:public_json(Item) || Item <- daily_count_items_list(Items, AccountId)]
+            }
+           ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"monthly_amount_of_daily_calculated_items">>]
+            ,wht_util:dollars_to_units(Amount)
+            }
+           ,{<<"pvt_modified">>, Timestamp}
+          ],
+    NewDoc = kz_json:set_values(Upd, DFDoc),
     kazoo_modb:save_doc(AccountId, NewDoc, Year, Month).
 
 -spec populate_modb_with_fees(ne_binary(), integer(), integer()) -> proplist().
@@ -282,3 +288,11 @@ populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
     {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
     ItemList = kz_service_items:to_list(Items),
     sync(Timestamp, Year, Month, Day, ItemList, AccountId, 0.0, Items).
+
+daily_count_items_list(Items, AccountId) ->
+    [Item || Item <- kz_service_items:to_list(Items)
+            ,lists:member(kz_service_item:category(Item)
+                         ,kz_json:get_value(<<"pvt_daily_count_categories">>, onbill_util:reseller_vars(AccountId), [])
+                         )
+    ].
+

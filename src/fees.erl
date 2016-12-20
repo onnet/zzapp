@@ -212,34 +212,33 @@ process_daily_fee(JObj, Modb, RawTableId) ->
     end.
 
 upload_daily_fee_to_ets(DFDoc, RawTableId) ->
-    ItemsList = kz_json:get_value([<<"pvt_metadata">>, <<"items_history">>],DFDoc),
-    [ItemTs|_] = lists:reverse(lists:sort(kz_json:get_keys(ItemsList))),
-    Item = kz_json:get_value(ItemTs, ItemsList),
-    {{_,_,Day},_} = calendar:gregorian_seconds_to_datetime(kz_util:to_integer(ItemTs)),
-    [process_element(kz_json:get_value(ElementKey, Item), RawTableId, Day) || ElementKey <- kz_json:get_keys(Item)
-     ,kz_json:is_json_object(kz_json:get_value(ElementKey, Item)) == 'true'
+    ItemsHistoryBag = kz_json:get_value([<<"pvt_metadata">>, <<"items_history">>],DFDoc),
+    [MostRecentTs|_] = lists:reverse(lists:sort(kz_json:get_keys(ItemsHistoryBag))),
+    LatterDataBag = kz_json:get_value(MostRecentTs, ItemsHistoryBag),
+    {{_,_,Day},_} = calendar:gregorian_seconds_to_datetime(kz_util:to_integer(MostRecentTs)),
+    [process_element(Element, RawTableId, Day)
+     || Element <- kz_json:get_value(<<"daily_calculated_items">>, LatterDataBag)
+     ,kz_json:is_json_object(Element) == 'true'
+     ,quantity(Element) =/= 0.0
     ].
 
 process_element(Element, RawTableId, Day) ->
-    [ets:insert(RawTableId, {category(Unit), item(Unit), rate(Unit), quantity(Unit), Day, name(Unit)})
-     || {_, Unit} <- kz_json:to_proplist(Element)
-     , quantity(Unit) =/= 0.0
-    ].
+    ets:insert(RawTableId, {category(Element), item(Element), rate(Element), quantity(Element), Day, name(Element)}).
 
-category(Unit) ->
-    kz_json:get_value(<<"category">>, Unit).
+category(Element) ->
+    kz_json:get_value(<<"category">>, Element).
 
-item(Unit) ->
-    kz_json:get_value(<<"item">>, Unit).
+item(Element) ->
+    kz_json:get_value(<<"item">>, Element).
 
-name(Unit) ->
-    kz_json:get_value(<<"name">>, Unit).
+name(Element) ->
+    kz_json:get_value(<<"name">>, Element).
 
-rate(Unit) ->
-    kz_util:to_float(kz_json:get_value(<<"rate">>, Unit)).
+rate(Element) ->
+    kz_util:to_float(kz_json:get_value(<<"rate">>, Element)).
 
-quantity(Unit) ->
-    kz_util:to_float(kz_json:get_value(<<"quantity">>, Unit)).
+quantity(Element) ->
+    kz_util:to_float(kz_json:get_value(<<"quantity">>, Element)).
 
 process_ets(RawTableId, ResultTableId) ->
     ServiceTypesList = lists:usort(ets:match(RawTableId,{'$1','_','_','_','_','_'})),
@@ -260,7 +259,9 @@ handle_ets_item_price(RawTableId, ResultTableId, ServiceType, Item, Price) ->
 handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Quantity) ->
     Days = [Day || [Day] <- lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'$5','_'}))],
     [[Name]|_] = lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'_','$6'})),
-    lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Days: ~p, Name: ~p",[ServiceType, Item, Price, Quantity, days_sequence_reduce(Days), Name]),
+    lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Days: ~p, Name: ~p"
+              ,[ServiceType, Item, Price, Quantity, days_sequence_reduce(Days), Name]
+              ),
     ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, days_sequence_reduce(Days), length(Days), Name}).
 
 days_sequence_reduce([Digit]) ->
