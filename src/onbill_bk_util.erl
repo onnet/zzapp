@@ -2,6 +2,7 @@
 
 -export([max_daily_items_usage/2
         ,max_daily_items_usage/5
+        ,prepare_dailyfee_doc_name/3
         ]).
 
 -include("onbill.hrl").
