@@ -1,7 +1,7 @@
 -module(kz_bookkeeper_onbill).
 
 -export([sync/2]).
--export([is_good_standing/1]).
+-export([is_good_standing/1, is_good_standing/2]).
 -export([transactions/3]).
 -export([subscriptions/1]).
 -export([commit_transactions/2]).
@@ -34,7 +34,7 @@ sync(_Timestamp, _Year, _Month, _Day, [], _AccountId, Acc, _Items) when Acc == 0
     'ok';
 sync(Timestamp, Year, Month, Day, [], AccountId, Acc, Items) ->
     lager:debug("sync Daily fee calculation finished for ~p. Total: ~p",[AccountId, Acc]),
-    DailyFeeId = prepare_dailyfee_doc_name(Year, Month, Day),
+    DailyFeeId = onbill_bk_util:prepare_dailyfee_doc_name(Year, Month, Day),
     case kazoo_modb:open_doc(AccountId, DailyFeeId, Year, Month) of
         {'error', 'not_found'} -> create_dailyfee_doc(Timestamp, Year, Month, Day, Acc, Items, AccountId);
         {'ok', DFDoc} -> maybe_update_dailyfee_doc(Timestamp, Year, Month, Acc, DFDoc, Items, AccountId)
@@ -88,7 +88,12 @@ calc_item(ServiceItem, AccountId) ->
 
 -spec is_good_standing(ne_binary()) -> boolean().
 is_good_standing(AccountId) ->
-  lager:info("IAM is_good_standing"),
+  lager:info("IAM is_good_standing/1: ~p",[wht_util:current_balance(AccountId) > 0]),
+    wht_util:current_balance(AccountId) > 0.
+
+-spec is_good_standing(ne_binary(), ne_binary()) -> boolean().
+is_good_standing(AccountId, _Status) ->
+  lager:info("IAM is_good_standing/1: ~p, Status: ~p",[(wht_util:current_balance(AccountId) > 0), _Status]),
     wht_util:current_balance(AccountId) > 0.
 
 -spec transactions(ne_binary(), gregorian_seconds(), gregorian_seconds()) ->
@@ -96,7 +101,7 @@ is_good_standing(AccountId) ->
                           {'error', 'not_found'} |
                           {'error', 'unknown_error'}.
 transactions(AccountId, From, To) ->
-  lager:info("IAM transactions"),
+  lager:info("IAM transactions AccountId: ~p, From: ~p, To: ~p",[AccountId, From, To]),
     case kz_transactions:fetch_local(AccountId, From, To) of
         {'error', _Reason}=Error -> Error;
         {'ok', _Transactions}=Res -> Res
@@ -113,12 +118,13 @@ commit_transactions(BillingId, Transactions) ->
     commit_transactions(BillingId, Transactions, 3).
 
 commit_transactions(BillingId, Transactions, Try) when Try > 0 ->
-  lager:info("IAM commit_transactions"),
+  lager:info("IAM commit_transactions BillingId: ~p, Transactions: ~p, Try: ~p", [BillingId, kz_transactions:to_json(Transactions), Try]),
     case kz_datamgr:open_doc(?KZ_SERVICES_DB, BillingId) of
         {'error', _E} ->
             lager:error("could not open services for ~p : ~p retrying...", [BillingId, _E]),
             commit_transactions(BillingId, Transactions, Try-1);
         {'ok', JObj} ->
+  lager:info("IAM commit_transactions JObj: ~p", [JObj]),
             NewTransactions = kz_json:get_value(<<"transactions">>, JObj, [])
                 ++ kz_transactions:to_json(Transactions),
             JObj1 = kz_json:set_values([{<<"pvt_dirty">>, 'true'}
@@ -129,7 +135,9 @@ commit_transactions(BillingId, Transactions, Try) when Try > 0 ->
                 {'error', _E} ->
                     lager:error("could not save services for ~p : ~p retrying...", [BillingId, _E]),
                     commit_transactions(BillingId, Transactions, Try-1);
-                {'ok', _} -> 'ok'
+                {'ok', _} ->
+                    lager:error("IAM commit_transactions new JObj1 saved: ~p", [JObj1]),
+                    'ok'
             end
     end;
 commit_transactions(BillingId, _Transactions, _Try) ->
@@ -160,6 +168,7 @@ charge_transactions(BillingId, [Transaction|Transactions], FailedTransactionsAcc
     charge_transactions(BillingId, Transactions, Result ++ FailedTransactionsAcc).
 
 handle_charged_transaction(AccountId, Transaction) ->
+  lager:info("IAM handle_charged_transaction/2 AccountId: ~p, Transaction: ~p",[AccountId, Transaction]),
     %%
     %% already_charged should be enhanced to check not only braintree transactions existance but transactions saved in Couch also
     %%
@@ -219,15 +228,9 @@ handle_quick_sale_response(BtTransaction) ->
     %% https://www.braintreepayments.com/docs/ruby/reference/processor_responses
     kz_util:to_integer(RespCode) < 2000.
 
-prepare_dailyfee_doc_name(Y, M, D) ->
-    Year = kz_util:to_binary(Y),
-    Month = kz_util:pad_month(M),
-    Day = kz_util:pad_month(D),
-    <<Year/binary, Month/binary, Day/binary, "-dailyfee">>.
-
 create_dailyfee_doc(Timestamp, Year, Month, Day, Amount, Items, AccountId) ->
     MonthStrBin = kz_util:to_binary(httpd_util:month(Month)),
-    Upd = [{<<"_id">>, prepare_dailyfee_doc_name(Year, Month, Day)}
+    Upd = [{<<"_id">>, onbill_bk_util:prepare_dailyfee_doc_name(Year, Month, Day)}
            ,{<<"pvt_type">>, <<"debit">>}
            ,{<<"description">>, <<(?TO_BIN(Day))/binary
                                   ," "

@@ -33,4 +33,9 @@ stop(_State) ->
 
 -spec declare_exchanges() -> 'ok'.
 declare_exchanges() ->
+    _ = kapi_resource:declare_exchanges(),
+    _ = kapi_conf:declare_exchanges(),
+    _ = kapi_conf:declare_exchanges(),
+    _ = kapi_notifications:declare_exchanges(),
+    _ = kapi_registration:declare_exchanges(),
     kapi_self:declare_exchanges().
