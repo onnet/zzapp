@@ -242,10 +242,9 @@ create_dailyfee_doc(Timestamp, Year, Month, Day, Amount, Items, AccountId) ->
             }
            ,{<<"pvt_reason">>, <<"daily_fee">>}
            ,{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
-           ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"all_items">>], kz_service_items:public_json(Items)}
+           ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"all_items">>], filter_out_items(Items)}
            ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"daily_calculated_items">>]
-%            ,[kz_service_item:public_json(Item) || Item <- daily_count_items_list(Items, AccountId)]
-            ,daily_count_items_json(Items, AccountId)
+            ,filter_out_daily_count_items(Items, AccountId)
             }
            ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"monthly_amount_of_daily_calculated_items">>]
             ,wht_util:dollars_to_units(Amount)
@@ -269,9 +268,9 @@ maybe_update_dailyfee_doc(Timestamp, Year, Month, Amount, DFDoc, Items, AccountI
 
 update_dailyfee_doc(Timestamp, Year, Month, Amount, DFDoc, Items, AccountId) ->
     Upd = [{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
-           ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"all_items">>], kz_service_items:public_json(Items)}
+           ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"all_items">>], filter_out_items(Items)}
            ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"daily_calculated_items">>]
-            ,[kz_service_item:public_json(Item) || Item <- daily_count_items_list(Items, AccountId)]
+            ,filter_out_daily_count_items(Items, AccountId)
             }
            ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"monthly_amount_of_daily_calculated_items">>]
             ,wht_util:dollars_to_units(Amount)
@@ -309,12 +308,20 @@ daily_count_items_list(Items, AccountId) ->
                          )
     ].
 
-daily_count_items_json(Items, AccountId) ->
+filter_out_daily_count_items(Items, AccountId) ->
+    ResellerVars = onbill_util:reseller_vars(AccountId),
     Upd = [{[kz_service_item:category(Item), kz_service_item:item(Item)], kz_service_item:public_json(Item)}
            || Item <- kz_service_items:to_list(Items)
            ,lists:member(kz_service_item:category(Item)
-                        ,kz_json:get_value(<<"pvt_daily_count_categories">>, onbill_util:reseller_vars(AccountId), [])
+                        ,kz_json:get_value(<<"pvt_daily_count_categories">>, ResellerVars, [])
                         )
+           ,kz_service_item:quantity(Item) > 0
     ],
     kz_json:set_values(Upd, kz_json:new()).
 
+filter_out_items(Items) ->
+    Upd = [{[kz_service_item:category(Item), kz_service_item:item(Item)], kz_service_item:public_json(Item)}
+           || Item <- kz_service_items:to_list(Items)
+           ,kz_service_item:quantity(Item) > 0
+    ],
+    kz_json:set_values(Upd, kz_json:new()).
