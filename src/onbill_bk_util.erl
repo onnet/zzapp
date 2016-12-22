@@ -145,26 +145,34 @@ dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items) ->
 
 -spec charge_newly_added(ne_binary(), kz_json:object(), proplist(), integer()) -> 'ok'|proplist(). 
 charge_newly_added(_AccountId, _NewMax, [], _Timestamp) -> 'ok';
-charge_newly_added(AccountId, NewMax, [{Path, Qty}|ExcessDets], Timestamp) -> 
-    create_debit_tansaction(AccountId, kz_json:get_value(Path, NewMax), Qty, Timestamp),
+charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], Timestamp) -> 
+    CategoriesList = kz_json:get_value(<<"pvt_daily_count_categories">>, onbill_util:reseller_vars(AccountId), []),
+    case lists:member(Category, CategoriesList) of
+        'true' -> 'ok';
+        'false' ->
+            create_debit_tansaction(AccountId, kz_json:get_value(Path, NewMax), Qty, Timestamp)
+    end,
     charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp). 
 
 
 -spec create_debit_tansaction(ne_binary(), kz_json:object(), integer(), integer()) -> 'ok'|proplist(). 
 create_debit_tansaction(AccountId, ItemJObj, Qty, Timestamp) ->
-    Name = kz_json:get_float_value(<<"name">>, ItemJObj),
-    Item = kz_json:get_float_value(<<"item">>, ItemJObj),
+lager:info("IAM ItemJObj: ~p",[ItemJObj]),
+    Name = kz_json:get_value(<<"name">>, ItemJObj),
+    Item = kz_json:get_value(<<"item">>, ItemJObj),
     Rate = kz_json:get_float_value(<<"rate">>, ItemJObj),
     Units = wht_util:dollars_to_units(Rate),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
-    MonthStrBin = kz_util:to_binary(httpd_util:month(Month)),
+    MonthStr = httpd_util:month(Month),
 
     Meta =
         kz_json:from_list(
           [{<<"account_id">>, AccountId}]
          ),
-    Reason = <<Item/binary, " add-on">>,
-    Description = <<Name/binary," add-on ",(?TO_BIN(Day))/binary," ",MonthStrBin/binary," ",(?TO_BIN(Year))/binary>>,
+    Reason = <<(?TO_BIN(Item))/binary," add-on">>,
+lager:info("IAM Reason: ~p",[Reason]),
+    Description = <<(?TO_BIN(Name))/binary," add-on ",(?TO_BIN(Day))/binary," ",(?TO_BIN(MonthStr))/binary," ",(?TO_BIN(Year))/binary>>,
+lager:info("IAM Description: ~p",[Description]),
 
     Routines = [fun(Tr) -> kz_transaction:set_reason(Reason, Tr) end
                ,fun(Tr) -> kz_transaction:set_description(Description, Tr) end
@@ -176,4 +184,3 @@ create_debit_tansaction(AccountId, ItemJObj, Qty, Timestamp) ->
                ,kz_transaction:debit(AccountId, Units * Qty)
                ,Routines
      ).
-
