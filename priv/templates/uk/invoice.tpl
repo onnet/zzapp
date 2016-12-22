@@ -81,7 +81,7 @@
         </thead>
         <tbody>
           {% for fee_line in monthly_fees %}
-          <tr>
+          <tr style="page-break-inside: avoid !important;">
             <td>
               {{ fee_line.name }} {% if fee_line.period %}{{ fee_line.period }}.{{ fee_line.month_pad }}.{{ fee_line.year }}{% endif %}
             </td>
