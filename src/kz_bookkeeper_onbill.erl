@@ -24,30 +24,24 @@
 sync(Items, AccountId) ->
     Timestamp = kz_util:current_tstamp(),
     case onbill_bk_util:max_daily_usage_exceeded(Items, AccountId, Timestamp) of
-        {'true', ItemsJObj} ->
-            {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
-            DailyCountItems = onbill_bk_util:filter_out_daily_count_items_list(ItemsJObj, AccountId),
+        {'true', NewMax} ->
+            DailyCountItems = onbill_bk_util:select_daily_count_items_list(NewMax, AccountId),
             lager:debug("sync daily count items for: ~p : ~p",[AccountId, DailyCountItems]),
-            sync(Timestamp, Year, Month, Day, DailyCountItems, AccountId, 0.0, Items);
+            sync(Timestamp, DailyCountItems, AccountId, 0.0, NewMax, Items);
         'false' ->
             lager:debug("max usage not exceeded, no sync needed for: ~p",[AccountId])
     end.
 
-sync(_Timestamp, _Year, _Month, _Day, [], _AccountId, Acc, _Items) when Acc == 0.0 ->
-    lager:debug("sync Daily fee check NOT NEEDED. Total: ~p",[Acc]),
-    'ok';
-sync(Timestamp, Year, Month, Day, [], AccountId, Acc, Items) ->
-    lager:debug("sync Daily fee calculation finished for ~p. Total: ~p",[AccountId, Acc]),
-    DailyFeeId = onbill_bk_util:prepare_dailyfee_doc_name(Year, Month, Day),
-    case kazoo_modb:open_doc(AccountId, DailyFeeId, Year, Month) of
-        {'error', 'not_found'} -> onbill_bk_util:create_dailyfee_doc(Items, AccountId, Acc, Timestamp);
-        {'ok', DFDoc} -> maybe_update_dailyfee_doc(Timestamp, Year, Month, Acc, DFDoc, Items, AccountId)
-    end,
-    'ok';
-sync(Timestamp, Year, Month, Day, [ServiceItem|ServiceItems], AccountId, Acc, Items) ->
+sync(_Timestamp, [], _AccountId, Acc, _NewMax, _Items) when Acc == 0.0 ->
+    lager:debug("sync Daily fee check NOT NEEDED. Total: ~p",[Acc]);
+sync(Timestamp, [], AccountId, Acc, NewMax, Items) ->
+    onbill_bk_util:save_dailyfee_doc(Timestamp, AccountId, Acc, NewMax, Items),
+    lager:debug("sync Daily fee calculation finished for ~p. Total: ~p",[AccountId, Acc]);
+
+sync(Timestamp, [ServiceItem|ServiceItems], AccountId, Acc, NewMax, Items) ->
     ItemCost = calc_item(ServiceItem, AccountId),
     SubTotal = Acc + ItemCost,
-    sync(Timestamp, Year, Month, Day, ServiceItems, AccountId, SubTotal, Items).
+    sync(Timestamp, ServiceItems, AccountId, SubTotal, NewMax, Items).
 
 -spec calc_item(kz_service_item:item(), ne_binary()) -> number().
 calc_item(ServiceItem, AccountId) ->
@@ -222,28 +216,6 @@ handle_quick_sale_response(BtTransaction) ->
     %% https://www.braintreepayments.com/docs/ruby/reference/processor_responses
     kz_util:to_integer(RespCode) < 2000.
 
-maybe_update_dailyfee_doc(Timestamp, Year, Month, Amount, DFDoc, Items, AccountId) ->
-    case (wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month) >
-          kz_json:get_number_value(<<"pvt_amount">>, DFDoc, 0)
-         ) of
-        'true' -> update_dailyfee_doc(Timestamp, Year, Month, Amount, DFDoc, Items, AccountId);
-        'false' -> 'ok'
-    end.
-
-update_dailyfee_doc(Timestamp, Year, Month, Amount, DFDoc, Items, AccountId) ->
-    Upd = [{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
-           ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"all_items">>], onbill_bk_util:filter_out_items_json(Items)}
-           ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"daily_calculated_items">>]
-            ,onbill_bk_util:filter_out_daily_count_items_json(Items, AccountId)
-            }
-           ,{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"monthly_amount_of_daily_calculated_items">>]
-            ,wht_util:dollars_to_units(Amount)
-            }
-           ,{<<"pvt_modified">>, Timestamp}
-          ],
-    NewDoc = kz_json:set_values(Upd, DFDoc),
-    kazoo_modb:save_doc(AccountId, NewDoc, Year, Month).
-
 -spec populate_modb_with_fees(ne_binary(), integer(), integer()) -> proplist().
 populate_modb_with_fees(AccountId, Year, Month) ->
     LastMonthDay = calendar:last_day_of_the_month(Year, Month),
@@ -262,5 +234,6 @@ populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
                                    kazoo_modb:open_doc(Modb, <<"services_bom">>)
                            end,
     {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
-    ItemList = onbill_bk_util:filter_out_daily_count_items_list(Items, AccountId),
-    sync(Timestamp, Year, Month, Day, ItemList, AccountId, 0.0, Items).
+    NewMax = onbill_bk_util:select_non_zero_items_json(Items),
+    DailyCountItems = onbill_bk_util:select_daily_count_items_list(NewMax, AccountId),
+    sync(Timestamp, DailyCountItems, AccountId, 0.0, NewMax, Items).

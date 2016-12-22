@@ -10,6 +10,7 @@
 -define(ONBILL_DB, <<"onbill">>).
 -define(ONBILL_DOC, <<"onbill">>).
 -define(TO_BIN(Var), kz_util:to_binary(Var)).
+-define(TO_INT(Var), kz_util:to_integer(Var)).
 -define(CARRIER_DOC(CarrierName), <<"onbill_carrier.", CarrierName/binary>>).
 -define(MOD_CONFIG_CRAWLER, <<(?APP_NAME)/binary, ".account_crawler">>).
 -define(DOCS_NUMBER_DB(ResellerId, Year), <<(?APP_NAME)/binary

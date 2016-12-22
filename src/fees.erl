@@ -212,13 +212,11 @@ process_daily_fee(JObj, Modb, RawTableId) ->
     end.
 
 upload_daily_fee_to_ets(DFDoc, RawTableId) ->
-    ItemsHistoryBag = kz_json:get_value([<<"pvt_metadata">>, <<"items_history">>],DFDoc),
-    [MostRecentTs|_] = lists:reverse(lists:sort(kz_json:get_keys(ItemsHistoryBag))),
-    LatterDataBagDaily = kz_json:get_value([MostRecentTs, <<"daily_calculated_items">>], ItemsHistoryBag),
-    {{_,_,Day},_} = calendar:gregorian_seconds_to_datetime(kz_util:to_integer(MostRecentTs)),
-    [process_element(kz_json:get_value(ElementKey, LatterDataBagDaily), RawTableId, Day)
-     || ElementKey <- kz_json:get_keys(LatterDataBagDaily)
-     ,kz_json:is_json_object(kz_json:get_value(ElementKey, LatterDataBagDaily)) == 'true'
+    MaxDailyUsage = kz_json:get_value([<<"pvt_metadata">>,<<"max_usage">>,<<"daily_calculated_items">>],DFDoc),
+    <<_Year:4/binary, _Month:2/binary, Day:2/binary, _/binary>> = kz_json:get_value(<<"_id">>,DFDoc),
+    [process_element(kz_json:get_value(ElementKey, MaxDailyUsage), RawTableId, ?TO_INT(Day))
+     || ElementKey <- kz_json:get_keys(MaxDailyUsage)
+     ,kz_json:is_json_object(kz_json:get_value(ElementKey, MaxDailyUsage)) == 'true'
     ].
 
 process_element(Element, RawTableId, Day) ->
