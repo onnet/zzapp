@@ -24,9 +24,9 @@
 sync(Items, AccountId) ->
     Timestamp = kz_util:current_tstamp(),
     case onbill_bk_util:max_daily_usage_exceeded(Items, AccountId, Timestamp) of
-        {'true', NewMax} ->
+        {'true', NewMax, ExcessDets} ->
             DailyCountItems = onbill_bk_util:select_daily_count_items_list(NewMax, AccountId),
-            lager:debug("sync daily count items for: ~p : ~p",[AccountId, DailyCountItems]),
+            lager:debug("sync daily count items for: ~p : ~p; excess details: ~p",[AccountId, DailyCountItems, ExcessDets]),
             sync(Timestamp, DailyCountItems, AccountId, 0.0, NewMax, Items);
         'false' ->
             lager:debug("max usage not exceeded, no sync needed for: ~p",[AccountId])

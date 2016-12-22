@@ -21,17 +21,18 @@ max_daily_usage_exceeded(Items, AccountId, Timestamp) ->
         {'ok', DFDoc} ->
             case kz_json:get_value([<<"pvt_metadata">>,<<"max_usage">>,<<"all_items">>], DFDoc) of
                 'undefined' ->
-                    {'true', select_non_zero_items_json(Items)};
+                    {'true', select_non_zero_items_json(Items), []};
                  MaxJObj ->
-                    case check_max_usage(select_non_zero_items_json(Items), MaxJObj, Timestamp) of
+                    NewJObj = select_non_zero_items_json(Items),
+                    case check_max_usage(NewJObj, MaxJObj, Timestamp) of
                         [] ->
                             'false';
                         Diff ->
-                            {'true', kz_json:set_values(Diff, MaxJObj)}
+                            {'true', kz_json:set_values(Diff, MaxJObj), excess_details(NewJObj, MaxJObj)}
                     end
             end;
         {'error', 'not_found'} ->
-            {'true', select_non_zero_items_json(Items)}
+            {'true', select_non_zero_items_json(Items), []}
     end.
 
 -spec prepare_dailyfee_doc_name(integer(), integer(), integer()) -> ne_binary().
@@ -83,6 +84,16 @@ check_max_usage(NewJObj, MaxJObj, Timestamp) ->
                                ,kz_json:get_keys(NewJObj)
                                ),
     [{ItemPath, kz_json:set_value(<<"updated">>, Timestamp, kz_json:get_value(ItemPath, NewJObj))}
+     || ItemPath <- ItemsPathList
+     ,kz_json:get_value(ItemPath ++ [<<"quantity">>], NewJObj, 0) > kz_json:get_value(ItemPath ++ [<<"quantity">>], MaxJObj, 0)
+    ].
+
+excess_details(NewJObj, MaxJObj) ->
+    ItemsPathList = lists:foldl(fun (Category, Acc) -> [[Category, Item] || Item <- kz_json:get_keys(Category, NewJObj)] ++ Acc end
+                               ,[]
+                               ,kz_json:get_keys(NewJObj)
+                               ),
+    [{ItemPath, kz_json:get_value(ItemPath ++ [<<"quantity">>], NewJObj, 0) - kz_json:get_value(ItemPath ++ [<<"quantity">>], MaxJObj, 0)}
      || ItemPath <- ItemsPathList
      ,kz_json:get_value(ItemPath ++ [<<"quantity">>], NewJObj, 0) > kz_json:get_value(ItemPath ++ [<<"quantity">>], MaxJObj, 0)
     ].
