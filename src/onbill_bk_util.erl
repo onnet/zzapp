@@ -6,6 +6,7 @@
         ,select_daily_count_items_json/2
         ,select_non_zero_items_json/1
         ,save_dailyfee_doc/5
+        ,charge_newly_added/4
         ]).
 
 -include("onbill.hrl").
@@ -141,3 +142,38 @@ dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items) ->
      ,{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
      ,{<<"pvt_modified">>, Timestamp}
     ].
+
+-spec charge_newly_added(ne_binary(), kz_json:object(), proplist(), integer()) -> 'ok'|proplist(). 
+charge_newly_added(_AccountId, _NewMax, [], _Timestamp) -> 'ok';
+charge_newly_added(AccountId, NewMax, [{Path, Qty}|ExcessDets], Timestamp) -> 
+    create_debit_tansaction(AccountId, kz_json:get_value(Path, NewMax), Qty, Timestamp),
+    charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp). 
+
+
+-spec create_debit_tansaction(ne_binary(), kz_json:object(), integer(), integer()) -> 'ok'|proplist(). 
+create_debit_tansaction(AccountId, ItemJObj, Qty, Timestamp) ->
+    Name = kz_json:get_float_value(<<"name">>, ItemJObj),
+    Item = kz_json:get_float_value(<<"item">>, ItemJObj),
+    Rate = kz_json:get_float_value(<<"rate">>, ItemJObj),
+    Units = wht_util:dollars_to_units(Rate),
+    {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
+    MonthStrBin = kz_util:to_binary(httpd_util:month(Month)),
+
+    Meta =
+        kz_json:from_list(
+          [{<<"account_id">>, AccountId}]
+         ),
+    Reason = <<Item/binary, " add-on">>,
+    Description = <<Name/binary," add-on ",(?TO_BIN(Day))/binary," ",MonthStrBin/binary," ",(?TO_BIN(Year))/binary>>,
+
+    Routines = [fun(Tr) -> kz_transaction:set_reason(Reason, Tr) end
+               ,fun(Tr) -> kz_transaction:set_description(Description, Tr) end
+               ,fun(Tr) -> kz_transaction:set_metadata(Meta, Tr) end
+               ,fun kz_transaction:save/1
+               ],
+    lists:foldl(
+      fun(F, Tr) -> F(Tr) end
+               ,kz_transaction:debit(AccountId, Units * Qty)
+               ,Routines
+     ).
+

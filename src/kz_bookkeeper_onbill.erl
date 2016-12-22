@@ -27,6 +27,7 @@ sync(Items, AccountId) ->
         {'true', NewMax, ExcessDets} ->
             DailyCountItems = onbill_bk_util:select_daily_count_items_list(NewMax, AccountId),
             lager:debug("sync daily count items for: ~p : ~p; excess details: ~p",[AccountId, DailyCountItems, ExcessDets]),
+            onbill_bk_util:charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp),
             sync(Timestamp, DailyCountItems, AccountId, 0.0, NewMax, Items);
         'false' ->
             lager:debug("max usage not exceeded, no sync needed for: ~p",[AccountId])
