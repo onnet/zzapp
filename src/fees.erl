@@ -4,19 +4,24 @@
         ,shape_fees/5
         ,per_minute_calls/4
         ,vatify_amount/3
+        ,dates_sequence_reduce/1
+        ,days_sequence_reduce/1
         ]).
 
 -include("onbill.hrl").
 
 -spec shape_fees(ne_binary(), integer(), integer(), ne_binary()) -> 'ok'. 
--spec shape_fees(ne_binary(), integer(), integer(), ne_binary(), proplist()) -> 'ok'. 
+-spec shape_fees(ne_binary(), integer(), integer(), integer(), ne_binary()) -> 'ok'. 
+-spec shape_fees(ne_binary(), integer(), integer(), integer(), kz_json:object(), proplist()) -> 'ok'. 
 shape_fees(AccountId, Year, Month, Carrier) ->
+    shape_fees(AccountId, Year, Month, 1, Carrier).
+shape_fees(AccountId, Year, Month, Day, Carrier) ->
     CarrierDoc =  onbill_util:carrier_doc(Carrier, AccountId),
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
-    shape_fees(AccountId, Year, Month, CarrierDoc, OnbillResellerVars).
+    shape_fees(AccountId, Year, Month, Day, CarrierDoc, OnbillResellerVars).
 
-shape_fees(AccountId, Year, Month, CarrierDoc, OnbillResellerVars) ->
-    FeesList = maybe_monthly_fees(AccountId, CarrierDoc, Year, Month),
+shape_fees(AccountId, Year, Month, Day, CarrierDoc, OnbillResellerVars) ->
+    FeesList = maybe_monthly_fees(AccountId, CarrierDoc, Year, Month, Day),
     case kz_json:get_value(<<"vat_disposition">>, OnbillResellerVars) of
         <<"netto">> ->
             [enhance_vat_netto(FeeLine, OnbillResellerVars) ++ enhance_extra_codes(FeeLine, OnbillResellerVars) || FeeLine <- FeesList];
@@ -75,13 +80,13 @@ enhance_vat_brutto(FeeLine, OnbillResellerVars) ->
                 ],
     props:set_values(NewValues, FeeLine).
 
-maybe_monthly_fees(AccountId, CarrierDoc, Year, Month) ->
+maybe_monthly_fees(AccountId, CarrierDoc, Year, Month, Day) ->
     case onbill_util:maybe_main_carrier(CarrierDoc, AccountId) of
-        'true' -> monthly_fees(AccountId, Year, Month) ++ process_per_minute_calls(AccountId, Year, Month, CarrierDoc);
-        _ -> process_per_minute_calls(AccountId, Year, Month, CarrierDoc)
+        'true' -> monthly_fees(AccountId, Year, Month, Day) ++ process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc);
+        _ -> process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc)
     end.
 
-monthly_fees(AccountId, Year, Month) ->
+monthly_fees(AccountId, Year, Month, _Day) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     _ = onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
     RawTableId = ets:new(erlang:binary_to_atom(<<AccountId/binary, "-raw">>, 'latin1'), [duplicate_bag]),
@@ -97,9 +102,9 @@ monthly_fees(AccountId, Year, Month) ->
     ets:delete(ResultTableId),
     services_to_proplist(ServicesList, Year, Month).
 
-process_per_minute_calls(AccountId, Year, Month, Carrier) when is_binary(Carrier) ->
-    process_per_minute_calls(AccountId, Year, Month, onbill_util:carrier_doc(Carrier, AccountId));
-process_per_minute_calls(AccountId, Year, Month, CarrierDoc) ->
+process_per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Carrier) ->
+    process_per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
+process_per_minute_calls(AccountId, Year, Month, _Day, CarrierDoc) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, []) of
         {'error', 'not_found'} ->
@@ -197,7 +202,7 @@ process_one_time_fee(JObj, Modb) ->
      ,kz_json:get_value(<<"description">>, DFDoc)
      ,wht_util:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, DFDoc))
      ,1.0
-     ,kz_util:to_binary(Day)
+     ,[{?TO_BIN(Year), ?TO_BIN(httpd_util:month(Month)), ?TO_BIN(Day)}]
      ,DaysInMonth
      ,one_time_fee_name(DFDoc)
     }.
@@ -213,14 +218,14 @@ process_daily_fee(JObj, Modb, RawTableId) ->
 
 upload_daily_fee_to_ets(DFDoc, RawTableId) ->
     MaxDailyUsage = kz_json:get_value([<<"pvt_metadata">>,<<"max_usage">>,<<"daily_calculated_items">>],DFDoc),
-    <<_Year:4/binary, _Month:2/binary, Day:2/binary, _/binary>> = kz_json:get_value(<<"_id">>,DFDoc),
-    [process_element(kz_json:get_value(ElementKey, MaxDailyUsage), RawTableId, ?TO_INT(Day))
+    <<Year:4/binary, Month:2/binary, Day:2/binary, _/binary>> = kz_json:get_value(<<"_id">>,DFDoc),
+    [process_element(kz_json:get_value(ElementKey, MaxDailyUsage), RawTableId, {Year, Month, Day})
      || ElementKey <- kz_json:get_keys(MaxDailyUsage)
      ,kz_json:is_json_object(kz_json:get_value(ElementKey, MaxDailyUsage)) == 'true'
     ].
 
-process_element(Element, RawTableId, Day) ->
-    [ets:insert(RawTableId, {category(Unit), item(Unit), rate(Unit), quantity(Unit), Day, name(Unit)})
+process_element(Element, RawTableId, Date) ->
+    [ets:insert(RawTableId, {category(Unit), item(Unit), rate(Unit), quantity(Unit), Date, name(Unit)})
      || {_, Unit} <- kz_json:to_proplist(Element)
      , quantity(Unit) =/= 0.0
     ].
@@ -257,11 +262,21 @@ handle_ets_item_price(RawTableId, ResultTableId, ServiceType, Item, Price) ->
     [handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Quantity) || [Quantity] <- Quantities].
 
 handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Quantity) ->
-    Days = [Day || [Day] <- lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'$5','_'}))],
+    Dates = [Date || [Date] <- lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'$5','_'}))],
     [[Name]|_] = lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'_','$6'})),
-    lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Days: ~p, Name: ~p",[ServiceType, Item, Price, Quantity, days_sequence_reduce(Days), Name]),
-    ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, days_sequence_reduce(Days), length(Days), Name}).
+    lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Dates: ~p, Name: ~p",[ServiceType, Item, Price, Quantity, dates_sequence_reduce(Dates), Name]),
+    ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, dates_sequence_reduce(Dates), length(Dates), Name}).
 
+-spec dates_sequence_reduce(proplist()) -> proplist().
+dates_sequence_reduce(DatesList) ->
+    Pairs = lists:usort([{Year,Month} || {Year,Month,_} <- DatesList]),
+    [format_pair_days(Year, Month, DatesList) || {Year,Month} <- Pairs].
+
+format_pair_days(Year, Month, DatesList) ->
+    Days = [?TO_INT(D) || {Y,M,D} <- DatesList, Year == Y  andalso Month == M],
+    {Year, kz_util:to_binary(httpd_util:month(?TO_INT(Month))), days_sequence_reduce(Days)}.
+
+-spec days_sequence_reduce(proplist()) -> proplist().
 days_sequence_reduce([Digit]) ->
     days_sequence_reduce([Digit], []);
 days_sequence_reduce([First,Last]) ->
@@ -299,16 +314,16 @@ services_to_proplist(ServicesList, Year, Month) ->
     lists:foldl(fun(ServiceLine, Acc) -> service_to_line(ServiceLine, Year, Month, Acc) end, [], ServicesList).
 
 service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name}, Year, Month, Acc) ->
-    DaysInMonth = calendar:last_day_of_the_month(Year, Month),
+    DaysInPeriod = calendar:last_day_of_the_month(Year, Month),
     [[{<<"category">>, ServiceType}
     ,{<<"item">>, Item}
     ,{<<"name">>, Name}
-    ,{<<"cost">>, DaysQty / DaysInMonth * Price * Quantity}
+    ,{<<"cost">>, DaysQty / DaysInPeriod * Price * Quantity}
     ,{<<"rate">>, Price}
     ,{<<"quantity">>, Quantity}
     ,{<<"period">>, Period}
     ,{<<"days_quantity">>, DaysQty}
-    ,{<<"days_in_month">>, DaysInMonth}
+    ,{<<"days_in_period">>, DaysInPeriod}
     ,{<<"month">>, Month}
     ,{<<"month_pad">>, kz_util:pad_month(Month)}
     ,{<<"year">>, Year}
@@ -323,7 +338,7 @@ aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, 
     ,{<<"quantity">>, Quantity}
     ,{<<"period">>, Period}
     ,{<<"days_quantity">>, DaysQty}
-    ,{<<"days_in_month">>, calendar:last_day_of_the_month(Year, Month)}
+    ,{<<"days_in_period">>, calendar:last_day_of_the_month(Year, Month)}
     ,{<<"month">>, Month}
     ,{<<"month_pad">>, kz_util:pad_month(Month)}
     ,{<<"year">>, Year}

@@ -83,7 +83,10 @@
           {% for fee_line in monthly_fees %}
           <tr style="page-break-inside: avoid !important;">
             <td>
-              {{ fee_line.name }} {% if fee_line.period %}{{ fee_line.period }}.{{ fee_line.month_pad }}.{{ fee_line.year }}{% endif %}
+              {{ fee_line.name }}
+              {% for period in fee_line.period %}
+                {{ period.3 }} {{ period.2 }} {{ period.1 }}
+              {% endfor %}
             </td>
             <td class="text-right">
               {{ fee_line.quantity }}

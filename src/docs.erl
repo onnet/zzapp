@@ -118,9 +118,7 @@ generate_docs(AccountId, Year, Month) ->
     maybe_aggregate_invoice(AccountId, Year, Month, Carriers).
 
 generate_docs(AccountId, Year, Month, Carrier) ->
-    CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
-    OnbillResellerVars = onbill_util:reseller_vars(AccountId),
-    VatUpdatedFeesList = fees:shape_fees(AccountId, Year, Month, CarrierDoc, OnbillResellerVars),
+    VatUpdatedFeesList = fees:shape_fees(AccountId, Year, Month, Carrier),
     Totals = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
                                                         {TN_Acc + props:get_value(<<"cost_netto">>, X)
                                                          ,VAT_Acc + props:get_value(<<"vat_line_total">>, X)

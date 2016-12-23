@@ -165,14 +165,16 @@ lager:info("IAM ItemJObj: ~p",[ItemJObj]),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     MonthStr = httpd_util:month(Month),
 
+    Reason = <<"recurring_prorate">>,
+    Description = <<(?TO_BIN(Name))/binary>>,
+
     Meta =
         kz_json:from_list(
-          [{<<"account_id">>, AccountId}]
+          [{<<"account_id">>, AccountId}
+          ,{<<"date">>, <<(?TO_BIN(Day))/binary," ",(?TO_BIN(MonthStr))/binary," ",(?TO_BIN(Year))/binary>>}
+          ,{<<"reason">>, Reason}
+          ]
          ),
-    Reason = <<(?TO_BIN(Item))/binary," add-on">>,
-lager:info("IAM Reason: ~p",[Reason]),
-    Description = <<(?TO_BIN(Name))/binary," add-on ",(?TO_BIN(Day))/binary," ",(?TO_BIN(MonthStr))/binary," ",(?TO_BIN(Year))/binary>>,
-lager:info("IAM Description: ~p",[Description]),
 
     Routines = [fun(Tr) -> kz_transaction:set_reason(Reason, Tr) end
                ,fun(Tr) -> kz_transaction:set_description(Description, Tr) end
