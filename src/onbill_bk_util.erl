@@ -159,7 +159,6 @@ charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], T
 create_debit_tansaction(AccountId, ItemJObj, Qty, Timestamp) ->
 lager:info("IAM ItemJObj: ~p",[ItemJObj]),
     Name = kz_json:get_value(<<"name">>, ItemJObj),
-    Item = kz_json:get_value(<<"item">>, ItemJObj),
     Rate = kz_json:get_float_value(<<"rate">>, ItemJObj),
     Units = wht_util:dollars_to_units(Rate),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
@@ -173,6 +172,8 @@ lager:info("IAM ItemJObj: ~p",[ItemJObj]),
           [{<<"account_id">>, AccountId}
           ,{<<"date">>, <<(?TO_BIN(Day))/binary," ",(?TO_BIN(MonthStr))/binary," ",(?TO_BIN(Year))/binary>>}
           ,{<<"reason">>, Reason}
+          ,{<<"diff_quantity">>, Qty}
+          ,{<<"item_jobj">>, ItemJObj}
           ]
          ),
 
