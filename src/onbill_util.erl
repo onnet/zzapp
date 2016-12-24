@@ -26,6 +26,9 @@
         ,period_start_tuple/3
         ,period_end_tuple_by_start/3
         ,period_tuple/3
+        ,period_start_date/1
+        ,period_start_date/2
+        ,period_start_date/4
         ]).
 
 -include("onbill.hrl").
@@ -230,3 +233,17 @@ period_tuple(Year, Month, Day) ->
     ,{<<"day">>, Day}
     ].
 
+-spec period_start_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
+period_start_date(AccountId) ->
+    Timestamp = kz_util:current_tstamp(),
+    period_start_date(AccountId, Timestamp).
+
+-spec period_start_date(ne_binary(), gregorian_seconds()) -> {kz_year(), kz_month(), kz_day()}.
+period_start_date(AccountId, Timestamp) ->
+    {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
+    period_start_date(AccountId, Year, Month, Day).
+
+-spec period_start_date(ne_binary(), kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+period_start_date(_AccountId, Year, Month, Day) ->
+    {Year, Month, Day}.
+    
