@@ -60,6 +60,14 @@
         </div>
       </div>
       <br />
+        <h3>
+          <small>
+            Service period:
+            {{ period_start.day }} {{ period_start.month_short }} {{ period_start.year }}
+            -
+            {{ period_end.day }} {{ period_end.month_short }} {{ period_end.year }}
+          </small>
+        </h3>
       <br />
       <!-- / end client details section -->
       <table class="table table-bordered">
@@ -83,7 +91,7 @@
           {% for fee_line in monthly_fees %}
           <tr style="page-break-inside: avoid !important;">
             <td>
-              {{ fee_line.name }}
+              {{ fee_line.name }}.
               {% for period in fee_line.period %}
                 {{ period.day }} {{ period.month_short }} {{ period.year }}
               {% endfor %}

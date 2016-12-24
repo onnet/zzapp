@@ -22,6 +22,10 @@
         ,adjust_period_last_day/3
         ,days_in_period/3
         ,period_last_day_by_first_one/3
+        ,period_end_modb_by_start/4
+        ,period_start_tuple/3
+        ,period_end_tuple_by_start/3
+        ,period_tuple/3
         ]).
 
 -include("onbill.hrl").
@@ -183,10 +187,12 @@ adjust_period_last_day(Year, Month, Day) ->
     end.
 
 -spec period_last_day_by_first_one(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+period_last_day_by_first_one(Year, Month, 1) -> 
+    {Year, Month, calendar:last_day_of_the_month(Year, Month)};
 period_last_day_by_first_one(Year, Month, Day) -> 
     {FY, FM, FD} = adjust_period_first_day(Year, Month, Day),
     {NextMonthYear, NextMonth} = next_month(FY, FM),
-    adjust_period_last_day(NextMonthYear, NextMonth, FD).
+    adjust_period_last_day(NextMonthYear, NextMonth, FD - 1).
 
 -spec days_in_period(kz_year(), kz_month(), kz_day()) -> integer().
 days_in_period(StartYear, StartMonth, StartDay) ->
@@ -196,3 +202,31 @@ days_in_period(StartYear, StartMonth, StartDay) ->
   %  calendar:date_to_gregorian_days(adjust_period_first_day(StartYear, StartMonth, StartDay)).
   {Year, Month, _} = adjust_period_first_day(StartYear, StartMonth, StartDay),
   calendar:last_day_of_the_month(Year, Month).
+
+-spec period_start_tuple(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+period_start_tuple(Year, Month, Day) ->
+    {Y, M, D} = onbill_util:adjust_period_first_day(Year, Month, Day),
+    period_tuple(Y, M, D).
+
+-spec period_end_modb_by_start(ne_binary(), kz_year(), kz_month(), kz_day()) -> ne_binary().
+period_end_modb_by_start(AccountId, Year, Month, Day) ->
+    {SY, SM, SD} = onbill_util:adjust_period_first_day(Year, Month, Day),
+    {Y, M, _} = onbill_util:period_last_day_by_first_one(SY, SM, SD),
+    kazoo_modb:get_modb(AccountId, Y, M).
+
+-spec period_end_tuple_by_start(kz_year(), kz_month(), kz_day()) -> proplist().
+period_end_tuple_by_start(Year, Month, Day) ->
+    {SY, SM, SD} = onbill_util:adjust_period_first_day(Year, Month, Day),
+    {Y, M, D} = onbill_util:period_last_day_by_first_one(SY, SM, SD),
+    period_tuple(Y, M, D).
+
+-spec period_tuple(kz_year(), kz_month(), kz_day()) -> proplist().
+period_tuple(Year, Month, Day) when is_integer(Day) ->
+    period_tuple(Year, Month, ?TO_BIN(Day));
+period_tuple(Year, Month, Day) ->
+    [{<<"year">>, ?TO_BIN(Year)}
+    ,{<<"month_short">>, ?TO_BIN(httpd_util:month(?TO_INT(Month)))}
+    ,{<<"month_pad">>, ?TO_BIN(kz_util:pad_month(Month))}
+    ,{<<"day">>, Day}
+    ].
+
