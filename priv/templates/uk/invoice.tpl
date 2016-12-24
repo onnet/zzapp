@@ -24,7 +24,7 @@
         </div>
         <div class="col-xs-5 text-right">
           <h1><small style="color: black;">INVOICE #{{ doc_pref }}{{ doc_number }}{{ doc_ind }}</small></h1>
-          <h3><small>{{ doc_date }}</small></h3>
+          <h3><small>{{ period_end.day }} {{ period_end.month_short }} {{ period_end.year }}</small></h3>
         </div>
       </div>
       <br />
