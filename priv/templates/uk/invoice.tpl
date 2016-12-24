@@ -85,7 +85,7 @@
             <td>
               {{ fee_line.name }}
               {% for period in fee_line.period %}
-                {{ period.3 }} {{ period.2 }} {{ period.1 }}
+                {{ period.day }} {{ period.month_short }} {{ period.year }}
               {% endfor %}
             </td>
             <td class="text-right">

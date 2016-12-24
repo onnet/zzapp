@@ -18,9 +18,10 @@
         ,normalize_view_active_results/2
         ,maybe_fee_active/2
         ,next_month/2
-        ,maybe_period_first_day/3
-        ,maybe_period_last_day/3
+        ,adjust_period_first_day/3
+        ,adjust_period_last_day/3
         ,days_in_period/3
+        ,period_last_day_by_first_one/3
         ]).
 
 -include("onbill.hrl").
@@ -160,8 +161,8 @@ next_month(Year, 12) ->
 next_month(Year, Month) ->
     {Year, Month + 1}.
 
--spec maybe_period_first_day(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
-maybe_period_first_day(Year, Month, Day) ->
+-spec adjust_period_first_day(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+adjust_period_first_day(Year, Month, Day) ->
     LastDayOfMonth = calendar:last_day_of_the_month(Year, Month),
     case (Day > LastDayOfMonth) of
         'true' ->
@@ -171,8 +172,8 @@ maybe_period_first_day(Year, Month, Day) ->
             {Year, Month, Day}
     end.
 
--spec maybe_period_last_day(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
-maybe_period_last_day(Year, Month, Day) ->
+-spec adjust_period_last_day(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+adjust_period_last_day(Year, Month, Day) ->
     LastDayOfMonth = calendar:last_day_of_the_month(Year, Month),
     case (Day > LastDayOfMonth) of
         'true' ->
@@ -181,11 +182,17 @@ maybe_period_last_day(Year, Month, Day) ->
             {Year, Month, Day}
     end.
 
+-spec period_last_day_by_first_one(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+period_last_day_by_first_one(Year, Month, Day) -> 
+    {FY, FM, FD} = adjust_period_first_day(Year, Month, Day),
+    {NextMonthYear, NextMonth} = next_month(FY, FM),
+    adjust_period_last_day(NextMonthYear, NextMonth, FD).
+
 -spec days_in_period(kz_year(), kz_month(), kz_day()) -> integer().
 days_in_period(StartYear, StartMonth, StartDay) ->
   %  {NextMonthYear, NextMonth} = next_month(StartYear, StartMonth),
-  %  calendar:date_to_gregorian_days(maybe_period_last_day(NextMonthYear, NextMonth, StartDay))
+  %  calendar:date_to_gregorian_days(adjust_period_last_day(NextMonthYear, NextMonth, StartDay))
   %  -
-  %  calendar:date_to_gregorian_days(maybe_period_first_day(StartYear, StartMonth, StartDay)).
-  {Year, Month, _} = maybe_period_first_day(StartYear, StartMonth, StartDay),
+  %  calendar:date_to_gregorian_days(adjust_period_first_day(StartYear, StartMonth, StartDay)).
+  {Year, Month, _} = adjust_period_first_day(StartYear, StartMonth, StartDay),
   calendar:last_day_of_the_month(Year, Month).

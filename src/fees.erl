@@ -86,7 +86,7 @@ maybe_monthly_fees(AccountId, CarrierDoc, Year, Month, Day) ->
         _ -> process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc)
     end.
 
-monthly_fees(AccountId, Year, Month, _Day) ->
+monthly_fees(AccountId, Year, Month, Day) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     _ = onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
     RawTableId = ets:new(erlang:binary_to_atom(<<AccountId/binary, "-raw">>, 'latin1'), [duplicate_bag]),
@@ -100,11 +100,11 @@ monthly_fees(AccountId, Year, Month, _Day) ->
     [lager:info("Result Table Line: ~p",[Service]) || Service <- ServicesList],
     ets:delete(RawTableId),
     ets:delete(ResultTableId),
-    services_to_proplist(ServicesList, Year, Month).
+    services_to_proplist(ServicesList, Year, Month, Day).
 
 process_per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Carrier) ->
     process_per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
-process_per_minute_calls(AccountId, Year, Month, _Day, CarrierDoc) ->
+process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
     case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, []) of
         {'error', 'not_found'} ->
@@ -123,6 +123,7 @@ process_per_minute_calls(AccountId, Year, Month, _Day, CarrierDoc) ->
                                }
                                ,Year
                                ,Month
+                               ,Day
                               )
     end.
 
@@ -202,7 +203,7 @@ process_one_time_fee(JObj, Modb) ->
      ,kz_json:get_value(<<"description">>, DFDoc)
      ,wht_util:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, DFDoc))
      ,1.0
-     ,[{?TO_BIN(Year), ?TO_BIN(httpd_util:month(Month)), ?TO_BIN(Day)}]
+     ,[period_tuple(Year, Month, Day)]
      ,DaysInMonth
      ,one_time_fee_name(DFDoc)
     }.
@@ -270,11 +271,11 @@ handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Qu
 -spec dates_sequence_reduce(proplist()) -> proplist().
 dates_sequence_reduce(DatesList) ->
     Pairs = lists:usort([{Year,Month} || {Year,Month,_} <- DatesList]),
-    [format_pair_days(Year, Month, DatesList) || {Year,Month} <- Pairs].
+    [format_days_of_month(Year, Month, DatesList) || {Year,Month} <- Pairs].
 
-format_pair_days(Year, Month, DatesList) ->
+format_days_of_month(Year, Month, DatesList) ->
     Days = [?TO_INT(D) || {Y,M,D} <- DatesList, Year == Y  andalso Month == M],
-    {Year, kz_util:to_binary(httpd_util:month(?TO_INT(Month))), days_sequence_reduce(Days)}.
+    period_tuple(Year, Month, days_sequence_reduce(Days)).
 
 -spec days_sequence_reduce(proplist()) -> proplist().
 days_sequence_reduce([Digit]) ->
@@ -310,10 +311,10 @@ days_sequence_reduce(Prev, [First,Next|T], Acc) ->
 days_glue(L) ->
     lists:foldl(fun(X,Acc) -> case Acc of <<>> -> X; _ -> <<Acc/binary, ",", X/binary>> end end, <<>>, L).
 
-services_to_proplist(ServicesList, Year, Month) ->
-    lists:foldl(fun(ServiceLine, Acc) -> service_to_line(ServiceLine, Year, Month, Acc) end, [], ServicesList).
+services_to_proplist(ServicesList, Year, Month, Day) ->
+    lists:foldl(fun(ServiceLine, Acc) -> service_to_line(ServiceLine, Year, Month, Day, Acc) end, [], ServicesList).
 
-service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name}, Year, Month, Acc) ->
+service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name}, Year, Month, Day, Acc) ->
     DaysInPeriod = calendar:last_day_of_the_month(Year, Month),
     [[{<<"category">>, ServiceType}
     ,{<<"item">>, Item}
@@ -321,29 +322,27 @@ service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name}, Yea
     ,{<<"cost">>, DaysQty / DaysInPeriod * Price * Quantity}
     ,{<<"rate">>, Price}
     ,{<<"quantity">>, Quantity}
-    ,{<<"period">>, Period}
     ,{<<"days_quantity">>, DaysQty}
     ,{<<"days_in_period">>, DaysInPeriod}
-    ,{<<"month">>, Month}
-    ,{<<"month_pad">>, kz_util:pad_month(Month)}
-    ,{<<"year">>, Year}
+    ,{<<"period">>, Period}
+    ,{<<"period_start">>, period_start_tuple(Year, Month, Day)}
+    ,{<<"period_end">>, period_end_tuple_by_start(Year, Month, Day)}
     ]] ++ Acc.
 
-aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, Name}, Year, Month) when Cost > 0.0, Quantity > 0.0 ->
+aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, Name}, Year, Month, Day) when Cost > 0.0, Quantity > 0.0 ->
     [[{<<"category">>, ServiceType}
     ,{<<"item">>, Item}
     ,{<<"name">>, Name}
     ,{<<"cost">>, Cost}
     ,{<<"rate">>, Cost / Quantity}
     ,{<<"quantity">>, Quantity}
-    ,{<<"period">>, Period}
     ,{<<"days_quantity">>, DaysQty}
     ,{<<"days_in_period">>, calendar:last_day_of_the_month(Year, Month)}
-    ,{<<"month">>, Month}
-    ,{<<"month_pad">>, kz_util:pad_month(Month)}
-    ,{<<"year">>, Year}
+    ,{<<"period">>, Period}
+    ,{<<"period_start">>, period_start_tuple(Year, Month, Day)}
+    ,{<<"period_end">>, period_end_tuple_by_start(Year, Month, Day)}
     ]];
-aggregated_service_to_line(_, _, _) ->
+aggregated_service_to_line(_, _, _, _) ->
     [].
 
 -spec vatify_amount(ne_binary(), number(), kz_json:object()) -> 'ok'.
@@ -371,3 +370,22 @@ vatify_amount(AmountName, Amount, _, _) ->
     ,{<<AmountName/binary, "_brutto">>, Amount}
     ,{<<AmountName/binary, "_vat">>, 0.0}
     ].
+
+period_start_tuple(Year, Month, Day) ->
+    {Y, M, D} = onbill_util:adjust_period_first_day(Year, Month, Day),
+    period_tuple(Y, M, D).
+
+period_end_tuple_by_start(Year, Month, Day) ->
+    {SY, SM, SD} = onbill_util:adjust_period_first_day(Year, Month, Day),
+    {Y, M, D} = onbill_util:period_last_day_by_first_one(SY, SM, SD),
+    period_tuple(Y, M, D).
+
+period_tuple(Year, Month, Day) when is_integer(Day) ->
+    period_tuple(Year, Month, ?TO_BIN(Day));
+period_tuple(Year, Month, Day) ->
+    [{<<"year">>, ?TO_BIN(Year)}
+    ,{<<"month_short">>, ?TO_BIN(httpd_util:month(?TO_INT(Month)))}
+    ,{<<"month_pad">>, ?TO_BIN(kz_util:pad_month(Month))}
+    ,{<<"day">>, Day}
+    ].
+
