@@ -29,6 +29,7 @@
         ,period_start_date/1
         ,period_start_date/2
         ,period_start_date/4
+        ,get_account_created_date/1
         ]).
 
 -include("onbill.hrl").
@@ -162,6 +163,12 @@ maybe_fee_active(LookupTstamp, Fee) ->
     andalso
     LookupTstamp < kz_json:get_value([<<"value">>, <<"service_ends">>], Fee).
 
+-spec prev_month(kz_year(), kz_month()) -> {kz_year(), kz_month()}.
+prev_month(Year, 1) ->
+    {Year - 1, 12};
+prev_month(Year, Month) ->
+    {Year, Month - 1}.
+
 -spec next_month(kz_year(), kz_month()) -> {kz_year(), kz_month()}.
 next_month(Year, 12) ->
     {Year + 1, 1};
@@ -244,6 +251,45 @@ period_start_date(AccountId, Timestamp) ->
     period_start_date(AccountId, Year, Month, Day).
 
 -spec period_start_date(ne_binary(), kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
-period_start_date(_AccountId, Year, Month, Day) ->
+period_start_date(AccountId, Year, Month, Day) ->
+    case kz_json:get_value(<<"pvt_billing_day">>, account_vars(AccountId)) of
+        'undefined' ->
+            _ = set_billing_day(AccountId),
+            period_start_date(AccountId, Year, Month, Day);
+        BillingDay ->
+            BDay = kz_util:to_integer(BillingDay),
+            case Day >= BDay of
+                'true' ->
+                     {Year, Month, BDay};
+                'false' ->
+                     {PrevYear, PrevMonth} = prev_month(Year, Month),
+                     {PrevYear, PrevMonth, BDay}
+            end
+    end.
+
+set_billing_day(AccountId) ->
+    BillingDay =
+        case kz_json:get_value(<<"pvt_billing_period_type">>, account_vars(AccountId)) of
+            <<"calendar_month">> -> 1;
+            _ ->
+                {_, _, Day} = get_account_created_date(AccountId),
+                Day
+        end,
+    DbName = kz_util:format_account_id(AccountId,'encoded'),
+    NewDoc = case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
+        {ok, Doc} ->
+            kz_json:set_value(<<"pvt_billing_day">>, BillingDay, Doc);
+        {'error', 'not_found'} ->
+            kz_json:set_values([{<<"_id">>, ?ONBILL_DOC}
+                               ,{<<"pvt_type">>, ?ONBILL_DOC}
+                               ,{<<"pvt_billing_day">>, BillingDay}
+                               ]
+                              ,kz_json:new())
+    end,
+    kz_datamgr:ensure_saved(DbName, NewDoc).
+
+-spec get_account_created_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
+get_account_created_date(AccountId) ->
+    Timestamp = kz_json:get_value(<<"created">>, kz_account:fetch(AccountId)),
+    {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     {Year, Month, Day}.
-    

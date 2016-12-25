@@ -7,6 +7,7 @@
         ,select_non_zero_items_json/1
         ,save_dailyfee_doc/5
         ,charge_newly_added/4
+        ,check_this_period_mrc/3
         ]).
 
 -include("onbill.hrl").
@@ -154,6 +155,9 @@ charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], T
     end,
     charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp). 
 
+-spec check_this_period_mrc(ne_binary(), kz_json:object(), integer()) -> 'ok'|proplist(). 
+check_this_period_mrc(_AccountId, _NewMax, _Timestamp) ->
+    ok.
 
 -spec create_debit_tansaction(ne_binary(), kz_json:object(), integer(), integer()) -> 'ok'|proplist(). 
 create_debit_tansaction(AccountId, ItemJObj, Qty, Timestamp) ->
