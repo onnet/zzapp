@@ -147,20 +147,46 @@ dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items) ->
 -spec charge_newly_added(ne_binary(), kz_json:object(), proplist(), integer()) -> 'ok'|proplist(). 
 charge_newly_added(_AccountId, _NewMax, [], _Timestamp) -> 'ok';
 charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], Timestamp) -> 
-    CategoriesList = kz_json:get_value(<<"pvt_daily_count_categories">>, onbill_util:reseller_vars(AccountId), []),
-    case lists:member(Category, CategoriesList) of
+    DailyCountCategoriesList = kz_json:get_value(<<"pvt_daily_count_categories">>, onbill_util:reseller_vars(AccountId), []),
+    case lists:member(Category, DailyCountCategoriesList) of
         'true' -> 'ok';
         'false' ->
-            create_debit_tansaction(AccountId, kz_json:get_value(Path, NewMax), Qty, Timestamp)
+            create_debit_tansaction(AccountId, kz_json:get_value(Path, NewMax), Qty, Timestamp, <<"recurring_prorate">>)
     end,
     charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp). 
 
 -spec check_this_period_mrc(ne_binary(), kz_json:object(), integer()) -> 'ok'|proplist(). 
-check_this_period_mrc(_AccountId, _NewMax, _Timestamp) ->
-    ok.
+check_this_period_mrc(AccountId, NewMax, Timestamp) ->
+    {Year, Month, Day} = onbill_util:period_start_date(AccountId, Timestamp),
+    case kazoo_modb:open_doc(AccountId, ?MRC_DOC, Year, Month) of
+        {'ok', _} ->
+            'ok';
+        {'error', 'not_found'} ->
+            case onbill_util:get_account_created_date(AccountId) of
+                {Year, Month, Day} ->
+                    lager:debug("first period customer, recurring_prorate instead of monthly_recurring needed");
+                _ ->
+                    lager:debug("monthly_recurring doc not found, trying to create"),
+                    [charge_mrc_category(AccountId, Category, NewMax, Timestamp)
+                     || Category <- kz_json:get_keys(NewMax)
+                     ,not lists:member(Category, kz_json:get_value(<<"pvt_daily_count_categories">>, onbill_util:reseller_vars(AccountId), []))
+                    ]
+            end            
+    end.
 
--spec create_debit_tansaction(ne_binary(), kz_json:object(), integer(), integer()) -> 'ok'|proplist(). 
-create_debit_tansaction(AccountId, ItemJObj, Qty, Timestamp) ->
+charge_mrc_category(AccountId, Category, NewMax, Timestamp) ->
+    ItemsList = kz_json:get_keys(kz_json:get_value(Category, NewMax)),
+    [create_debit_tansaction(AccountId, kz_json:get_value([Category,Item],NewMax), Timestamp, <<"monthly_recurring">>)
+     || Item <- ItemsList
+    ].
+
+-spec create_debit_tansaction(ne_binary(), kz_json:object(), integer(), ne_binary()) -> 'ok'|proplist(). 
+-spec create_debit_tansaction(ne_binary(), kz_json:object(), integer(), integer(), ne_binary()) -> 'ok'|proplist(). 
+create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason) ->
+    Qty = kz_json:get_value(<<"quantity">>, ItemJObj),
+    create_debit_tansaction(AccountId, ItemJObj, Qty, Timestamp, Reason).
+
+create_debit_tansaction(AccountId, ItemJObj, Qty, Timestamp, Reason) ->
 lager:info("IAM ItemJObj: ~p",[ItemJObj]),
     Name = kz_json:get_value(<<"name">>, ItemJObj),
     Rate = kz_json:get_float_value(<<"rate">>, ItemJObj),
@@ -168,7 +194,6 @@ lager:info("IAM ItemJObj: ~p",[ItemJObj]),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     MonthStr = httpd_util:month(Month),
 
-    Reason = <<"recurring_prorate">>,
     Description = <<(?TO_BIN(Name))/binary>>,
 
     Meta =

@@ -9,6 +9,7 @@
 
 -define(ONBILL_DB, <<"onbill">>).
 -define(ONBILL_DOC, <<"onbill">>).
+-define(MRC_DOC, <<"monthly_recurring">>).
 -define(TO_BIN(Var), kz_util:to_binary(Var)).
 -define(TO_INT(Var), kz_util:to_integer(Var)).
 -define(CARRIER_DOC(CarrierName), <<"onbill_carrier.", CarrierName/binary>>).

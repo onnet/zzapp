@@ -82,10 +82,11 @@ carrier_doc(Carrier, AccountId) ->
 account_vars(AccountId) ->
     DbName = kz_util:format_account_id(AccountId,'encoded'),
     case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
-        {'ok', OnbillDoc} -> OnbillDoc;
-    _ ->
-        lager:info("can't open onbill doc in ~p, please check if it exists",[DbName]),
-        kz_json:new()
+        {'ok', OnbillDoc} ->
+            OnbillDoc;
+        _ ->
+            lager:info("can't open onbill doc in ~p, please check if it exists",[DbName]),
+            kz_json:new()
     end.
 
 -spec reseller_vars(ne_binary()) -> proplist().
@@ -290,6 +291,7 @@ set_billing_day(AccountId) ->
 
 -spec get_account_created_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
 get_account_created_date(AccountId) ->
-    Timestamp = kz_json:get_value(<<"created">>, kz_account:fetch(AccountId)),
+    {'ok', AccountDoc} = kz_account:fetch(AccountId),
+    Timestamp = kz_json:get_value(<<"pvt_created">>, AccountDoc),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     {Year, Month, Day}.

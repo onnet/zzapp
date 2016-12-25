@@ -23,13 +23,13 @@
 -spec sync(kz_service_item:items(), ne_binary()) -> 'ok'.
 sync(Items, AccountId) ->
     Timestamp = kz_util:current_tstamp(),
-    onbill_util:period_start_date(AccountId, Timestamp),
     case onbill_bk_util:max_daily_usage_exceeded(Items, AccountId, Timestamp) of
         {'true', NewMax, ExcessDets} ->
-            DailyCountItems = onbill_bk_util:select_daily_count_items_list(NewMax, AccountId),
-            lager:debug("sync daily count items for: ~p : ~p; excess details: ~p",[AccountId, DailyCountItems, ExcessDets]),
+            lager:debug("sync daily AccountId: ~p; excess details: ~p",[AccountId, ExcessDets]),
             _ = onbill_bk_util:check_this_period_mrc(AccountId, NewMax, Timestamp),
             _ = onbill_bk_util:charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp),
+            DailyCountItems = onbill_bk_util:select_daily_count_items_list(NewMax, AccountId),
+            lager:debug("sync daily AccountId: ~p; daily count items: ~p",[AccountId, DailyCountItems]),
             sync(Timestamp, DailyCountItems, AccountId, 0.0, NewMax, Items);
         'false' ->
             lager:debug("max usage not exceeded, no sync needed for: ~p",[AccountId])
