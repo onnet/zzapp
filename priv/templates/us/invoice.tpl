@@ -24,7 +24,7 @@
         </div>
         <div class="col-xs-5 text-right">
           <h3><small style="color: black;">INVOICE #{{ doc_pref }}{{ doc_number }}{{ doc_ind }}</small></h3>
-          <h4><small>{{ doc_date }}</small></h4>
+          <h4><small>{{ period_end.day }} {{ period_end.month_short }} {{ period_end.year }}</small></h4>
         </div>
       </div>
       <br />
@@ -60,6 +60,14 @@
         </div>
       </div>
       <br />
+        <h4>
+          <small>
+            Service period:
+            {{ period_start.day }} {{ period_start.month_short }} {{ period_start.year }}
+            -
+            {{ period_end.day }} {{ period_end.month_short }} {{ period_end.year }}
+          </small>
+        </h4>
       <br />
       <!-- / end client details section -->
       <table class="table table-bordered">
@@ -83,7 +91,21 @@
           {% for fee_line in monthly_fees %}
           <tr style="page-break-inside: avoid !important;">
             <td>
-              {{ fee_line.name }} {% if fee_line.period %}{{ fee_line.period }}.{{ fee_line.month_pad }}.{{ fee_line.year }}{% endif %}
+              {% if fee_line.type == "daily_calculated" %}
+                {{ fee_line.name }}.
+                {% for period in fee_line.period %}
+                  {{ period.day }}
+                  {{ period.month_short }}
+                  {{ period.year }}{% if forloop.last %}.{% endif %}
+                {% endfor %}
+                Pro-rated.
+              {% elif fee_line.category == "number_activation" %}
+                Number activation: {{ fee_line.name }}. NRC
+              {% elif fee_line.category == "monthly_recurring" %}
+                {{ fee_line.name }}. MRC
+              {% else %}
+                {{ fee_line.name }}.
+              {% endif %}
             </td>
             <td class="text-right">
               {{ fee_line.quantity }}
