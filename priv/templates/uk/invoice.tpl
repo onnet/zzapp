@@ -91,10 +91,21 @@
           {% for fee_line in monthly_fees %}
           <tr style="page-break-inside: avoid !important;">
             <td>
-              {{ fee_line.name }}.
-              {% for period in fee_line.period %}
-                {{ period.day }} {{ period.month_short }} {{ period.year }}
-              {% endfor %}
+              {% if fee_line.type == "daily_calculated" %}
+                {{ fee_line.name }}.
+                {% for period in fee_line.period %}
+                  {{ period.day }}
+                  {{ period.month_short }}
+                  {{ period.year }}{% if forloop.last %}.{% endif %}
+                {% endfor %}
+                Pro-rated.
+              {% elif fee_line.category == "number_activation" %}
+                Number activation: {{ fee_line.name }}. NRC
+              {% elif fee_line.category == "monthly_recurring" %}
+                {{ fee_line.name }}. MRC
+              {% else %}
+                {{ fee_line.name }}.
+              {% endif %}
             </td>
             <td class="text-right">
               {{ fee_line.quantity }}

@@ -167,6 +167,7 @@ check_this_period_mrc(AccountId, NewMax, Timestamp) ->
                     lager:debug("first period customer, recurring_prorate instead of monthly_recurring needed");
                 _ ->
                     lager:debug("monthly_recurring doc not found, trying to create"),
+                    {'ok',_} = create_monthly_recurring_doc(AccountId, NewMax, Timestamp),
                     [charge_mrc_category(AccountId, Category, NewMax, Timestamp)
                      || Category <- kz_json:get_keys(NewMax)
                      ,not lists:member(Category, kz_json:get_value(<<"pvt_daily_count_categories">>, onbill_util:reseller_vars(AccountId), []))
@@ -174,14 +175,29 @@ check_this_period_mrc(AccountId, NewMax, Timestamp) ->
             end            
     end.
 
+-spec create_monthly_recurring_doc(ne_binary(), kz_json:object(), gregorian_seconds()) -> any().
+create_monthly_recurring_doc(AccountId, NewMax, Timestamp) ->
+    {Year, Month, Day} = onbill_util:period_start_date(AccountId, Timestamp),
+    MonthStrBin = kz_util:to_binary(httpd_util:month(Month)),
+    Routines = [{<<"_id">>, <<"monthly_recurring">>}
+               ,{<<"description">>,<<"MRC info for period start: ",(?TO_BIN(Day))/binary," ",MonthStrBin/binary," ",(?TO_BIN(Year))/binary>>}
+               ,{[<<"pvt_metadata">>,<<"items">>], NewMax}
+               ,{<<"pvt_created">>, Timestamp}
+               ,{<<"pvt_modified">>, Timestamp}
+               ,{<<"pvt_account_id">>, AccountId}
+               ,{<<"pvt_account_db">>, kazoo_modb:get_modb(AccountId, Year, Month)}
+              ],
+    BrandNewDoc = kz_json:set_values(Routines, kz_json:new()),
+    kazoo_modb:save_doc(AccountId, BrandNewDoc, Year, Month).
+
 charge_mrc_category(AccountId, Category, NewMax, Timestamp) ->
     ItemsList = kz_json:get_keys(kz_json:get_value(Category, NewMax)),
     [create_debit_tansaction(AccountId, kz_json:get_value([Category,Item],NewMax), Timestamp, <<"monthly_recurring">>)
      || Item <- ItemsList
     ].
 
--spec create_debit_tansaction(ne_binary(), kz_json:object(), integer(), ne_binary()) -> 'ok'|proplist(). 
--spec create_debit_tansaction(ne_binary(), kz_json:object(), integer(), integer(), ne_binary()) -> 'ok'|proplist(). 
+-spec create_debit_tansaction(ne_binary(), kz_json:object(), gregorian_seconds(), ne_binary()) -> 'ok'|proplist(). 
+-spec create_debit_tansaction(ne_binary(), kz_json:object(), integer(), gregorian_seconds(), ne_binary()) -> 'ok'|proplist(). 
 create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason) ->
     Qty = kz_json:get_value(<<"quantity">>, ItemJObj),
     create_debit_tansaction(AccountId, ItemJObj, Qty, Timestamp, Reason).

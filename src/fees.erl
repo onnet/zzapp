@@ -201,16 +201,20 @@ process_one_time_fee(JObj, Modb) ->
     {'ok', DFDoc} =  kz_datamgr:open_doc(Modb, kz_json:get_value(<<"id">>, JObj)),
     {Year, Month, Day} = kz_util:to_date(kz_json:get_value(<<"pvt_created">>, DFDoc)),
     DaysInMonth = calendar:last_day_of_the_month(Year, Month),
-    {kz_json:get_value(<<"pvt_reason">>, DFDoc)
-     ,kz_json:get_value(<<"description">>, DFDoc)
-     ,wht_util:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, DFDoc))
-     ,1.0
-     ,[onbill_util:period_tuple(Year, Month, Day)]
-     ,DaysInMonth
-     ,one_time_fee_name(DFDoc)
+    Reason = kz_json:get_value(<<"pvt_reason">>, DFDoc),
+    {Reason
+    ,kz_json:get_value(<<"description">>, DFDoc)
+    ,wht_util:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, DFDoc))
+    ,1.0
+    ,[onbill_util:period_tuple(Year, Month, Day)]
+    ,DaysInMonth
+    ,one_time_fee_name(Reason, DFDoc)
+    ,<<"non_daily_calculated">>
     }.
 
-one_time_fee_name(DFDoc) -> 
+one_time_fee_name(<<"number_activation">>, DFDoc) -> 
+    kz_json:get_value(<<"number">>, DFDoc);
+one_time_fee_name(_, DFDoc) -> 
     kz_json:get_value(<<"description">>, DFDoc).
 
 process_daily_fee(JObj, Modb, RawTableId) ->
@@ -267,8 +271,10 @@ handle_ets_item_price(RawTableId, ResultTableId, ServiceType, Item, Price) ->
 handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Quantity) ->
     Dates = [Date || [Date] <- lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'$5','_'}))],
     [[Name]|_] = lists:usort(ets:match(RawTableId,{ServiceType,Item,Price,Quantity,'_','$6'})),
-    lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Dates: ~p, Name: ~p",[ServiceType, Item, Price, Quantity, dates_sequence_reduce(Dates), Name]),
-    ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, dates_sequence_reduce(Dates), length(Dates), Name}).
+    lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Dates: ~p, Name: ~p"
+              ,[ServiceType, Item, Price, Quantity, dates_sequence_reduce(Dates), Name]
+              ),
+    ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, dates_sequence_reduce(Dates), length(Dates), Name, <<"daily_calculated">>}).
 
 -spec dates_sequence_reduce(proplist()) -> proplist().
 dates_sequence_reduce(DatesList) ->
@@ -316,7 +322,7 @@ days_glue(L) ->
 services_to_proplist(ServicesList, Year, Month) ->
     lists:foldl(fun(ServiceLine, Acc) -> service_to_line(ServiceLine, Year, Month, Acc) end, [], ServicesList).
 
-service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name}, Year, Month, Acc) ->
+service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name, Type}, Year, Month, Acc) ->
     DaysInPeriod = calendar:last_day_of_the_month(Year, Month),
     [[{<<"category">>, ServiceType}
     ,{<<"item">>, Item}
@@ -327,6 +333,7 @@ service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name}, Yea
     ,{<<"days_quantity">>, DaysQty}
     ,{<<"days_in_period">>, DaysInPeriod}
     ,{<<"period">>, Period}
+    ,{<<"type">>, Type}
     ]] ++ Acc.
 
 aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, Name}, Year, Month) when Cost > 0.0, Quantity > 0.0 ->
