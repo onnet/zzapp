@@ -98,11 +98,13 @@
                   {{ period.month_short }}
                   {{ period.year }}{% if forloop.last %}.{% endif %}
                 {% endfor %}
-                Pro-rated.
+                Prorated.
               {% elif fee_line.category == "number_activation" %}
-                Number activation: {{ fee_line.name }}. NRC
+                Number activation: {{ fee_line.name }}. NRC.
               {% elif fee_line.category == "monthly_recurring" %}
-                {{ fee_line.name }}. MRC
+                {{ fee_line.name }}. MRC.
+              {% elif fee_line.category == "recurring_prorate" %}
+                {{ fee_line.name }}. Prorated MRC.
               {% else %}
                 {{ fee_line.name }}.
               {% endif %}

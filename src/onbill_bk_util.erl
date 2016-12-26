@@ -134,6 +134,7 @@ update_dailyfee_doc(Timestamp, AccountId, Amount, MaxUsage, Items, DFDoc) ->
     {{Year, Month, _}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     kazoo_modb:save_doc(AccountId, NewDoc, Year, Month).
 
+-spec dailyfee_doc_update_routines(gregorian_seconds(), ne_binary(), number(), kz_json:object(), kz_service_item:items()) -> any().
 dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items) ->
     {{Year, Month, _}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     [{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"all_items">>], select_non_zero_items_json(Items)}
@@ -151,11 +152,18 @@ charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], T
     case lists:member(Category, DailyCountCategoriesList) of
         'true' -> 'ok';
         'false' ->
-            create_debit_tansaction(AccountId, kz_json:get_value(Path, NewMax), Qty, Timestamp, <<"recurring_prorate">>)
+            {StartYear, StartMonth, StartDay} = onbill_util:period_start_date(AccountId, Timestamp),
+            DaysInPeriod = onbill_util:days_in_period(StartYear, StartMonth, StartDay),
+            DaysLeft = onbill_util:days_left_in_period(StartYear, StartMonth, StartDay, Timestamp),
+            ItemJObj = kz_json:get_value(Path, NewMax),
+            Rate = kz_json:get_float_value(<<"rate">>, ItemJObj),
+            Units = wht_util:dollars_to_units(Rate),
+            Amount = Units * Qty * DaysLeft / DaysInPeriod,
+            create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"recurring_prorate">>, Qty, Amount)
     end,
     charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp). 
 
--spec check_this_period_mrc(ne_binary(), kz_json:object(), integer()) -> 'ok'|proplist(). 
+-spec check_this_period_mrc(ne_binary(), kz_json:object(), gregorian_seconds()) -> 'ok'|proplist(). 
 check_this_period_mrc(AccountId, NewMax, Timestamp) ->
     {Year, Month, Day} = onbill_util:period_start_date(AccountId, Timestamp),
     case kazoo_modb:open_doc(AccountId, ?MRC_DOC, Year, Month) of
@@ -190,23 +198,24 @@ create_monthly_recurring_doc(AccountId, NewMax, Timestamp) ->
     BrandNewDoc = kz_json:set_values(Routines, kz_json:new()),
     kazoo_modb:save_doc(AccountId, BrandNewDoc, Year, Month).
 
+-spec charge_mrc_category(ne_binary(), ne_binary(), kz_json:object(), gregorian_seconds()) -> any().
 charge_mrc_category(AccountId, Category, NewMax, Timestamp) ->
     ItemsList = kz_json:get_keys(kz_json:get_value(Category, NewMax)),
-    [create_debit_tansaction(AccountId, kz_json:get_value([Category,Item],NewMax), Timestamp, <<"monthly_recurring">>)
+    [charge_mrc_item(AccountId, kz_json:get_value([Category,Item],NewMax), Timestamp)
      || Item <- ItemsList
     ].
 
--spec create_debit_tansaction(ne_binary(), kz_json:object(), gregorian_seconds(), ne_binary()) -> 'ok'|proplist(). 
--spec create_debit_tansaction(ne_binary(), kz_json:object(), integer(), gregorian_seconds(), ne_binary()) -> 'ok'|proplist(). 
-create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason) ->
+-spec charge_mrc_item(ne_binary(), kz_json:object(), gregorian_seconds()) -> 'ok'|proplist(). 
+charge_mrc_item(AccountId, ItemJObj, Timestamp) ->
     Qty = kz_json:get_value(<<"quantity">>, ItemJObj),
-    create_debit_tansaction(AccountId, ItemJObj, Qty, Timestamp, Reason).
-
-create_debit_tansaction(AccountId, ItemJObj, Qty, Timestamp, Reason) ->
-lager:info("IAM ItemJObj: ~p",[ItemJObj]),
-    Name = kz_json:get_value(<<"name">>, ItemJObj),
     Rate = kz_json:get_float_value(<<"rate">>, ItemJObj),
     Units = wht_util:dollars_to_units(Rate),
+    Amount = Units * Qty,
+    create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"monthly_recurring">>, Qty, Amount).
+
+-spec create_debit_tansaction(ne_binary(), kz_json:object(), gregorian_seconds(), ne_binary(), pos_integer(), number()) -> 'ok'|proplist(). 
+create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Qty, Amount) ->
+    Name = kz_json:get_value(<<"name">>, ItemJObj),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     MonthStr = httpd_util:month(Month),
 
@@ -217,7 +226,8 @@ lager:info("IAM ItemJObj: ~p",[ItemJObj]),
           [{<<"account_id">>, AccountId}
           ,{<<"date">>, <<(?TO_BIN(Day))/binary," ",(?TO_BIN(MonthStr))/binary," ",(?TO_BIN(Year))/binary>>}
           ,{<<"reason">>, Reason}
-          ,{<<"diff_quantity">>, Qty}
+          ,{<<"rate">>, kz_json:get_float_value(<<"rate">>, ItemJObj)}
+          ,{<<"quantity">>, Qty}
           ,{<<"item_jobj">>, ItemJObj}
           ]
          ),
@@ -229,6 +239,6 @@ lager:info("IAM ItemJObj: ~p",[ItemJObj]),
                ],
     lists:foldl(
       fun(F, Tr) -> F(Tr) end
-               ,kz_transaction:debit(AccountId, Units * Qty)
+               ,kz_transaction:debit(AccountId, Amount)
                ,Routines
      ).

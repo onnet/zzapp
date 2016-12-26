@@ -21,6 +21,7 @@
         ,adjust_period_first_day/3
         ,adjust_period_last_day/3
         ,days_in_period/3
+        ,days_left_in_period/4
         ,period_last_day_by_first_one/3
         ,period_end_modb_by_start/4
         ,period_start_tuple/3
@@ -213,6 +214,14 @@ days_in_period(StartYear, StartMonth, StartDay) ->
   %  calendar:date_to_gregorian_days(adjust_period_first_day(StartYear, StartMonth, StartDay)).
   {Year, Month, _} = adjust_period_first_day(StartYear, StartMonth, StartDay),
   calendar:last_day_of_the_month(Year, Month).
+
+-spec days_left_in_period(kz_year(), kz_month(), kz_day(), gregorian_seconds()) -> integer().
+days_left_in_period(StartYear, StartMonth, StartDay, Timestamp) ->
+    {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
+    {NextMonthYear, NextMonth} = next_month(StartYear, StartMonth),
+    calendar:date_to_gregorian_days(adjust_period_last_day(NextMonthYear, NextMonth, StartDay))
+    -
+    calendar:date_to_gregorian_days(Year, Month, Day).
 
 -spec period_start_tuple(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
 period_start_tuple(Year, Month, Day) ->

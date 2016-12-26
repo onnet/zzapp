@@ -202,10 +202,11 @@ process_one_time_fee(JObj, Modb) ->
     {Year, Month, Day} = kz_util:to_date(kz_json:get_value(<<"pvt_created">>, DFDoc)),
     DaysInMonth = calendar:last_day_of_the_month(Year, Month),
     Reason = kz_json:get_value(<<"pvt_reason">>, DFDoc),
+    Amount = wht_util:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, DFDoc)),
     {Reason
     ,kz_json:get_value(<<"description">>, DFDoc)
-    ,wht_util:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, DFDoc))
-    ,1.0
+    ,kz_json:get_value([<<"metadata">>,<<"rate">>], DFDoc, Amount)
+    ,kz_json:get_value([<<"metadata">>,<<"quantity">>], DFDoc, 1.0)
     ,[onbill_util:period_tuple(Year, Month, Day)]
     ,DaysInMonth
     ,one_time_fee_name(Reason, DFDoc)
