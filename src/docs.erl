@@ -274,6 +274,9 @@ per_minute_reports(AccountId, Year, Month) ->
     _ = [maybe_per_minute_report(AccountId, Year, Month, Carrier) || Carrier <- Carriers].
 
 maybe_per_minute_report(AccountId, Year, Month, Carrier) ->
+
+%% Needed day to introduce period instead of calendar month
+
     {CallsJObjs, CallsTotalSec, CallsTotalSumm} = fees:per_minute_calls(AccountId, Year, Month, Carrier),
     per_minute_report(AccountId, Year, Month, Carrier, CallsJObjs, CallsTotalSec, CallsTotalSumm).
 
@@ -282,7 +285,7 @@ per_minute_report(AccountId, Year, Month, Carrier, CallsJObjs, CallsTotalSec, Ca
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
-    {CallsJObjs, CallsTotalSec, CallsTotalSumm} = fees:per_minute_calls(AccountId, Year, Month, Carrier),
+    {CallsJObjs, CallsTotalSec, CallsTotalSumm} = fees:per_minute_calls(AccountId, Year, Month, 1, Carrier),
     Vars = [{<<"per_minute_calls">>, CallsJObjs}
            ,{<<"doc_date">>, ?END_DATE(Month, Year)}
            ,{<<"start_date">>, ?START_DATE(Month, Year)}
