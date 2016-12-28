@@ -30,10 +30,13 @@ max_daily_usage_exceeded(Items, AccountId, Timestamp) ->
                         [] ->
                             'false';
                         Diff ->
-                            {'true', kz_json:set_values(Diff, MaxJObj), excess_details(NewJObj, MaxJObj)}
+                            NewMaxJObj = kz_json:set_values(Diff, MaxJObj),
+                            _ = update_dailyfee_max(Timestamp, AccountId, NewMaxJObj, Items),
+                            {'true', NewMaxJObj, excess_details(NewJObj, MaxJObj)}
                     end
             end;
         {'error', 'not_found'} ->
+            _ = create_dailyfee_doc(Timestamp, AccountId, 0, select_non_zero_items_json(Items), Items),
             {'true', select_non_zero_items_json(Items), []}
     end.
 
@@ -99,6 +102,23 @@ excess_details(NewJObj, MaxJObj) ->
      || ItemPath <- ItemsPathList
      ,kz_json:get_value(ItemPath ++ [<<"quantity">>], NewJObj, 0) > kz_json:get_value(ItemPath ++ [<<"quantity">>], MaxJObj, 0)
     ].
+
+
+
+-spec update_dailyfee_max(integer(), ne_binary(), any(), any()) -> any().
+update_dailyfee_max(Timestamp, AccountId, MaxUsage, Items) ->
+    {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
+    DailyFeeId = prepare_dailyfee_doc_name(Year, Month, Day),
+    case kazoo_modb:open_doc(AccountId, DailyFeeId, Year, Month) of
+        {'error', 'not_found'} ->
+            create_dailyfee_doc(Timestamp, AccountId, 0, MaxUsage, Items);
+        {'ok', DFDoc} ->
+            Upd = [{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"all_items">>], select_non_zero_items_json(Items)}
+                  ,{[<<"pvt_metadata">>,<<"max_usage">>,<<"all_items">>], MaxUsage}
+                  ],
+            NewDoc = kz_json:set_values(Upd, DFDoc),
+            kazoo_modb:save_doc(AccountId, NewDoc, Year, Month)
+    end.
 
 -spec save_dailyfee_doc(integer(), ne_binary(), number(), any(), any()) -> any().
 save_dailyfee_doc(Timestamp, AccountId, Amount, MaxUsage, Items) ->
