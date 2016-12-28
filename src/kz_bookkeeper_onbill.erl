@@ -84,7 +84,9 @@ is_good_standing(AccountId) ->
 
 -spec is_good_standing(ne_binary(), ne_binary()) -> boolean().
 is_good_standing(AccountId, _Status) ->
-  lager:info("IAM is_good_standing/1: ~p, Status: ~p",[(wht_util:current_balance(AccountId) > 0), _Status]),
+    _ = kz_services:reconcile(AccountId),
+    _ = kz_service_sync:sync(AccountId),
+  lager:info("IAM is_good_standing/2: ~p, Status: ~p",[(wht_util:current_balance(AccountId) > 0), _Status]),
     wht_util:current_balance(AccountId) > 0.
 
 -spec transactions(ne_binary(), gregorian_seconds(), gregorian_seconds()) ->

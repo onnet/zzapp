@@ -31,8 +31,11 @@
                   ,{'resource', []}
                   ,{'conf', []}
                   ,{'notifications', []}
+               %   ,{'registration', []}
+                  ,{'money', []}
                   ]).
--define(RESPONDERS, [{{'onbill_handlers', 'handle_logger'}, [{<<"*">>, <<"*">>}]}
+-define(RESPONDERS, [{{'onbill_handlers', 'handle_doc_created'}, [{<<"configuration">>, <<"doc_created">>}]}
+                    ,{{'onbill_handlers', 'handle_logger'}, [{<<"*">>, <<"*">>}]}
                     ]).
 %%-define(QUEUE_NAME, <<>>).
 %%-define(QUEUE_OPTIONS, []).
