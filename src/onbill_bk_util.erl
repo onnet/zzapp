@@ -177,9 +177,10 @@ charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], T
             DaysLeft = onbill_util:days_left_in_period(StartYear, StartMonth, StartDay, Timestamp),
             ItemJObj = kz_json:get_value(Path, NewMax),
             Rate = kz_json:get_float_value(<<"rate">>, ItemJObj),
-            Units = wht_util:dollars_to_units(Rate),
-            Amount = Units * Qty * DaysLeft / DaysInPeriod,
-            create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"recurring_prorate">>, Qty, Amount)
+            ProratedRate = Rate * DaysLeft / DaysInPeriod,
+            Units = wht_util:dollars_to_units(ProratedRate),
+            Amount = Units * Qty,
+            create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"recurring_prorate">>, Qty, Amount, ProratedRate)
     end,
     charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp). 
 
@@ -192,7 +193,7 @@ check_this_period_mrc(AccountId, NewMax, Timestamp) ->
         {'error', 'not_found'} ->
             case onbill_util:get_account_created_date(AccountId) of
                 {Year, Month, Day} ->
-                    lager:debug("first period customer, recurring_prorate instead of monthly_recurring needed");
+                    lager:debug("first period customer, no monthly_recurring needed");
                 _ ->
                     lager:debug("monthly_recurring doc not found, trying to create"),
                     {'ok',_} = create_monthly_recurring_doc(AccountId, NewMax, Timestamp),
@@ -231,10 +232,10 @@ charge_mrc_item(AccountId, ItemJObj, Timestamp) ->
     Rate = kz_json:get_float_value(<<"rate">>, ItemJObj),
     Units = wht_util:dollars_to_units(Rate),
     Amount = Units * Qty,
-    create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"monthly_recurring">>, Qty, Amount).
+    create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"monthly_recurring">>, Qty, Amount, Rate).
 
--spec create_debit_tansaction(ne_binary(), kz_json:object(), gregorian_seconds(), ne_binary(), pos_integer(), number()) -> 'ok'|proplist(). 
-create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Qty, Amount) ->
+-spec create_debit_tansaction(ne_binary(), kz_json:object(), gregorian_seconds(), ne_binary(), pos_integer(), number(), number()) -> 'ok'|proplist(). 
+create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Qty, Amount, Rate) ->
     Name = kz_json:get_value(<<"name">>, ItemJObj),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     MonthStr = httpd_util:month(Month),
@@ -246,7 +247,8 @@ create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Qty, Amount) ->
           [{<<"account_id">>, AccountId}
           ,{<<"date">>, <<(?TO_BIN(Day))/binary," ",(?TO_BIN(MonthStr))/binary," ",(?TO_BIN(Year))/binary>>}
           ,{<<"reason">>, Reason}
-          ,{<<"rate">>, kz_json:get_float_value(<<"rate">>, ItemJObj)}
+          ,{<<"amount">>, Amount}
+          ,{<<"rate">>, Rate}
           ,{<<"quantity">>, Qty}
           ,{<<"item_jobj">>, ItemJObj}
           ]
