@@ -206,7 +206,7 @@ process_one_time_fee(JObj, Modb) ->
     {Reason
     ,kz_json:get_value(<<"description">>, DFDoc)
     ,kz_json:get_value([<<"metadata">>,<<"rate">>], DFDoc, Amount)
-    ,kz_json:get_value([<<"metadata">>,<<"quantity">>], DFDoc, 1.0)
+    ,kz_json:get_value([<<"metadata">>,<<"quantity">>], DFDoc, 1)
     ,[onbill_util:period_tuple(Year, Month, Day)]
     ,DaysInMonth
     ,one_time_fee_name(Reason, DFDoc)
