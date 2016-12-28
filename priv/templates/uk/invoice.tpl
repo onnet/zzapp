@@ -104,7 +104,12 @@
               {% elif fee_line.category == "monthly_recurring" %}
                 {{ fee_line.name }}. MRC.
               {% elif fee_line.category == "recurring_prorate" %}
-                {{ fee_line.name }}. Prorated MRC.
+                {{ fee_line.name }}. Prorated MRC. 
+                {% for period in fee_line.period %}
+                  {{ period.day }}
+                  {{ period.month_short }}
+                  {{ period.year }}{% if forloop.last %}.{% endif %}
+                {% endfor %}
               {% else %}
                 {{ fee_line.name }}.
               {% endif %}
