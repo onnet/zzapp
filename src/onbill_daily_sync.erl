@@ -32,6 +32,7 @@ start_link() ->
 -spec init(list()) -> {'ok', state()}.
 init([]) ->
     self() ! 'crawl_accounts',
+    kz_couch_compactor:compact_db(<<"services">>),
     {'ok', #state{}}.
 
 -spec handle_call(any(), pid_ref(), state()) -> handle_call_ret_state(state()).
@@ -54,6 +55,7 @@ handle_info('crawl_accounts', _) ->
                 {'noreply', []}
         end;
 handle_info('next_account', []) ->
+    kz_couch_compactor:compact_db(<<"services">>),
     NextDay = calendar:datetime_to_gregorian_seconds({erlang:date(),{0,45,0}}) + ?SECONDS_IN_DAY,
     Cycle = NextDay - calendar:datetime_to_gregorian_seconds(erlang:localtime()),
     erlang:send_after(Cycle, self(), 'crawl_accounts'),
