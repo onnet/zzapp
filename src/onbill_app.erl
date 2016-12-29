@@ -36,6 +36,5 @@ declare_exchanges() ->
     _ = kapi_resource:declare_exchanges(),
     _ = kapi_conf:declare_exchanges(),
     _ = kapi_notifications:declare_exchanges(),
-%    _ = kapi_registration:declare_exchanges(),
     _ = kapi_money:declare_exchanges(),
     kapi_self:declare_exchanges().

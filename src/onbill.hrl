@@ -7,6 +7,7 @@
 -define(APP_NAME, <<"onbill">>).
 -define(APP_VERSION, <<"4.0.0">> ).
 
+-define(SERVICES_DB, <<"services">>).
 -define(ONBILL_DB, <<"onbill">>).
 -define(ONBILL_DOC, <<"onbill">>).
 -define(MRC_DOC, <<"monthly_recurring">>).
