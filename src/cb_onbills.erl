@@ -1,10 +1,10 @@
 -module(cb_onbills).
 
 -export([init/0
-         ,allowed_methods/0, allowed_methods/2, allowed_methods/3
+         ,allowed_methods/0, allowed_methods/1, allowed_methods/2, allowed_methods/3
          ,resource_exists/0, resource_exists/1, resource_exists/2, resource_exists/3
          ,content_types_provided/1, content_types_provided/3, content_types_provided/4
-         ,validate/1, validate/3, validate/4
+         ,validate/1, validate/2, validate/3, validate/4
         ]).
 
 -include("../../crossbar/src/crossbar.hrl").
@@ -12,6 +12,7 @@
 -define(CB_LIST, <<"onbills/crossbar_listing">>).
 -define(ATTACHMENT, <<"attachment">>).
 -define(GENERATE, <<"generate">>).
+-define(CURRENT_SERVICES, <<"current_services">>).
 -define(MODB, <<"onbills_modb">>).
 -define(ALL_CHILDREN, <<"all_children">>).
 -define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
@@ -27,9 +28,12 @@ init() ->
     _ = crossbar_bindings:bind(<<"*.validate.onbills">>, ?MODULE, 'validate').
 
 -spec allowed_methods() -> http_methods().
+-spec allowed_methods(path_token()) -> http_methods().
 -spec allowed_methods(path_token(),path_token()) -> http_methods().
 -spec allowed_methods(path_token(),path_token(),path_token()) -> http_methods().
 allowed_methods() ->
+    [?HTTP_GET].
+allowed_methods(?CURRENT_SERVICES) ->
     [?HTTP_GET].
 allowed_methods(?GENERATE,_) ->
     [?HTTP_PUT];
@@ -60,10 +64,13 @@ content_types_provided(Context,?MODB,_,?ATTACHMENT) ->
     cb_context:set_content_types_provided(Context, CTP).
 
 -spec validate(cb_context:context()) -> cb_context:context().
+-spec validate(cb_context:context(), path_token()) -> cb_context:context().
 -spec validate(cb_context:context(), path_token(), path_token()) -> cb_context:context().
 -spec validate(cb_context:context(), path_token(), path_token(), path_token()) -> cb_context:context().
 validate(Context) ->
     validate_onbill(Context, cb_context:req_verb(Context)).
+validate(Context, ?CURRENT_SERVICES) ->
+    validate_current_services(Context, cb_context:req_verb(Context)).
 validate(Context, ?GENERATE, Id) ->
     validate_generate(Context, Id, cb_context:req_verb(Context)).
 validate(Context,?MODB, Id, ?ATTACHMENT) ->
@@ -208,3 +215,45 @@ get_children_list(ResellerId) ->
                ,{'endkey', [ResellerId, kz_json:new()]}
                ],
     kz_datamgr:get_results(?KZ_ACCOUNTS_DB, ?ACC_CHILDREN_LIST, ViewOpts).
+
+-spec validate_current_services(cb_context:context(), http_method()) -> cb_context:context().
+validate_current_services(Context, ?HTTP_GET) ->
+    AccountId = cb_context:account_id(Context),
+    Services = kz_services:fetch(AccountId),
+    ServicesJObj = kz_services:services_json(Services),
+    {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
+    ItemsList = onbill_bk_util:select_non_zero_items_list(Items, AccountId),
+    ItemsCalculatedList = [build_calculated_item(ItemJObj) || ItemJObj <- ItemsList],
+    CurrentServicesJObj =
+        kz_json:from_list([{<<"total_amount">>, onbill_bk_util:calc_items(ItemsList, AccountId, 0.0)}
+                          ,{<<"services_list">>, ItemsCalculatedList}
+                          ,{<<"account_id">>, AccountId}
+                          ]),
+    cb_context:setters(Context
+                      ,[{fun cb_context:set_resp_status/2, 'success'}
+                       ,{fun cb_context:set_resp_data/2, CurrentServicesJObj}
+                       ]);
+validate_current_services(Context, _) ->
+    Context.
+
+build_calculated_item(ItemJObj) ->
+    Quantity = kz_json:get_value(<<"quantity">>, ItemJObj),
+    Rate = kz_json:get_value(<<"rate">>, ItemJObj),
+    SingleDiscountAmount =
+        case kz_json:get_value(<<"single_discount">>, ItemJObj) of
+            'false' -> 0;
+            'true' -> kz_json:get_value(<<"single_discount_rate">>, ItemJObj)
+        end,
+    CumulativeDiscount = kz_json:get_value(<<"cumulative_discount">>, ItemJObj),
+    CumulativeDiscountRate = kz_json:get_value(<<"cumulative_discount_rate">>, ItemJObj),
+    TotalDiscount = SingleDiscountAmount + CumulativeDiscount * CumulativeDiscountRate,
+    ItemCost = Rate * Quantity - TotalDiscount,
+    {[{<<"name">>, kz_json:get_value(<<"name">>, ItemJObj)}
+    ,{<<"quantity">>, Quantity}
+    ,{<<"rate">>, Rate}
+    ,{<<"single_discount_amount">>, SingleDiscountAmount}
+    ,{<<"cumulative_discount">>, CumulativeDiscount}
+    ,{<<"cumulative_discount_rate">>, CumulativeDiscountRate}
+    ,{<<"total_discount">>, TotalDiscount}
+    ,{<<"item_cost">>, ItemCost}
+    ]}.

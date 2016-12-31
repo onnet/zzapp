@@ -30,51 +30,21 @@ sync(Items, AccountId) ->
             _ = onbill_bk_util:charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp),
             DailyCountItems = onbill_bk_util:select_daily_count_items_list(NewMax, AccountId),
             lager:debug("sync daily AccountId: ~p; daily count items: ~p",[AccountId, DailyCountItems]),
-            sync(Timestamp, DailyCountItems, AccountId, 0.0, NewMax, Items);
+            sync(Timestamp, DailyCountItems, AccountId, NewMax, Items);
         'false' ->
             lager:debug("max usage not exceeded, no sync needed for: ~p",[AccountId])
     end.
 
-sync(_Timestamp, [], _AccountId, Acc, _NewMax, _Items) when Acc == 0.0 ->
-    lager:debug("sync Daily fee check NOT NEEDED. Total: ~p",[Acc]);
-sync(Timestamp, [], AccountId, Acc, NewMax, Items) ->
-    onbill_bk_util:save_dailyfee_doc(Timestamp, AccountId, Acc, NewMax, Items),
-    lager:debug("sync Daily fee calculation finished for ~p. Total: ~p",[AccountId, Acc]);
+sync(_Timestamp, [], _AccountId, _NewMax, _Items) ->
+    lager:debug("no daily count items found, daily fee synv not needed.");
 
-sync(Timestamp, [ServiceItem|ServiceItems], AccountId, Acc, NewMax, Items) ->
-    ItemCost = calc_item(ServiceItem, AccountId),
-    SubTotal = Acc + ItemCost,
-    sync(Timestamp, ServiceItems, AccountId, SubTotal, NewMax, Items).
-
--spec calc_item(kz_service_item:item(), ne_binary()) -> number().
-calc_item(ServiceItem, AccountId) ->
-    try
-        Quantity = kz_json:get_value(<<"quantity">>, ServiceItem),
-        Rate = kz_json:get_value(<<"rate">>, ServiceItem),
-
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %%%%   Do not forget to add discount calculations !!!!! %%%%%
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-   %     _SingleDiscount = kz_service_item:single_discount(ServiceItem),
-   %     _SingleDiscountRate = kz_service_item:single_discount_rate(ServiceItem),
-   %     _CumulativeDiscount = kz_service_item:cumulative_discount(ServiceItem),
-   %     _CumulativeDiscountRate = kz_service_item:cumulative_discount_rate(ServiceItem),
-        ItemCost = Rate * Quantity,
-        ItemCost
-    catch
-        E:R ->
-            lager:debug("exception syncing acount: ~p : ~p: ~p", [AccountId, E, R]),
-            lager:debug("exception syncing acount: ~p service item: ~p", [AccountId, ServiceItem]),
-            lager:debug("exception syncing acount: ~p service item: ~p", [AccountId, kz_json:get_value(<<"rate">>, ServiceItem)]),
-            Subj = io_lib:format("OnBill Bookkeeper syncing problem! AccountId: ~p",[AccountId]),
-            Msg = io_lib:format("Exception syncing AccountId: ~p <br /> Service Item: ~p <br /> Rate: ~p"
-                               ,[AccountId
-                                ,ServiceItem
-                                ,kz_json:get_value(<<"rate">>, ServiceItem)
-                                ]),
-            kz_notify:system_alert(Subj, Msg, []),
-            0.0
+sync(Timestamp, ServiceItems, AccountId, NewMax, Items) ->
+    case onbill_bk_util:calc_items(ServiceItems, AccountId, 0.0) of
+        0.0 ->
+            lager:debug("daily fee items have zero cosc, no changes needed.");
+        ItemsCost ->
+            onbill_bk_util:save_dailyfee_doc(Timestamp, AccountId, ItemsCost, NewMax, Items),
+            lager:debug("sync Daily fee calculation finished for ~p. Total: ~p",[AccountId, ItemsCost])
     end.
 
 -spec is_good_standing(ne_binary()) -> boolean().
@@ -241,4 +211,4 @@ populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
     {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
     NewMax = onbill_bk_util:select_non_zero_items_json(Items),
     DailyCountItems = onbill_bk_util:select_daily_count_items_list(NewMax, AccountId),
-    sync(Timestamp, DailyCountItems, AccountId, 0.0, NewMax, Items).
+    sync(Timestamp, DailyCountItems, AccountId, NewMax, Items).

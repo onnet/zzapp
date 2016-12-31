@@ -5,9 +5,12 @@
         ,select_daily_count_items_list/2
         ,select_daily_count_items_json/2
         ,select_non_zero_items_json/1
+        ,select_non_zero_items_list/2
         ,save_dailyfee_doc/5
         ,charge_newly_added/4
         ,check_this_period_mrc/3
+        ,calc_items/3
+        ,current_usage_amount/1
         ]).
 
 -include("onbill.hrl").
@@ -61,7 +64,7 @@ select_daily_count_items_list(Items, AccountId) ->
             [kz_json:get_value(ItemPath, Items) || ItemPath <- DailyItemsPaths]
     end.
 
--spec select_daily_count_items_json(kz_service_item:items(), ne_binary()) -> kz_json:object().
+-spec select_daily_count_items_json(kz_service_item:items()|kz_json:object(), ne_binary()) -> kz_json:object().
 select_daily_count_items_json(Items, AccountId) ->
     case kz_json:is_json_object(Items) of
         'false' ->
@@ -82,6 +85,19 @@ select_non_zero_items_json(Items) ->
            ,kz_service_item:quantity(Item) > 0
     ],
     kz_json:set_values(Upd, kz_json:new()).
+
+-spec select_non_zero_items_list(kz_service_item:items()|kz_json:object(), ne_binary()) -> proplist().
+select_non_zero_items_list(Items, AccountId) ->
+    case kz_json:is_json_object(Items) of
+        'false' ->
+            select_non_zero_items_list(select_non_zero_items_json(Items), AccountId);
+        'true' ->
+            ItemsPaths = lists:foldl(fun (Category, Acc) -> [[Category, Item] || Item <- kz_json:get_keys(Category, Items)] ++ Acc end
+                                    ,[]
+                                    ,kz_json:get_keys(Items)
+                                    ),
+            [kz_json:get_value(ItemPath, Items) || ItemPath <- ItemsPaths]
+    end.
 
 check_max_usage(NewJObj, MaxJObj, Timestamp) ->
     ItemsPathList = lists:foldl(fun (Category, Acc) -> [[Category, Item] || Item <- kz_json:get_keys(Category, NewJObj)] ++ Acc end
@@ -264,3 +280,53 @@ create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Qty, Amount, Rat
                ,kz_transaction:debit(AccountId, Amount)
                ,Routines
      ).
+
+-spec calc_items(kz_json:objects(), ne_binary(), float()) -> number().
+calc_items([], _, Acc) ->
+    Acc;
+calc_items([ServiceItem|ServiceItems], AccountId, Acc) ->
+    ItemCost = calc_item(ServiceItem, AccountId),
+    SubTotal = Acc + ItemCost,
+    calc_items(ServiceItems, AccountId, SubTotal).
+
+-spec calc_item(kz_json:object(), ne_binary()) -> number().
+calc_item(ServiceItem, AccountId) ->
+    try
+        Quantity = kz_json:get_value(<<"quantity">>, ServiceItem),
+        Rate = kz_json:get_value(<<"rate">>, ServiceItem),
+        SingleDiscountAmount =
+            case kz_json:get_value(<<"single_discount">>, ServiceItem) of
+                'false' -> 0;
+                'true' -> kz_json:get_value(<<"single_discount_rate">>, ServiceItem)
+            end,
+        CumulativeDiscount = kz_json:get_value(<<"cumulative_discount">>, ServiceItem),
+        CumulativeDiscountRate = kz_json:get_value(<<"cumulative_discount_rate">>, ServiceItem),
+        ItemCost = Rate * Quantity - SingleDiscountAmount - CumulativeDiscount * CumulativeDiscountRate,
+        ItemCost
+    catch
+        E:R ->
+            lager:debug("exception syncing acount: ~p : ~p: ~p", [AccountId, E, R]),
+            lager:debug("exception syncing acount: ~p service item: ~p", [AccountId, ServiceItem]),
+            lager:debug("exception syncing acount: ~p service item: ~p", [AccountId, kz_json:get_value(<<"rate">>, ServiceItem)]),
+            Subj = io_lib:format("OnBill Bookkeeper syncing problem! AccountId: ~p",[AccountId]),
+            Msg = io_lib:format("Exception syncing AccountId: ~p <br /> Service Item: ~p <br /> Rate: ~p"
+                               ,[AccountId
+                                ,ServiceItem
+                                ,kz_json:get_value(<<"rate">>, ServiceItem)
+                                ]),
+            kz_notify:system_alert(Subj, Msg, []),
+            0.0
+    end.
+
+-spec current_items(ne_binary()) -> kz_service_item:items().
+current_items(AccountId) -> 
+    Services = kz_services:fetch(AccountId),
+    ServicesJObj = kz_services:services_json(Services),
+    {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
+    Items.
+
+-spec current_usage_amount(ne_binary()) -> float().
+current_usage_amount(AccountId) ->
+    Items = current_items(AccountId),
+    ItemsJObj = select_non_zero_items_list(Items,AccountId),
+    calc_items(ItemsJObj, AccountId, 0.0).
