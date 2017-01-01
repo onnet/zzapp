@@ -13,6 +13,7 @@
 -define(ATTACHMENT, <<"attachment">>).
 -define(GENERATE, <<"generate">>).
 -define(CURRENT_SERVICES, <<"current_services">>).
+-define(CURRENCY_SIGN, <<"currency_sign">>).
 -define(MODB, <<"onbills_modb">>).
 -define(ALL_CHILDREN, <<"all_children">>).
 -define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
@@ -34,6 +35,8 @@ init() ->
 allowed_methods() ->
     [?HTTP_GET].
 allowed_methods(?CURRENT_SERVICES) ->
+    [?HTTP_GET];
+allowed_methods(?CURRENCY_SIGN) ->
     [?HTTP_GET].
 allowed_methods(?GENERATE,_) ->
     [?HTTP_PUT];
@@ -70,7 +73,9 @@ content_types_provided(Context,?MODB,_,?ATTACHMENT) ->
 validate(Context) ->
     validate_onbill(Context, cb_context:req_verb(Context)).
 validate(Context, ?CURRENT_SERVICES) ->
-    validate_current_services(Context, cb_context:req_verb(Context)).
+    validate_current_services(Context, cb_context:req_verb(Context));
+validate(Context, ?CURRENCY_SIGN) ->
+    validate_currency_sign(Context, cb_context:req_verb(Context)).
 validate(Context, ?GENERATE, Id) ->
     validate_generate(Context, Id, cb_context:req_verb(Context)).
 validate(Context,?MODB, Id, ?ATTACHMENT) ->
@@ -257,3 +262,22 @@ build_calculated_item(ItemJObj) ->
     ,{<<"total_discount">>, TotalDiscount}
     ,{<<"item_cost">>, ItemCost}
     ]}.
+
+-spec validate_currency_sign(cb_context:context(), http_method()) -> cb_context:context().
+validate_currency_sign(Context, ?HTTP_GET) ->
+    AccountId = cb_context:account_id(Context),
+    Vars =
+        case kz_services:is_reseller(AccountId) of
+            'true' -> onbill_util:account_vars(AccountId);
+            'false' -> onbill_util:reseller_vars(AccountId)
+        end,
+    JObj =
+        kz_json:from_list([{<<"currency_sign">>, kz_json:get_value(<<"currency_sign">>, Vars)}
+                          ,{<<"account_id">>, AccountId}
+                          ]),
+    cb_context:setters(Context
+                      ,[{fun cb_context:set_resp_status/2, 'success'}
+                       ,{fun cb_context:set_resp_data/2, JObj}
+                       ]);
+validate_currency_sign(Context, _) ->
+    Context.
