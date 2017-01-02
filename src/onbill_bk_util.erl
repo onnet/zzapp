@@ -185,7 +185,8 @@ dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items) ->
 -spec charge_newly_added(ne_binary(), kz_json:object(), proplist(), integer()) -> 'ok'|proplist(). 
 charge_newly_added(_AccountId, _NewMax, [], _Timestamp) -> 'ok';
 charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], Timestamp) -> 
-    DailyCountCategoriesList = kz_json:get_value(<<"pvt_daily_count_categories">>, onbill_util:reseller_vars(AccountId), []),
+    ResellerVars = onbill_util:reseller_vars(AccountId),
+    DailyCountCategoriesList = kz_json:get_value(<<"pvt_daily_count_categories">>, ResellerVars, []),
     case lists:member(Category, DailyCountCategoriesList) of
         'true' -> 'ok';
         'false' ->
@@ -194,7 +195,25 @@ charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], T
             DaysLeft = onbill_util:days_left_in_period(StartYear, StartMonth, StartDay, Timestamp),
             ItemJObj = kz_json:get_value(Path, NewMax),
             Ratio = DaysLeft / DaysInPeriod,
-            create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"recurring_prorate">>, Ratio)
+            Upd =
+                case kz_json:get_value(<<"apply_discount_to_prorated">>, ResellerVars, 'false') of
+                    'true' ->
+                        %% TODO if anyone needed:
+                        %% Apply single discount if it is the very first unit
+                        %% Count if cumulative discounts left
+                        [{<<"quantity">>, Qty}
+                        ,{<<"single_discount">>, 'false'}
+                        ,{<<"cumulative_discount">>, 0.0}
+                        ,{<<"cumulative_discount_rate">>, 0.0}
+                        ];
+                    _ ->
+                        [{<<"quantity">>, Qty}
+                        ,{<<"single_discount">>, false}
+                        ,{<<"cumulative_discount">>, 0.0}
+                        ,{<<"cumulative_discount_rate">>, 0.0}
+                        ]
+                end,
+            create_debit_tansaction(AccountId, kz_json:set_values(Upd, ItemJObj), Timestamp, <<"recurring_prorate">>, Ratio)
     end,
     charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp). 
 
