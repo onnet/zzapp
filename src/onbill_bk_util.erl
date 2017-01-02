@@ -273,6 +273,7 @@ create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Ratio) ->
 
     Upd = [{<<"account_id">>, AccountId}
           ,{<<"date">>, <<(?TO_BIN(Day))/binary," ",(?TO_BIN(MonthStr))/binary," ",(?TO_BIN(Year))/binary>>}
+          ,{<<"timestamp">>, Timestamp}
           ,{<<"reason">>, Reason}
           ,{<<"ratio">>, Ratio}
           ,{<<"amount">>, UnitsAmount}
