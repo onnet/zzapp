@@ -302,7 +302,7 @@ items_amount([ServiceItem|ServiceItems], AccountId, Acc) ->
 
 -spec item_cost(kz_json:object(), ne_binary()) -> number().
 item_cost(ItemJObj, AccountId) ->
-    kz_json:get_value(<<"item_cost">>, calc_item(ItemJObj, AccountId)).
+    kz_json:get_value(<<"discounted_item_cost">>, calc_item(ItemJObj, AccountId)).
 
 -spec calc_item(kz_json:object(), ne_binary()) -> number().
 calc_item(ItemJObj, AccountId) ->
