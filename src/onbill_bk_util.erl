@@ -266,8 +266,8 @@ charge_mrc_item(AccountId, ItemJObj, Timestamp) ->
 -spec create_debit_tansaction(ne_binary(), kz_json:object(), gregorian_seconds(), ne_binary(), float()) -> 'ok'|proplist(). 
 create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Ratio) ->
     CItem = calc_item(ItemJObj, AccountId),
-    ResultingItemCost = kz_json:get_float_value(<<"resulting_cost">>, CItem),
-    UnitsAmount = wht_util:dollars_to_units(ResultingItemCost) * Ratio,
+    DiscountedItemCost = kz_json:get_float_value(<<"discounted_item_cost">>, CItem),
+    UnitsAmount = wht_util:dollars_to_units(DiscountedItemCost) * Ratio,
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     MonthStr = httpd_util:month(Month),
 
@@ -318,7 +318,7 @@ calc_item(ItemJObj, AccountId) ->
         CumulativeDiscountRate = kz_json:get_value(<<"cumulative_discount_rate">>, ItemJObj),
         TotalDiscount = SingleDiscountAmount + CumulativeDiscount * CumulativeDiscountRate,
         ItemCost = Rate * Quantity,
-        ResultingItemCost = ItemCost - TotalDiscount,
+        DiscountedItemCost = ItemCost - TotalDiscount,
         {[{<<"name">>, kz_json:get_value(<<"name">>, ItemJObj)}
         ,{<<"quantity">>, Quantity}
         ,{<<"rate">>, Rate}
@@ -326,7 +326,7 @@ calc_item(ItemJObj, AccountId) ->
         ,{<<"cumulative_discount">>, CumulativeDiscount}
         ,{<<"cumulative_discount_rate">>, CumulativeDiscountRate}
         ,{<<"total_discount">>, TotalDiscount}
-        ,{<<"resulting_cost">>, ResultingItemCost}
+        ,{<<"discounted_item_cost">>, DiscountedItemCost}
         ,{<<"item_cost">>, ItemCost}
         ]}
     catch
@@ -348,7 +348,7 @@ calc_item(ItemJObj, AccountId) ->
             ,{<<"cumulative_discount">>, 0.0}
             ,{<<"cumulative_discount_rate">>, 0.0}
             ,{<<"total_discount">>, 0.0}
-            ,{<<"resulting_cost">>, 0.0}
+            ,{<<"discounted_item_cost">>, 0.0}
             ,{<<"item_cost">>, 0.0}
             ]}
     end.

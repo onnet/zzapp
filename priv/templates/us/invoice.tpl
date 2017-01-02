@@ -77,13 +77,13 @@
               <h4>Item</h4>
             </th>
             <th>
-              <h4 style="text-align: center">Qty</h4>
+              <h4 style="text-align: center">Hrs/Qty</h4>
             </th>
             <th>
-              <h4 style="text-align: center">Rate</h4>
+              <h4 style="text-align: center">Rate/Price</h4>
             </th>
             <th>
-              <h4 style="text-align: center">Discount</h4>
+              <h4 style="text-align: center">Disc</h4>
             </th>
             <th>
               <h4 style="text-align: center">Amount</h4>

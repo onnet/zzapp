@@ -83,7 +83,7 @@
               <h4>Rate/Price</h4>
             </th>
             <th>
-              <h4>Discount</h4>
+              <h4>Disc</h4>
             </th>
             <th>
               <h4>Sub Total</h4>
