@@ -42,11 +42,18 @@ enhance_extra_codes(FeeLine, OnbillResellerVars) ->
 enhance_no_or_zero_vat(FeeLine, _OnbillResellerVars) ->
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
+    Discount = props:get_value(<<"discount">>, FeeLine),
+    DiscountedCost = Cost - Discount,
     NewValues = [{<<"rate_netto">>, onbill_util:price_round(Rate)}
                 ,{<<"cost_netto">>, onbill_util:price_round(Cost)}
+                ,{<<"discount_netto">>, onbill_util:price_round(Discount)}
+                ,{<<"discounted_cost_netto">>, onbill_util:price_round(DiscountedCost)}
                 ,{<<"rate_brutto">>, onbill_util:price_round(Rate)}
                 ,{<<"cost_brutto">>, onbill_util:price_round(Cost)}
+                ,{<<"discount_brutto">>, onbill_util:price_round(Discount)}
+                ,{<<"discounted_cost_brutto">>, onbill_util:price_round(DiscountedCost)}
                 ,{<<"vat_line_total">>, 0.0}
+                ,{<<"vat_line_discounted_total">>, 0.0}
                 ],
     props:set_values(NewValues, FeeLine).
 
@@ -54,14 +61,24 @@ enhance_vat_netto(FeeLine, OnbillResellerVars) ->
     VatRate = kz_json:get_value(<<"vat_rate">>, OnbillResellerVars),
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
+    Discount = props:get_value(<<"discount">>, FeeLine),
+    DiscountedCost = Cost - Discount,
     VatLineTotal = onbill_util:price_round(Cost * VatRate / 100),
-    BruttoCost = Cost + VatLineTotal,
+    VatLineDiscountedTotal = onbill_util:price_round(DiscountedCost * VatRate / 100),
     BruttoRate = Rate * (100 + VatRate) / 100,
+    BruttoCost = Cost + VatLineTotal,
+    BruttoDiscountedCost = DiscountedCost + VatLineDiscountedTotal,
+    BruttoDiscount = BruttoCost - BruttoDiscountedCost,
     NewValues = [{<<"rate_netto">>, onbill_util:price_round(Rate)}
                 ,{<<"cost_netto">>, onbill_util:price_round(Cost)}
+                ,{<<"discount_netto">>, onbill_util:price_round(Discount)}
+                ,{<<"discounted_cost_netto">>, onbill_util:price_round(DiscountedCost)}
                 ,{<<"rate_brutto">>, onbill_util:price_round(BruttoRate)}
                 ,{<<"cost_brutto">>, onbill_util:price_round(BruttoCost)}
+                ,{<<"discount_brutto">>, onbill_util:price_round(BruttoDiscount)}
+                ,{<<"discounted_cost_brutto">>, onbill_util:price_round(BruttoDiscountedCost)}
                 ,{<<"vat_line_total">>, VatLineTotal}
+                ,{<<"vat_line_discounted_total">>, VatLineDiscountedTotal}
                 ],
     props:set_values(NewValues, FeeLine).
 
@@ -69,14 +86,24 @@ enhance_vat_brutto(FeeLine, OnbillResellerVars) ->
     VatRate = kz_json:get_value(<<"vat_rate">>, OnbillResellerVars),
     Rate = props:get_value(<<"rate">>, FeeLine),
     Cost = props:get_value(<<"cost">>, FeeLine),
+    Discount = props:get_value(<<"discount">>, FeeLine),
+    DiscountedCost = Cost - Discount,
     VatLineTotal = onbill_util:price_round(Cost * VatRate / (100 + VatRate)),
-    NetCost = Cost - VatLineTotal,
+    VatLineDiscountedTotal = onbill_util:price_round(DiscountedCost * VatRate / (100 + VatRate)),
     NetRate = Rate / (100 + VatRate) * 100,
+    NetCost = Cost - VatLineTotal,
+    NetDiscountedCost = DiscountedCost - VatLineDiscountedTotal,
+    NetDiscount = NetCost - NetDiscountedCost,
     NewValues = [{<<"rate_netto">>, onbill_util:price_round(NetRate)}
                 ,{<<"cost_netto">>, onbill_util:price_round(NetCost)}
+                ,{<<"discount_netto">>, onbill_util:price_round(NetDiscount)}
+                ,{<<"discounted_cost_netto">>, onbill_util:price_round(NetDiscountedCost)}
                 ,{<<"rate_brutto">>, onbill_util:price_round(Rate)}
                 ,{<<"cost_brutto">>, onbill_util:price_round(Cost)}
+                ,{<<"discount_brutto">>, onbill_util:price_round(Discount)}
+                ,{<<"discounted_cost_brutto">>, onbill_util:price_round(Discount)}
                 ,{<<"vat_line_total">>, VatLineTotal}
+                ,{<<"vat_line_discounted_total">>, VatLineDiscountedTotal}
                 ],
     props:set_values(NewValues, FeeLine).
 
@@ -116,16 +143,18 @@ process_per_minute_calls(AccountId, Year, Month, _Day, CarrierDoc) ->
             Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
             {_, CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc) end, {[], 0,0}, JObjs),
             aggregated_service_to_line({<<"per-minute-voip">>
-                               ,<<"description">>
-                               ,CallsTotalSumm
-                               ,kz_util:to_integer(CallsTotalSec / 60)
-                               ,<<"">>
-                               ,calendar:last_day_of_the_month(Year, Month)
-                               ,kz_json:get_value(<<"per_minute_item_name">>, CarrierDoc, <<"Per minute calls">>)
-                               }
-                               ,Year
-                               ,Month
-                              )
+                                       ,<<"description">>
+                                       ,CallsTotalSumm
+                                       ,kz_util:to_integer(CallsTotalSec / 60)
+                                       ,<<"">>
+                                       ,calendar:last_day_of_the_month(Year, Month)
+                                       ,kz_json:get_value(<<"per_minute_item_name">>, CarrierDoc, <<"Per minute calls">>)
+                                       ,<<"per-minute-voip">>
+                                       ,0.0
+                                       }
+                                      ,Year
+                                      ,Month
+                                      )
     end.
 
 -spec per_minute_calls(ne_binary(), kz_year(), kz_month(), kz_day(), ne_binary()) -> ok.
@@ -204,13 +233,14 @@ process_one_time_fee(JObj, Modb) ->
     Reason = kz_json:get_value(<<"pvt_reason">>, DFDoc),
     Amount = wht_util:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, DFDoc)),
     {Reason
-    ,kz_json:get_value(<<"description">>, DFDoc)
-    ,kz_json:get_value([<<"metadata">>,<<"rate">>], DFDoc, Amount)
-    ,kz_json:get_value([<<"metadata">>,<<"quantity">>], DFDoc, 1)
+    ,kz_json:get_value([<<"metadata">>, <<"description">>], DFDoc)
+    ,kz_json:get_value([<<"metadata">>, <<"rate">>], DFDoc, Amount) * kz_json:get_value([<<"metadata">>, <<"ratio">>], DFDoc, 1.0)
+    ,kz_json:get_value([<<"metadata">>, <<"quantity">>], DFDoc, 1)
     ,[onbill_util:period_tuple(Year, Month, Day)]
     ,DaysInMonth
     ,one_time_fee_name(Reason, DFDoc)
     ,<<"non_daily_calculated">>
+    ,kz_json:get_value([<<"metadata">>, <<"total_discount">>], DFDoc, 0.0)
     }.
 
 one_time_fee_name(<<"number_activation">>, DFDoc) -> 
@@ -275,7 +305,7 @@ handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Qu
     lager:info("ETS ServiceType: ~p, Item: ~p, Price: ~p, Quantity: ~p, Dates: ~p, Name: ~p"
               ,[ServiceType, Item, Price, Quantity, dates_sequence_reduce(Dates), Name]
               ),
-    ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, dates_sequence_reduce(Dates), length(Dates), Name, <<"daily_calculated">>}).
+    ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, dates_sequence_reduce(Dates), length(Dates), Name, <<"daily_calculated">>, 0.0}).
 
 -spec dates_sequence_reduce(proplist()) -> proplist().
 dates_sequence_reduce(DatesList) ->
@@ -323,7 +353,7 @@ days_glue(L) ->
 services_to_proplist(ServicesList, Year, Month) ->
     lists:foldl(fun(ServiceLine, Acc) -> service_to_line(ServiceLine, Year, Month, Acc) end, [], ServicesList).
 
-service_to_line({ServiceType, Item, Rate, Quantity, Period, DaysQty, Name, Type}, Year, Month, Acc) ->
+service_to_line({ServiceType, Item, Rate, Quantity, Period, DaysQty, Name, Type, Discount}, Year, Month, Acc) ->
     DaysInPeriod = calendar:last_day_of_the_month(Year, Month),
     [[{<<"category">>, ServiceType}
     ,{<<"item">>, Item}
@@ -335,9 +365,10 @@ service_to_line({ServiceType, Item, Rate, Quantity, Period, DaysQty, Name, Type}
     ,{<<"days_in_period">>, DaysInPeriod}
     ,{<<"period">>, Period}
     ,{<<"type">>, Type}
+    ,{<<"discount">>, Discount}
     ]] ++ Acc.
 
-aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, Name}, Year, Month) when Cost > 0.0, Quantity > 0.0 ->
+aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, Name, Type, Discount}, Year, Month) when Cost > 0.0, Quantity > 0.0 ->
     [[{<<"category">>, ServiceType}
     ,{<<"item">>, Item}
     ,{<<"name">>, Name}
@@ -347,6 +378,8 @@ aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, 
     ,{<<"days_quantity">>, DaysQty}
     ,{<<"days_in_period">>, calendar:last_day_of_the_month(Year, Month)}
     ,{<<"period">>, Period}
+    ,{<<"type">>, Type}
+    ,{<<"discount">>, Discount}
     ]];
 aggregated_service_to_line(_, _, _) ->
     [].

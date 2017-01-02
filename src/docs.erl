@@ -21,9 +21,9 @@ generate_docs(AccountId, PeriodStartYear, PeriodStartMonth, PeriodStartDay) ->
 generate_docs(AccountId, Year, Month, Day, Carrier) ->
     VatUpdatedFeesList = fees:shape_fees(AccountId, Year, Month, Day, Carrier),
     Totals = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
-                                                        {TN_Acc + props:get_value(<<"cost_netto">>, X)
-                                                         ,VAT_Acc + props:get_value(<<"vat_line_total">>, X)
-                                                         ,TB_Acc + props:get_value(<<"cost_brutto">>, X)
+                                                        {TN_Acc + props:get_value(<<"discounted_cost_netto">>, X)
+                                                         ,VAT_Acc + props:get_value(<<"vat_line_discounted_total">>, X)
+                                                         ,TB_Acc + props:get_value(<<"discounted_cost_brutto">>, X)
                                                         }
                                                       end
                                                       ,{0,0,0}

@@ -73,7 +73,7 @@
       <table class="table table-bordered">
         <thead>
           <tr>
-            <th width="52%">
+            <th width="45%">
               <h4>Item</h4>
             </th>
             <th>
@@ -81,6 +81,9 @@
             </th>
             <th>
               <h4 style="text-align: center">Rate</h4>
+            </th>
+            <th>
+              <h4 style="text-align: center">Discount</h4>
             </th>
             <th>
               <h4 style="text-align: center">Amount</h4>
@@ -121,7 +124,10 @@
               {{ currency_sign }}{{ fee_line.rate_netto }}
             </td>
             <td class="text-right">
-              {{ currency_sign }}{{ fee_line.cost_netto }}
+              {{ currency_sign }}{{ fee_line.discount_netto }}
+            </td>
+            <td class="text-right">
+              {{ currency_sign }}{{ fee_line.discounted_cost_netto }}
             </td>
           </tr>
           {% endfor %}
