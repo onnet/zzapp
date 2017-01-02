@@ -238,20 +238,20 @@ process_element(Element, RawTableId, Date) ->
      , quantity(Unit) =/= 0.0
     ].
 
-category(Unit) ->
-    kz_json:get_value(<<"category">>, Unit).
+category(JObj) ->
+    kz_json:get_value(<<"category">>, JObj).
 
-item(Unit) ->
-    kz_json:get_value(<<"item">>, Unit).
+item(JObj) ->
+    kz_json:get_value(<<"item">>, JObj).
 
-name(Unit) ->
-    kz_json:get_value(<<"name">>, Unit).
+name(JObj) ->
+    kz_json:get_value(<<"name">>, JObj).
 
-rate(Unit) ->
-    kz_util:to_float(kz_json:get_value(<<"rate">>, Unit)).
+rate(JObj) ->
+    kz_util:to_float(kz_json:get_value(<<"rate">>, JObj)).
 
-quantity(Unit) ->
-    kz_util:to_float(kz_json:get_value(<<"quantity">>, Unit)).
+quantity(JObj) ->
+    kz_util:to_float(kz_json:get_value(<<"quantity">>, JObj)).
 
 process_ets(RawTableId, ResultTableId) ->
     ServiceTypesList = lists:usort(ets:match(RawTableId,{'$1','_','_','_','_','_'})),
@@ -323,13 +323,13 @@ days_glue(L) ->
 services_to_proplist(ServicesList, Year, Month) ->
     lists:foldl(fun(ServiceLine, Acc) -> service_to_line(ServiceLine, Year, Month, Acc) end, [], ServicesList).
 
-service_to_line({ServiceType, Item, Price, Quantity, Period, DaysQty, Name, Type}, Year, Month, Acc) ->
+service_to_line({ServiceType, Item, Rate, Quantity, Period, DaysQty, Name, Type}, Year, Month, Acc) ->
     DaysInPeriod = calendar:last_day_of_the_month(Year, Month),
     [[{<<"category">>, ServiceType}
     ,{<<"item">>, Item}
     ,{<<"name">>, Name}
-    ,{<<"cost">>, DaysQty / DaysInPeriod * Price * Quantity}
-    ,{<<"rate">>, Price}
+    ,{<<"cost">>, DaysQty / DaysInPeriod * Rate * Quantity}
+    ,{<<"rate">>, Rate}
     ,{<<"quantity">>, Quantity}
     ,{<<"days_quantity">>, DaysQty}
     ,{<<"days_in_period">>, DaysInPeriod}

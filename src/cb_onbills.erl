@@ -228,9 +228,9 @@ validate_current_services(Context, ?HTTP_GET) ->
     ServicesJObj = kz_services:services_json(Services),
     {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
     ItemsList = onbill_bk_util:select_non_zero_items_list(Items, AccountId),
-    ItemsCalculatedList = [build_calculated_item(ItemJObj) || ItemJObj <- ItemsList],
+    ItemsCalculatedList = [onbill_bk_util:calc_item(ItemJObj, AccountId) || ItemJObj <- ItemsList],
     CurrentServicesJObj =
-        kz_json:from_list([{<<"total_amount">>, onbill_bk_util:calc_items(ItemsList, AccountId, 0.0)}
+        kz_json:from_list([{<<"total_amount">>, onbill_bk_util:items_amount(ItemsList, AccountId, 0.0)}
                           ,{<<"services_list">>, ItemsCalculatedList}
                           ,{<<"account_id">>, AccountId}
                           ]),
@@ -240,28 +240,6 @@ validate_current_services(Context, ?HTTP_GET) ->
                        ]);
 validate_current_services(Context, _) ->
     Context.
-
-build_calculated_item(ItemJObj) ->
-    Quantity = kz_json:get_value(<<"quantity">>, ItemJObj),
-    Rate = kz_json:get_value(<<"rate">>, ItemJObj),
-    SingleDiscountAmount =
-        case kz_json:get_value(<<"single_discount">>, ItemJObj) of
-            'false' -> 0;
-            'true' -> kz_json:get_value(<<"single_discount_rate">>, ItemJObj)
-        end,
-    CumulativeDiscount = kz_json:get_value(<<"cumulative_discount">>, ItemJObj),
-    CumulativeDiscountRate = kz_json:get_value(<<"cumulative_discount_rate">>, ItemJObj),
-    TotalDiscount = SingleDiscountAmount + CumulativeDiscount * CumulativeDiscountRate,
-    ItemCost = Rate * Quantity - TotalDiscount,
-    {[{<<"name">>, kz_json:get_value(<<"name">>, ItemJObj)}
-    ,{<<"quantity">>, Quantity}
-    ,{<<"rate">>, Rate}
-    ,{<<"single_discount_amount">>, SingleDiscountAmount}
-    ,{<<"cumulative_discount">>, CumulativeDiscount}
-    ,{<<"cumulative_discount_rate">>, CumulativeDiscountRate}
-    ,{<<"total_discount">>, TotalDiscount}
-    ,{<<"item_cost">>, ItemCost}
-    ]}.
 
 -spec validate_currency_sign(cb_context:context(), http_method()) -> cb_context:context().
 validate_currency_sign(Context, ?HTTP_GET) ->

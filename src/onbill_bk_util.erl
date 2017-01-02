@@ -9,7 +9,8 @@
         ,save_dailyfee_doc/5
         ,charge_newly_added/4
         ,check_this_period_mrc/3
-        ,calc_items/3
+        ,items_amount/3
+        ,calc_item/2
         ,current_usage_amount/1
         ]).
 
@@ -192,11 +193,8 @@ charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], T
             DaysInPeriod = onbill_util:days_in_period(StartYear, StartMonth, StartDay),
             DaysLeft = onbill_util:days_left_in_period(StartYear, StartMonth, StartDay, Timestamp),
             ItemJObj = kz_json:get_value(Path, NewMax),
-            Rate = kz_json:get_float_value(<<"rate">>, ItemJObj),
-            ProratedRate = Rate * DaysLeft / DaysInPeriod,
-            Units = wht_util:dollars_to_units(ProratedRate),
-            Amount = Units * Qty,
-            create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"recurring_prorate">>, Qty, Amount, ProratedRate)
+            Ratio = DaysLeft / DaysInPeriod,
+            create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"recurring_prorate">>, Ratio)
     end,
     charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp). 
 
@@ -244,78 +242,95 @@ charge_mrc_category(AccountId, Category, NewMax, Timestamp) ->
 
 -spec charge_mrc_item(ne_binary(), kz_json:object(), gregorian_seconds()) -> 'ok'|proplist(). 
 charge_mrc_item(AccountId, ItemJObj, Timestamp) ->
-    Qty = kz_json:get_value(<<"quantity">>, ItemJObj),
-    Rate = kz_json:get_float_value(<<"rate">>, ItemJObj),
-    Units = wht_util:dollars_to_units(Rate),
-    Amount = Units * Qty,
-    create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"monthly_recurring">>, Qty, Amount, Rate).
+    create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"monthly_recurring">>, 1.0).
 
--spec create_debit_tansaction(ne_binary(), kz_json:object(), gregorian_seconds(), ne_binary(), pos_integer(), number(), number()) -> 'ok'|proplist(). 
-create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Qty, Amount, Rate) ->
-    Name = kz_json:get_value(<<"name">>, ItemJObj),
+-spec create_debit_tansaction(ne_binary(), kz_json:object(), gregorian_seconds(), ne_binary(), float()) -> 'ok'|proplist(). 
+create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Ratio) ->
+    CItem = calc_item(ItemJObj, AccountId),
+    ResultingItemCost = kz_json:get_float_value(<<"resulting_cost">>, CItem),
+    UnitsAmount = wht_util:dollars_to_units(ResultingItemCost) * Ratio,
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     MonthStr = httpd_util:month(Month),
 
-    Description = <<(?TO_BIN(Name))/binary>>,
-
-    Meta =
-        kz_json:from_list(
-          [{<<"account_id">>, AccountId}
+    Upd = [{<<"account_id">>, AccountId}
           ,{<<"date">>, <<(?TO_BIN(Day))/binary," ",(?TO_BIN(MonthStr))/binary," ",(?TO_BIN(Year))/binary>>}
           ,{<<"reason">>, Reason}
-          ,{<<"amount">>, Amount}
-          ,{<<"rate">>, Rate}
-          ,{<<"quantity">>, Qty}
+          ,{<<"ratio">>, Ratio}
+          ,{<<"amount">>, UnitsAmount}
           ,{<<"item_jobj">>, ItemJObj}
-          ]
-         ),
+          ],
 
     Routines = [fun(Tr) -> kz_transaction:set_reason(Reason, Tr) end
-               ,fun(Tr) -> kz_transaction:set_description(Description, Tr) end
-               ,fun(Tr) -> kz_transaction:set_metadata(Meta, Tr) end
+               ,fun(Tr) -> kz_transaction:set_description(kz_json:get_value(<<"name">>, CItem), Tr) end
+               ,fun(Tr) -> kz_transaction:set_metadata(kz_json:set_values(Upd, CItem), Tr) end
                ,fun kz_transaction:save/1
                ],
+
     lists:foldl(
       fun(F, Tr) -> F(Tr) end
-               ,kz_transaction:debit(AccountId, Amount)
+               ,kz_transaction:debit(AccountId, UnitsAmount)
                ,Routines
      ).
 
--spec calc_items(kz_json:objects(), ne_binary(), float()) -> number().
-calc_items([], _, Acc) ->
+-spec items_amount(kz_json:objects(), ne_binary(), float()) -> number().
+items_amount([], _, Acc) ->
     Acc;
-calc_items([ServiceItem|ServiceItems], AccountId, Acc) ->
-    ItemCost = calc_item(ServiceItem, AccountId),
+items_amount([ServiceItem|ServiceItems], AccountId, Acc) ->
+    ItemCost = item_cost(ServiceItem, AccountId),
     SubTotal = Acc + ItemCost,
-    calc_items(ServiceItems, AccountId, SubTotal).
+    items_amount(ServiceItems, AccountId, SubTotal).
+
+-spec item_cost(kz_json:object(), ne_binary()) -> number().
+item_cost(ItemJObj, AccountId) ->
+    kz_json:get_value(<<"item_cost">>, calc_item(ItemJObj, AccountId)).
 
 -spec calc_item(kz_json:object(), ne_binary()) -> number().
-calc_item(ServiceItem, AccountId) ->
+calc_item(ItemJObj, AccountId) ->
     try
-        Quantity = kz_json:get_value(<<"quantity">>, ServiceItem),
-        Rate = kz_json:get_value(<<"rate">>, ServiceItem),
+        Quantity = kz_json:get_value(<<"quantity">>, ItemJObj),
+        Rate = kz_json:get_value(<<"rate">>, ItemJObj),
         SingleDiscountAmount =
-            case kz_json:get_value(<<"single_discount">>, ServiceItem) of
+            case kz_json:get_value(<<"single_discount">>, ItemJObj) of
                 'false' -> 0;
-                'true' -> kz_json:get_value(<<"single_discount_rate">>, ServiceItem)
+                'true' -> kz_json:get_value(<<"single_discount_rate">>, ItemJObj)
             end,
-        CumulativeDiscount = kz_json:get_value(<<"cumulative_discount">>, ServiceItem),
-        CumulativeDiscountRate = kz_json:get_value(<<"cumulative_discount_rate">>, ServiceItem),
-        ItemCost = Rate * Quantity - SingleDiscountAmount - CumulativeDiscount * CumulativeDiscountRate,
-        ItemCost
+        CumulativeDiscount = kz_json:get_value(<<"cumulative_discount">>, ItemJObj),
+        CumulativeDiscountRate = kz_json:get_value(<<"cumulative_discount_rate">>, ItemJObj),
+        TotalDiscount = SingleDiscountAmount + CumulativeDiscount * CumulativeDiscountRate,
+        ItemCost = Rate * Quantity,
+        ResultingItemCost = ItemCost - TotalDiscount,
+        {[{<<"name">>, kz_json:get_value(<<"name">>, ItemJObj)}
+        ,{<<"quantity">>, Quantity}
+        ,{<<"rate">>, Rate}
+        ,{<<"single_discount_amount">>, SingleDiscountAmount}
+        ,{<<"cumulative_discount">>, CumulativeDiscount}
+        ,{<<"cumulative_discount_rate">>, CumulativeDiscountRate}
+        ,{<<"total_discount">>, TotalDiscount}
+        ,{<<"resulting_cost">>, ResultingItemCost}
+        ,{<<"item_cost">>, ItemCost}
+        ]}
     catch
         E:R ->
             lager:debug("exception syncing acount: ~p : ~p: ~p", [AccountId, E, R]),
-            lager:debug("exception syncing acount: ~p service item: ~p", [AccountId, ServiceItem]),
-            lager:debug("exception syncing acount: ~p service item: ~p", [AccountId, kz_json:get_value(<<"rate">>, ServiceItem)]),
+            lager:debug("exception syncing acount: ~p service item: ~p", [AccountId, ItemJObj]),
+            lager:debug("exception syncing acount: ~p service item: ~p", [AccountId, kz_json:get_value(<<"rate">>, ItemJObj)]),
             Subj = io_lib:format("OnBill Bookkeeper syncing problem! AccountId: ~p",[AccountId]),
             Msg = io_lib:format("Exception syncing AccountId: ~p <br /> Service Item: ~p <br /> Rate: ~p"
                                ,[AccountId
-                                ,ServiceItem
-                                ,kz_json:get_value(<<"rate">>, ServiceItem)
+                                ,ItemJObj
+                                ,kz_json:get_value(<<"rate">>, ItemJObj)
                                 ]),
             kz_notify:system_alert(Subj, Msg, []),
-            0.0
+            {[{<<"name">>, kz_json:get_value(<<"name">>, ItemJObj)}
+            ,{<<"quantity">>, 0}
+            ,{<<"rate">>, 0.0}
+            ,{<<"single_discount_amount">>, 0.0}
+            ,{<<"cumulative_discount">>, 0.0}
+            ,{<<"cumulative_discount_rate">>, 0.0}
+            ,{<<"total_discount">>, 0.0}
+            ,{<<"resulting_cost">>, 0.0}
+            ,{<<"item_cost">>, 0.0}
+            ]}
     end.
 
 -spec current_items(ne_binary()) -> kz_service_item:items().
@@ -329,4 +344,4 @@ current_items(AccountId) ->
 current_usage_amount(AccountId) ->
     Items = current_items(AccountId),
     ItemsJObj = select_non_zero_items_list(Items,AccountId),
-    calc_items(ItemsJObj, AccountId, 0.0).
+    items_amount(ItemsJObj, AccountId, 0.0).
