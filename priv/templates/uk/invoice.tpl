@@ -86,7 +86,7 @@
               <h4>Disc</h4>
             </th>
             <th>
-              <h4>Sub Total</h4>
+              <h4>Amount</h4>
             </th>
           </tr>
         </thead>
