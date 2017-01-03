@@ -42,6 +42,8 @@ handle_doc_edited(JObj, _Props) ->
 
 handle_doc_edited(_, 'undefined', _) ->
     'ok';
+handle_doc_edited(<<"limits">>, AccountId, _) ->
+    _ = kz_services:reconcile(AccountId);
 handle_doc_edited(<<"service">>, AccountId, _) ->
     case kz_datamgr:open_doc(?SERVICES_DB, AccountId) of
         {'ok', ServiceDoc} ->
