@@ -15,8 +15,6 @@
 
 -include("../../crossbar/src/crossbar.hrl").
 
--define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
-
 -spec init() -> 'ok'.
 init() ->
     _ = crossbar_bindings:bind(<<"*.allowed_methods.onbill_transactions">>, ?MODULE, 'allowed_methods'),
