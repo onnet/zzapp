@@ -14,7 +14,7 @@
 
 -include("../../crossbar/src/crossbar.hrl").
 
--define(CB_E911_ADDRESSES, <<"e911/addresses">>).
+-define(CB_E911_ADDRESSES, <<"onbill_e911/addresses">>).
 
 -spec init() -> 'ok'.
 init() ->
@@ -51,17 +51,16 @@ validate(Context, Id) ->
 validate_e911(Context, ?HTTP_GET) ->
     e911_addresses_summary(Context).
 
--spec onbills_modb_summary(cb_context:context()) -> cb_context:context().
-onbills_modb_summary(Context) ->
+-spec e911_addresses_summary(cb_context:context()) -> cb_context:context().
+e911_addresses_summary(Context) ->
     AccountId = cb_context:account_id(Context),
-    Modb = kazoo_modb:get_modb(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
-    onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
-    Context1 = cb_context:set_account_db(Context, Modb),
-    crossbar_doc:load_view(?CB_LIST, [], Context, fun onbill_util:normalize_view_results/2).
+    DbName = kz_util:format_account_id(AccountId,'encoded'),
+    onbill_util:maybe_add_design_doc(DbName, <<"onbill_e911">>),
+    crossbar_doc:load_view(?CB_E911_ADDRESSES, [], Context, fun onbill_util:normalize_view_results/2).
 
--spec validate_periodic_fees(cb_context:context(), ne_binary(), path_token()) -> cb_context:context().
+-spec validate_e911_doc(cb_context:context(), ne_binary(), path_token()) -> cb_context:context().
 validate_e911_doc(Context, Id, ?HTTP_GET) ->
-    crossbar_doc:load(Id,[{'expected_type', <<"e911_address">>}]).
+    crossbar_doc:load(Id, Context, [{'expected_type', <<"e911_address">>}]).
 
 -spec maybe_valid_relationship(cb_context:context()) -> boolean().
 maybe_valid_relationship(Context) ->
