@@ -3,7 +3,7 @@
     "language": "javascript",
     "views": {
         "addresses": {
-            "map": "function(doc) { if (doc.pvt_type != 'e911_address' || doc.pvt_deleted) return; emit(doc._id, {'id': doc._id, 'zip': doc.zip, 'city': doc.city, 'state': doc.state, 'address': doc.address_line1 + ' ' + doc.address_line2 + ' ' + doc.address_line3, 'address_confirmed': doc.pvt_address_confirmed}); }"
+            "map": "function(doc) { if (doc.pvt_type != 'e911_address' || doc.pvt_deleted) return; emit(doc._id, {'id': doc._id, 'zip': doc.zip, 'city': doc.city, 'state': doc.state, 'address': doc.address_line1 + ' ' + doc.address_line2 + ' ' + doc.address_line3, 'address_confirmed': doc.pvt_address_confirmed, 'uploaded_doc': doc.uploaded_doc}); }"
         }
     }
 }
