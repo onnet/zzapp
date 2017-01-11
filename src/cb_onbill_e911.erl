@@ -38,7 +38,7 @@ init() ->
 allowed_methods() ->
     [?HTTP_GET, ?HTTP_PUT].
 allowed_methods(_Id) ->
-    [?HTTP_GET, ?HTTP_POST].
+    [?HTTP_GET, ?HTTP_POST, ?HTTP_DELETE].
 allowed_methods(_Id, ?BIN_DATA) ->
     [?HTTP_GET, ?HTTP_POST].
 
@@ -113,7 +113,12 @@ validate_e911(Context, ?HTTP_PUT) ->
 validate_e911_doc(Context, Id, ?HTTP_GET) ->
     crossbar_doc:load(Id, Context, [{'expected_type', <<"e911_address">>}]);
 validate_e911_doc(Context, Id, ?HTTP_POST) ->
-    save_e911_doc(Context, Id).
+    save_e911_doc(Context, Id);
+validate_e911_doc(Context, Id, ?HTTP_DELETE) ->
+    case maybe_valid_relationship(Context) of
+        'true' -> delete_e911_doc(Context, Id);
+        'false' ->  cb_context:add_system_error('forbidden', Context)
+    end.
 
 -spec e911_addresses_summary(cb_context:context()) -> cb_context:context().
 e911_addresses_summary(Context) ->
@@ -123,6 +128,7 @@ e911_addresses_summary(Context) ->
     crossbar_doc:load_view(?CB_E911_ADDRESSES, [], Context, fun onbill_util:normalize_view_results/2).
 
 -spec save_e911_doc(cb_context:context()) -> cb_context:context().
+-spec save_e911_doc(cb_context:context(), ne_binary()) -> cb_context:context().
 save_e911_doc(Context) ->
     save_e911_doc(Context, kz_datamgr:get_uuid()).
 save_e911_doc(Context, Id) ->
@@ -220,4 +226,22 @@ update_attachment_binary(Context, Id, [{Filename, FileObj}|Files]) ->
                        ,Id
                        ,Files
      ).
+
+-spec maybe_valid_relationship(cb_context:context()) -> boolean().
+maybe_valid_relationship(Context) ->
+    AccountId = cb_context:account_id(Context),
+    AuthAccountId = cb_context:auth_account_id(Context),
+    onbill_util:validate_relationship(AccountId, AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId).
+
+-spec delete_e911_doc(cb_context:context(), ne_binary()) -> cb_context:context().
+delete_e911_doc(Context, Id) ->
+    AccountId = cb_context:account_id(Context),
+    DbName = kz_util:format_account_id(AccountId,'encoded'),
+    case kz_datamgr:open_doc(DbName, Id) of
+        {ok, Doc} ->
+            kz_datamgr:ensure_saved(DbName, kz_json:set_value(<<"deleted_by_user">>, 'true', Doc)),
+            cb_context:set_resp_status(Context, 'success');
+        {'error', 'not_found'} ->
+            Context
+    end.
 
