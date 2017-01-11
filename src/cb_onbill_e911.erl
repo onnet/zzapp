@@ -179,7 +179,9 @@ validate_attachment_binary(Context, _Id, ?HTTP_POST, _Files) ->
 
 -spec load_attachment_binary(cb_context:context(), path_token()) -> cb_context:context().
 load_attachment_binary(Context, Id) ->
-    Context1 = crossbar_doc:load(Id, Context, [{'expected_type', <<"e911_address">>}]),
+    AccountId = cb_context:account_id(Context),
+    DbName = kz_util:format_account_id(AccountId,'encoded'),
+    Context1 = crossbar_doc:load(Id, cb_context:set_account_db(Context, DbName), [{'expected_type', <<"e911_address">>}]),
     case cb_context:resp_status(Context1) of
         'success' ->
             case kz_doc:attachment_names(cb_context:doc(Context1)) of
@@ -196,7 +198,9 @@ load_attachment_binary(Context, Id) ->
                                                 ,{<<"Content-Length">>, kz_doc:attachment_length(cb_context:doc(Context1), Attachment)}
                                                 ])
             end;
-        _Status -> Context1
+        _Status ->
+            lager:debug("load_attachment_binary error _Status: ~p",[_Status]),
+            Context1
     end.
 
 -spec update_attachment_binary(cb_context:context(), path_token()) ->
