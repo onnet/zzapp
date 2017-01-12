@@ -21,6 +21,7 @@
 
 -define(CB_E911_ADDRESSES, <<"onbill_e911/addresses">>).
 -define(BIN_DATA, <<"raw">>).
+-define(CONFIRM_ADDRESS, <<"confirm">>).
 
 -define(ATTACHMENT_MIME_TYPES, ?PDF_CONTENT_TYPES ++ ?IMAGE_CONTENT_TYPES).
 
@@ -40,14 +41,17 @@ allowed_methods() ->
 allowed_methods(_Id) ->
     [?HTTP_GET, ?HTTP_POST, ?HTTP_DELETE].
 allowed_methods(_Id, ?BIN_DATA) ->
-    [?HTTP_GET, ?HTTP_POST].
+    [?HTTP_GET, ?HTTP_POST];
+allowed_methods(_Id, ?CONFIRM_ADDRESS) ->
+    [?HTTP_POST].
 
 -spec resource_exists() -> 'true'.
 -spec resource_exists(path_token()) -> 'true'.
 -spec resource_exists(path_token(), path_token()) -> 'true'.
 resource_exists() -> 'true'.
 resource_exists(_) -> 'true'.
-resource_exists(_, ?BIN_DATA) -> 'true'.
+resource_exists(_, ?BIN_DATA) -> 'true';
+resource_exists(_, ?CONFIRM_ADDRESS) -> 'true'.
 
 -spec acceptable_content_types() -> kz_proplist().
 acceptable_content_types() ->
@@ -99,6 +103,8 @@ validate(Context) ->
 validate(Context, Id) ->
     validate_e911_doc(Context, Id, cb_context:req_verb(Context)).
 
+validate(Context, Id, ?CONFIRM_ADDRESS) ->
+    confirm_address(Context, Id, cb_context:req_verb(Context));
 validate(Context, Id, ?BIN_DATA) ->
     lager:debug("uploading binary data to '~s'", [Id]),
     validate_attachment_binary(Context, kz_http_util:urlencode(Id), cb_context:req_verb(Context), cb_context:req_files(Context)).
@@ -246,3 +252,12 @@ delete_e911_doc(Context, Id) ->
             Context
     end.
 
+confirm_address(Context, Id, ?HTTP_POST) ->
+    AccountId = cb_context:account_id(Context),
+    ReqData = cb_context:req_data(Context),
+    Db = kz_util:format_account_id(AccountId, 'encoded'),
+    {'ok', Doc} = kz_datamgr:open_doc(Db, Id),
+    NewDoc = kz_json:set_value(<<"pvt_address_confirmed">>, kz_json:get_value(<<"address_confirmed">>, ReqData), Doc),
+    crossbar_doc:save(cb_context:set_doc(Context, NewDoc));
+confirm_address(Context, _Id, _) ->
+    Context.
