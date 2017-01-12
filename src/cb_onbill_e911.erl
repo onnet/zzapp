@@ -135,15 +135,14 @@ save_e911_doc(Context, Id) ->
     AccountId = cb_context:account_id(Context),
     ReqData = cb_context:req_data(Context),
     Db = kz_util:format_account_id(AccountId, 'encoded'),
-    Rev = case kz_datamgr:lookup_doc_rev(Db, Id) of
-              {'ok', Rv} -> Rv;
-              _ -> 'undefined'
+    InitialValues = [{<<"_id">>, Id}
+                    ,{<<"pvt_type">>, <<"e911_address">>}
+                    ],
+    Doc = case kz_datamgr:open_doc(Db, Id) of
+              {'ok', JObj} -> JObj;
+              _ -> kz_json:set_values(InitialValues, kz_json:new())
           end,
-    Values = props:filter_undefined([{<<"_id">>, Id}
-                                    ,{<<"_rev">>, Rev}
-                                    ,{<<"pvt_type">>, <<"e911_address">>}
-                                    ]),
-    NewDoc = kz_json:set_values(Values, ReqData),
+    NewDoc = kz_json:merge_recursive(Doc, ReqData),
     crossbar_doc:save(cb_context:set_doc(Context, NewDoc)).
 
 -spec validate_attachment_binary(cb_context:context(), ne_binary(), http_method(), kz_proplist()) -> cb_context:context().
@@ -179,9 +178,7 @@ validate_attachment_binary(Context, _Id, ?HTTP_POST, _Files) ->
 
 -spec load_attachment_binary(cb_context:context(), path_token()) -> cb_context:context().
 load_attachment_binary(Context, Id) ->
-    AccountId = cb_context:account_id(Context),
-    DbName = kz_util:format_account_id(AccountId,'encoded'),
-    Context1 = crossbar_doc:load(Id, cb_context:set_account_db(Context, DbName), [{'expected_type', <<"e911_address">>}]),
+    Context1 = crossbar_doc:load(Id, Context, [{'expected_type', <<"e911_address">>}]),
     case cb_context:resp_status(Context1) of
         'success' ->
             case kz_doc:attachment_names(cb_context:doc(Context1)) of
