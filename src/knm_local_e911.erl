@@ -2,7 +2,7 @@
 %%% @copyright (C) 2017, 2600Hz INC
 %%% @doc
 %%%
-%%% Dummy urhandlcwinge e911 provisioning
+%%% Dummy e911 provisioning
 %%%
 %%% @end
 %%% @contributors
