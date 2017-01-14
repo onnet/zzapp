@@ -17,7 +17,7 @@
          ,acceptable_content_types/0
         ]).
 
--include("../../crossbar/src/crossbar.hrl").
+-include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
 
 -define(CB_E911_ADDRESSES, <<"onbill_e911/addresses">>).
 -define(BIN_DATA, <<"raw">>).

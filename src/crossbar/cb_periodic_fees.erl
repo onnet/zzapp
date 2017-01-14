@@ -6,7 +6,7 @@
          ,validate/1, validate/2
         ]).
 
--include("../../crossbar/src/crossbar.hrl").
+-include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
 
 -define(CB_PERIODIC_FEES, <<"periodic_fees/crossbar_listing">>).
 

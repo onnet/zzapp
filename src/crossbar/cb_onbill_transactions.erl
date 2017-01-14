@@ -13,7 +13,7 @@
          ,validate/2
         ]).
 
--include("../../crossbar/src/crossbar.hrl").
+-include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
 
 -spec init() -> 'ok'.
 init() ->

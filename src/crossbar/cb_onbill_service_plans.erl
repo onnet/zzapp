@@ -14,7 +14,7 @@
          ,validate/2
         ]).
 
--include("../../crossbar/src/crossbar.hrl").
+-include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
 
 -define(SERVICE_PLAN_DOC_TYPE, <<"service_plan">>).
 

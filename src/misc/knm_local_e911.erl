@@ -13,7 +13,7 @@
 -export([save/1]).
 -export([delete/1]).
 
--include("../../../core/kazoo_number_manager/src/knm.hrl").
+-include("/opt/kazoo/core/kazoo_number_manager/src/knm.hrl").
 
 -define(ADDRESS_ID, <<"address_id">>).
 

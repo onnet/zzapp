@@ -7,7 +7,7 @@
          ,validate/1, validate/2, validate/3, validate/4
         ]).
 
--include("../../crossbar/src/crossbar.hrl").
+-include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
 
 -define(CB_LIST, <<"onbills/crossbar_listing">>).
 -define(ATTACHMENT, <<"attachment">>).

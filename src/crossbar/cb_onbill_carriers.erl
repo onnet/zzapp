@@ -15,7 +15,7 @@
          ,validate/2, validate/3
         ]).
 
--include("../../crossbar/src/crossbar.hrl").
+-include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
 
 -define(CARRIER_DOC_TYPE, <<"onbill_carrier">>).
 -define(TEMPLATE_NAME(Id, AttachmentId), <<Id/binary, "_", AttachmentId/binary, ".tpl">>).
