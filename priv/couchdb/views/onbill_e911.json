@@ -3,10 +3,10 @@
     "language": "javascript",
     "views": {
         "addresses": {
-            "map": "function(doc) { if (doc.pvt_type != 'e911_address' || doc.deleted_by_user || doc.pvt_deleted) return; if (doc._attachments) {var att = true} else {var att = false}; emit(doc._id, {'id': doc._id, 'postal_code': doc.postal_code, 'locality': doc.locality, 'region': doc.region, 'address': doc.street_address + ' ' + doc.extended_address, 'address_confirmed': doc.pvt_address_confirmed, 'attachment': att}); }"
+            "map": "function(doc) { if (doc.pvt_type != 'e911_address' || doc.deleted_by_user || doc.pvt_deleted) return; if (doc._attachments) {var att = true} else {var att = false}; emit(doc._id, {'id': doc._id, 'postal_code': doc.postal_code, 'locality': doc.locality, 'region': doc.region, 'street_address': doc.street_address, 'extended_address': doc.extended_address, 'address_confirmed': doc.pvt_address_confirmed, 'attachment': att}); }"
         },
         "addresses_all": {
-            "map": "function(doc) { if (doc.pvt_type != 'e911_address' || doc.pvt_deleted) return; if (doc._attachments) {var att = true} else {var att = false}; emit(doc._id, {'id': doc._id, 'postal_code': doc.postal_code, 'locality': doc.locality, 'region': doc.region, 'address': doc.street_address + ' ' + doc.extended_address, 'address_confirmed': doc.pvt_address_confirmed, 'attachment': att}); }"
+            "map": "function(doc) { if (doc.pvt_type != 'e911_address' || doc.pvt_deleted) return; if (doc._attachments) {var att = true} else {var att = false}; emit(doc._id, {'id': doc._id, 'postal_code': doc.postal_code, 'locality': doc.locality, 'region': doc.region, 'street_address': doc.street_address, 'extended_address': doc.extended_address, 'address_confirmed': doc.pvt_address_confirmed, 'attachment': att}); }"
         }
     }
 }
