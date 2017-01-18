@@ -100,6 +100,7 @@ commit_transactions(BillingId, Transactions, Try) when Try > 0 ->
                     commit_transactions(BillingId, Transactions, Try-1);
                 {'ok', _} ->
                     lager:error("IAM commit_transactions new JObj1 saved: ~p", [JObj1]),
+                    kz_services:reconcile(BillingId),
                     'ok'
             end
     end;
