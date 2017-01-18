@@ -8,9 +8,7 @@ Document consists of data related to:
 
 Services usage being calculated in fees.erl by folding daily_fees docs of particular month. 
 
-Account information is located in account's doc in pvt_account_vars object and could be retrieved/edited over cb_onbill_customers crossbar module.
-
-Reseller information is located in reseller's account doc in pvt_reseller_vars object and could be retrieved/edited over cb_onbill_resellers crossbar module.
+Account/Reseller information is located in account's db "onbill" doc and could be retrieved/edited over cb_onbill_customers/reseller crossbar module.
 
 Carriers information is located in onbill_carrier.{ CARRIER_NAME } docs and could be retrieved/edited over cb_onbill_carriers crossbar module
 
@@ -33,4 +31,6 @@ So Account can have one document of each type per month.
 
 Ex.: one invoice + one act of work completion + one monthly calls report + etc..
 
-Numbering information is stored in databases separately for each reseller/year
+Numbering information is stored in databases separately for each reseller/year.
+
+Numbering could be couninious if all existing documents of particular document type should be numbered sequentially throughout or can be started from #1 every beginning of the year (kz_json:is_true(<<"continious_doc_numbering">>, CarrierDoc))
