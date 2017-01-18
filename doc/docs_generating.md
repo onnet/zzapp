@@ -33,4 +33,6 @@ So Account can have one document of each type per month.
 
 Ex.: one invoice + one act of work completion + one monthly calls report + etc..
 
-Numbering information is stored in databases separately for each reseller/year
+Numbering information is stored in databases separately for each reseller/year.
+
+Numbering could be couninious if all existing documents should be numbered sequentially throughout or can be started from #1 every beginning of the year (kz_json:is_true(<<"continious_doc_numbering">>, CarrierDoc))
