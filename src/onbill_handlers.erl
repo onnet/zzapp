@@ -45,14 +45,12 @@ handle_doc_edited(_, 'undefined', _) ->
 handle_doc_edited(<<"limits">>, AccountId, _) ->
     _ = kz_services:reconcile(AccountId);
 handle_doc_edited(<<"service">>, AccountId, _) ->
-    case kz_datamgr:open_doc(?SERVICES_DB, AccountId) of
-        {'ok', ServiceDoc} ->
-            case kz_json:get_value(<<"pvt_dirty">>, ServiceDoc, 'false') of
-                'true' -> kz_service_sync:sync(AccountId);
-                'false' -> 'ok'
-            end;
-        _ ->
-            lager:info("can't open services doc ~p in services db, please check if it exists",[AccountId])
+    _ = onbill_util:ensure_service_plan(AccountId),
+    Services = kz_services:fetch(AccountId),
+    case kz_services:is_dirty(Services) of
+        'true' ->
+            kz_service_sync:sync(AccountId);
+        'false' -> 'ok'
     end;
 handle_doc_edited(_, _, _) ->
     'ok'.

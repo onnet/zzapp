@@ -35,6 +35,7 @@
         ,is_trial_account/1
         ,maybe_administratively_convicted/1
         ,maybe_convicted/1
+        ,ensure_service_plan/1
         ]).
 
 -include("onbill.hrl").
@@ -348,3 +349,34 @@ maybe_administratively_convicted(AccountId) ->
             end
     end.
 
+-spec ensure_service_plan(ne_binary()) -> 'ok'.
+ensure_service_plan(AccountId) ->
+    Services = kz_services:fetch(AccountId),
+    ServicesJObj = kz_services:services_json(Services),
+    Plans = kz_service_plans:plan_summary(ServicesJObj),
+    case kz_util:is_empty(Plans) of
+        'true' ->
+            _ = add_service_plan(AccountId);
+        _ ->
+            'ok'
+    end.
+
+add_service_plan(AccountId) ->
+    case default_service_plan(AccountId) of
+        'undefined' ->
+            lager:info("no default service plan found to apply to account: ~p",[AccountId]);
+        DefaultPlan -> 
+            add_service_plan(DefaultPlan, AccountId)
+    end.
+
+add_service_plan(PlanId, AccountId) ->
+    Services = kz_services:fetch(AccountId),
+    kz_services:save(kz_services:add_service_plan(PlanId, Services)).
+
+-spec default_service_plan(ne_binary()) -> ne_binary().
+default_service_plan(AccountId) ->
+    {'ok', MasterAccount} = kapps_util:get_master_account_id(),
+    kz_json:get_value(<<"default_service_plan">>
+                     ,reseller_vars(AccountId)
+                     ,kz_json:get_value(<<"default_service_plan">>,reseller_vars(MasterAccount))
+                     ).
