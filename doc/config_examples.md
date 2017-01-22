@@ -3,6 +3,7 @@ onbill doc reseller's example
 ```
     {  "_id": "onbill",
        "iso_code_country_of_residence": "ru",
+       "default_service_plan": "voip_service_plan",
        "carriers": [
            "onnet",
            "beeline"
