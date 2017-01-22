@@ -31,6 +31,10 @@
         ,period_start_date/2
         ,period_start_date/4
         ,get_account_created_date/1
+        ,maybe_allow_postpay/1
+        ,is_trial_account/1
+        ,maybe_administratively_convicted/1
+        ,maybe_convicted/1
         ]).
 
 -include("onbill.hrl").
@@ -127,7 +131,8 @@ format_datetime(TStamp) ->
 
 -spec is_billable(ne_binary()) -> boolean().
 is_billable(AccountId) ->
-    kz_account:is_enabled(kz_account:fetch(AccountId)).
+    {'ok', JObj} = kz_account:fetch(AccountId),
+    kz_account:is_enabled(JObj).
 
 -spec validate_relationship(ne_binary(), ne_binary()) -> boolean().
 validate_relationship(ChildId, ResellerId) ->
@@ -304,3 +309,42 @@ get_account_created_date(AccountId) ->
     Timestamp = kz_json:get_value(<<"pvt_created">>, AccountDoc),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     {Year, Month, Day}.
+
+-spec maybe_allow_postpay(ne_binary()) -> boolean().
+maybe_allow_postpay(AccountId) ->
+    Limits = j5_limits:get(AccountId),
+    case j5_limits:allow_postpay(Limits) of
+        'false' -> 'false';
+        'true' -> {'true', j5_limits:max_postpay(Limits)}
+    end.
+
+-spec is_trial_account(ne_binary()) -> boolean().
+is_trial_account(AccountId) ->
+    {'ok', JObj} = kz_account:fetch(AccountId),
+    case kz_account:trial_expiration(JObj) of
+        'undefined' -> 'false';
+        _ -> 'true'
+    end.
+
+-spec maybe_convicted(ne_binary()) -> 'ok'|'delinquent'.
+maybe_convicted(AccountId) ->
+    Balance = wht_util:current_balance(AccountId),
+    case onbill_util:maybe_allow_postpay(AccountId) of
+        'false' when Balance < 0 -> 'delinquent';
+        'false' -> 'ok';
+        {'ok', MaxPostpay} when Balance < MaxPostpay ->  'delinquent';
+        {'true', _} -> 'ok'
+    end.
+
+-spec maybe_administratively_convicted(ne_binary()) -> boolean().
+maybe_administratively_convicted(AccountId) ->
+    {ok, ServicesJObj} = kz_services:fetch_services_doc(AccountId,'false'),
+    case kzd_services:status(ServicesJObj) of
+        <<"good_standing">> -> 'false';
+        _ ->
+            case kz_json:get_value(<<"pvt_status_reason">>, ServicesJObj) of
+                <<"administratively_convicted">> -> 'true';
+                _ -> 'false'
+            end
+    end.
+

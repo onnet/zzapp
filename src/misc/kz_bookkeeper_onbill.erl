@@ -20,8 +20,15 @@
 
 -define(TR_DESCRIPTION, <<"braintree transaction">>).
 
--spec sync(kz_service_item:items(), ne_binary()) -> 'ok'.
+-spec sync(kz_service_item:items(), ne_binary()) -> 'ok'|'delinquent'|'retry'.
 sync(Items, AccountId) ->
+    case onbill_util:is_trial_account(AccountId) of
+        'true' -> 'ok';
+        'false' -> run_sync(Items, AccountId)
+    end.
+
+-spec run_sync(kz_service_item:items(), ne_binary()) -> 'ok'|'delinquent'|'retry'.
+run_sync(Items, AccountId) ->
     Timestamp = kz_util:current_tstamp(),
     case onbill_bk_util:max_daily_usage_exceeded(Items, AccountId, Timestamp) of
         {'true', NewMax, ExcessDets} ->
@@ -33,6 +40,10 @@ sync(Items, AccountId) ->
             sync(Timestamp, DailyCountItems, AccountId, NewMax, Items);
         'false' ->
             lager:debug("max usage not exceeded, no sync needed for: ~p",[AccountId])
+    end,
+    case onbill_util:maybe_administratively_convicted(AccountId) of
+        'true' -> 'delinquent';
+        'false' -> onbill_util:maybe_convicted(AccountId)
     end.
 
 sync(_Timestamp, [], _AccountId, _NewMax, _Items) ->
@@ -53,11 +64,12 @@ is_good_standing(AccountId) ->
     wht_util:current_balance(AccountId) > 0.
 
 -spec is_good_standing(ne_binary(), ne_binary()) -> boolean().
-is_good_standing(AccountId, _Status) ->
+is_good_standing(AccountId, Status) ->
     _ = kz_services:reconcile(AccountId),
     _ = kz_service_sync:sync(AccountId),
-  lager:info("IAM is_good_standing/2: ~p, Status: ~p",[(wht_util:current_balance(AccountId) > 0), _Status]),
-    wht_util:current_balance(AccountId) > 0.
+  lager:info("IAM is_good_standing/2: ~p, Status Arg: ~p",[Status =:= kzd_services:status_good(), Status]),
+ %   wht_util:current_balance(AccountId) > 0.
+    Status =:= kzd_services:status_good().
 
 -spec transactions(ne_binary(), gregorian_seconds(), gregorian_seconds()) ->
                           {'ok', kz_transaction:transactions()} |
