@@ -14,6 +14,7 @@
         ,format_datetime/1
         ,is_billable/1
         ,validate_relationship/2
+        ,get_children_list/1
         ,normalize_view_results/2
         ,normalize_view_active_results/2
         ,maybe_fee_active/2
@@ -146,6 +147,7 @@ validate_relationship(ChildId, ResellerId) ->
             'false'
     end.
 
+-spec get_children_list(ne_binary()) -> {'ok', proplist()} | {'error', any()}.
 get_children_list(ResellerId) ->
     ViewOpts = [{'startkey', [ResellerId]}
                ,{'endkey', [ResellerId, kz_json:new()]}

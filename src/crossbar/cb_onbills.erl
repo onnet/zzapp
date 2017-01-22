@@ -127,7 +127,7 @@ maybe_spawn_generate_billing_docs(AccountId, Year, Month, FunName, N) ->
 
 generate_billing_docs(Context, ?ALL_CHILDREN, Year, Month, FunName) ->
     ResellerId = cb_context:account_id(Context),
-    case get_children_list(ResellerId) of
+    case onbill_util:get_children_list(ResellerId) of
         {'ok', Accounts} ->
             _ = lists:foldl(fun(X, N) -> maybe_spawn_generate_billing_docs(kz_json:get_value(<<"id">>, X), Year, Month, FunName, N) end, 1, Accounts),
             cb_context:set_resp_status(Context, 'success');
@@ -136,7 +136,7 @@ generate_billing_docs(Context, ?ALL_CHILDREN, Year, Month, FunName) ->
     end;
 generate_billing_docs(Context, DocsAccountId, Year, Month, FunName) ->
     ResellerId = cb_context:account_id(Context),
-    case validate_relationship(DocsAccountId, ResellerId) of
+    case onbill_util:validate_relationship(DocsAccountId, ResellerId) of
         'true' ->
             _ = docs:FunName(DocsAccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
             cb_context:set_resp_status(Context, 'success');
@@ -203,23 +203,6 @@ load_modb_attachment(Context0, Id) ->
         _ ->
             cb_context:add_system_error('faulty_request', Context0)
     end.
-
--spec validate_relationship(ne_binary(), ne_binary()) -> boolean().
-validate_relationship(ChildId, ResellerId) ->
-    case get_children_list(ResellerId) of
-        {'ok', Accounts} ->
-            AccountIds = lists:map(fun(Account) -> kz_json:get_value(<<"id">>, Account) end, Accounts),
-            lists:member(ChildId, AccountIds);
-        {'error', _Reason} = E ->
-            lager:info("failed to load children. error: ~p", [E]),
-            'false'
-    end.
-
-get_children_list(ResellerId) ->
-    ViewOpts = [{'startkey', [ResellerId]}
-               ,{'endkey', [ResellerId, kz_json:new()]}
-               ],
-    kz_datamgr:get_results(?KZ_ACCOUNTS_DB, ?ACC_CHILDREN_LIST, ViewOpts).
 
 -spec validate_current_services(cb_context:context(), http_method()) -> cb_context:context().
 validate_current_services(Context, ?HTTP_GET) ->
