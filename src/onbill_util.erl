@@ -335,7 +335,7 @@ maybe_convicted(AccountId) ->
     case onbill_util:maybe_allow_postpay(AccountId) of
         'false' when Balance < 0 -> 'delinquent';
         'false' -> 'ok';
-        {'ok', MaxPostpay} when Balance < MaxPostpay ->  'delinquent';
+        {'true', MaxPostpay} when Balance < MaxPostpay ->  'delinquent';
         {'true', _} -> 'ok'
     end.
 
