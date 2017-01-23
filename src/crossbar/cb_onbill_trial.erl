@@ -58,8 +58,23 @@ validate_trial(Context, ?HTTP_POST) ->
                     {'ok', Doc} = kz_account:fetch(AccountId),
                     NewDoc = kz_json:set_value(?KEY_TRIAL_EXPIRATION, kz_util:to_integer(NewTS), Doc),
                     Context1 = cb_context:set_doc(Context, NewDoc),
-                    cb_context:set_resp_status(crossbar_doc:save(Context1),'success')
+                    RespCtx = cb_context:set_resp_status(crossbar_doc:save(Context1),'success'),
+                    _ = replicate_account_doc(NewDoc),
+                    RespCtx
             end;
         'false' ->
             cb_context:add_system_error('forbidden', Context)
     end.
+
+-spec replicate_account_doc(kz_json:object()) ->
+                                          {'ok', kz_json:object()} |
+                                          {'error', any()}.
+replicate_account_doc(JObj) ->
+    AccountId = kz_doc:id(JObj),
+    case kz_datamgr:lookup_doc_rev(?KZ_ACCOUNTS_DB, AccountId) of
+        {'ok', Rev} ->
+            kz_datamgr:ensure_saved(?KZ_ACCOUNTS_DB, kz_doc:set_revision(JObj, Rev));
+        _Else ->
+            kz_datamgr:ensure_saved(?KZ_ACCOUNTS_DB, kz_doc:delete_revision(JObj))
+    end.
+
