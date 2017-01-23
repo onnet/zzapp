@@ -22,9 +22,28 @@
 
 -spec sync(kz_service_item:items(), ne_binary()) -> 'ok'|'delinquent'|'retry'.
 sync(Items, AccountId) ->
+    lager:info("IAM attempt to sync AccountId: ~p",[AccountId]), 
     case onbill_util:is_trial_account(AccountId) of
-        'true' -> 'ok';
-        'false' -> run_sync(Items, AccountId)
+        'true' ->
+            CurrentUsage = onbill_bk_util:current_usage_amount(AccountId),
+            CurrentBalance = wht_util:current_balance(AccountId),
+            lager:info("IAM Trial AccountId: ~p, CurrentBalance:~p, CurrentUsage: ~p",[AccountId, CurrentBalance, CurrentUsage]), 
+            case wht_util:current_balance(AccountId)
+                   > onbill_bk_util:current_usage_amount(AccountId)
+            of
+                'true' ->
+                    _ = kz_services:reconcile(AccountId),
+                    case onbill_util:transit_to_full_suscription_state(AccountId) of
+                        {'ok', _} ->
+                            sync(Items, AccountId);
+                        _ ->
+                            'retry'
+                    end;
+                'false' ->
+                    'ok'
+            end;
+        'false' ->
+            run_sync(Items, AccountId)
     end.
 
 -spec run_sync(kz_service_item:items(), ne_binary()) -> 'ok'|'delinquent'|'retry'.

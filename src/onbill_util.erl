@@ -37,9 +37,13 @@
         ,maybe_administratively_convicted/1
         ,maybe_convicted/1
         ,ensure_service_plan/1
+        ,replicate_account_doc/1
+        ,transit_to_full_suscription_state/1
         ]).
 
 -include("onbill.hrl").
+
+-define(KEY_TRIAL_EXPIRATION, <<"pvt_trial_expires">>).
 
 -spec check_db(ne_binary()) -> 'ok'.
 check_db(Db) when is_binary(Db) ->
@@ -290,9 +294,12 @@ set_billing_day(AccountId) ->
         case kz_json:get_value(<<"pvt_billing_period_type">>, account_vars(AccountId)) of
             <<"calendar_month">> -> 1;
             _ ->
-                {_, _, Day} = get_account_created_date(AccountId),
-                Day
+                {{_,_,Today},_} = calendar:universal_time(),
+                Today
         end,
+    set_billing_day(BillingDay, AccountId).
+
+set_billing_day(BillingDay, AccountId) ->
     DbName = kz_util:format_account_id(AccountId,'encoded'),
     NewDoc = case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
         {ok, Doc} ->
@@ -382,3 +389,25 @@ default_service_plan(AccountId) ->
                      ,reseller_vars(AccountId)
                      ,kz_json:get_value(<<"default_service_plan">>,reseller_vars(MasterAccount))
                      ).
+
+-spec transit_to_full_suscription_state(ne_binary()) -> 'ok'.
+transit_to_full_suscription_state(AccountId) ->
+    set_billing_day(AccountId),
+    {'ok', Doc} = kz_account:fetch(AccountId),
+    NewDoc = kz_json:delete_key(?KEY_TRIAL_EXPIRATION, Doc),
+    AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
+    {'ok', JObj} = kz_datamgr:ensure_saved(AccountDb, NewDoc),
+    replicate_account_doc(JObj),
+    {'ok', JObj}.
+
+-spec replicate_account_doc(kz_json:object()) ->
+                                          {'ok', kz_json:object()} |
+                                          {'error', any()}.
+replicate_account_doc(JObj) ->
+    AccountId = kz_doc:id(JObj),
+    case kz_datamgr:lookup_doc_rev(?KZ_ACCOUNTS_DB, AccountId) of
+        {'ok', Rev} ->
+            kz_datamgr:ensure_saved(?KZ_ACCOUNTS_DB, kz_doc:set_revision(JObj, Rev));
+        _Else ->
+            kz_datamgr:ensure_saved(?KZ_ACCOUNTS_DB, kz_doc:delete_revision(JObj))
+    end.

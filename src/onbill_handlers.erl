@@ -49,8 +49,11 @@ handle_doc_edited(<<"service">>, AccountId, _) ->
     Services = kz_services:fetch(AccountId),
     case kz_services:is_dirty(Services) of
         'true' ->
+            lager:info("IAM handle_doc_edited dirty Account: ~p",[AccountId]),
             kz_service_sync:sync(AccountId);
-        'false' -> 'ok'
+        'false' ->
+            lager:info("IAM handle_doc_edited clean Account: ~p",[AccountId]),
+            'ok'
     end;
 handle_doc_edited(_, _, _) ->
     'ok'.

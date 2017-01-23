@@ -39,8 +39,7 @@ validate_trial(Context, ?HTTP_DELETE) ->
     AccountId = cb_context:account_id(Context),
     case onbill_util:validate_relationship(AccountId, ResellerId) of
         'true' ->
-            {'ok', Doc} = kz_account:fetch(AccountId),
-            NewDoc = kz_json:delete_key(?KEY_TRIAL_EXPIRATION, Doc),
+            {'ok', NewDoc} = onbill_util:transit_to_full_suscription_state(AccountId),
             Context1 = cb_context:set_doc(Context, NewDoc),
             cb_context:set_resp_status(crossbar_doc:save(Context1), 'success');
         'false' ->
@@ -59,22 +58,9 @@ validate_trial(Context, ?HTTP_POST) ->
                     NewDoc = kz_json:set_value(?KEY_TRIAL_EXPIRATION, kz_util:to_integer(NewTS), Doc),
                     Context1 = cb_context:set_doc(Context, NewDoc),
                     RespCtx = cb_context:set_resp_status(crossbar_doc:save(Context1),'success'),
-                    _ = replicate_account_doc(NewDoc),
+                    _ = onbill_util:replicate_account_doc(NewDoc),
                     RespCtx
             end;
         'false' ->
             cb_context:add_system_error('forbidden', Context)
     end.
-
--spec replicate_account_doc(kz_json:object()) ->
-                                          {'ok', kz_json:object()} |
-                                          {'error', any()}.
-replicate_account_doc(JObj) ->
-    AccountId = kz_doc:id(JObj),
-    case kz_datamgr:lookup_doc_rev(?KZ_ACCOUNTS_DB, AccountId) of
-        {'ok', Rev} ->
-            kz_datamgr:ensure_saved(?KZ_ACCOUNTS_DB, kz_doc:set_revision(JObj, Rev));
-        _Else ->
-            kz_datamgr:ensure_saved(?KZ_ACCOUNTS_DB, kz_doc:delete_revision(JObj))
-    end.
-
