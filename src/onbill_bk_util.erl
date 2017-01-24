@@ -12,6 +12,7 @@
         ,items_amount/3
         ,calc_item/2
         ,current_usage_amount/1
+        ,current_usage_amount_in_units/1
         ]).
 
 -include("onbill.hrl").
@@ -365,6 +366,10 @@ current_items(AccountId) ->
     ServicesJObj = kz_services:services_json(Services),
     {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
     Items.
+
+-spec current_usage_amount_in_units(ne_binary()) -> float().
+current_usage_amount_in_units(AccountId) ->
+    wht_util:dollars_to_units(current_usage_amount(AccountId)).
 
 -spec current_usage_amount(ne_binary()) -> float().
 current_usage_amount(AccountId) ->

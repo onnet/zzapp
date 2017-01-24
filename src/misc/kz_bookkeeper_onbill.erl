@@ -25,12 +25,10 @@ sync(Items, AccountId) ->
     lager:info("IAM attempt to sync AccountId: ~p",[AccountId]), 
     case onbill_util:is_trial_account(AccountId) of
         'true' ->
-            CurrentUsage = onbill_bk_util:current_usage_amount(AccountId),
+            CurrentUsage = onbill_bk_util:current_usage_amount_in_units(AccountId),
             CurrentBalance = wht_util:current_balance(AccountId),
             lager:info("IAM Trial AccountId: ~p, CurrentBalance:~p, CurrentUsage: ~p",[AccountId, CurrentBalance, CurrentUsage]), 
-            case wht_util:current_balance(AccountId)
-                   > onbill_bk_util:current_usage_amount(AccountId)
-            of
+            case CurrentBalance > CurrentUsage of
                 'true' ->
                     _ = kz_services:reconcile(AccountId),
                     case onbill_util:transit_to_full_suscription_state(AccountId) of
