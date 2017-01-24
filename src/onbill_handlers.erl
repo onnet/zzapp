@@ -30,6 +30,10 @@ handle_doc_created(<<"user">>, AccountId, _JObj) ->
     _ = kz_services:reconcile(AccountId);
 handle_doc_created(<<"number">>, AccountId, _JObj) ->
     _ = kz_services:reconcile(AccountId);
+handle_doc_created(<<"credit">>, AccountId, _JObj) ->
+    _ = onbill_util:ensure_service_plan(AccountId),
+    _ = kz_services:reconcile(AccountId),
+    kz_service_sync:sync(AccountId);
 handle_doc_created(_, _, _) ->
     'ok'.
 
