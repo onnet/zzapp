@@ -51,14 +51,14 @@ handle_doc_edited(_, 'undefined', _) ->
 handle_doc_edited(<<"limits">>, AccountId, _) ->
     _ = kz_services:reconcile(AccountId);
 handle_doc_edited(<<"service">>, AccountId, _) ->
-    _ = onbill_util:ensure_service_plan(AccountId),
+ %   _ = onbill_util:ensure_service_plan(AccountId),
     Services = kz_services:fetch(AccountId),
     case kz_services:is_dirty(Services) of
         'true' ->
             lager:info("IAM handle_doc_edited dirty Account: ~p",[AccountId]),
-            _ = kz_service_sync:sync(AccountId),
+            _ = kz_service_sync:sync(AccountId);
             % nail it twice just in case of conflict somewhere...
-            kz_services:reconcile(AccountId);
+          %  kz_services:reconcile(AccountId);
         'false' ->
             lager:info("IAM handle_doc_edited clean Account: ~p",[AccountId]),
             'ok'
