@@ -363,7 +363,10 @@ ensure_service_plan(AccountId) ->
     Services = kz_services:fetch(AccountId),
     ServicesJObj = kz_services:services_json(Services),
     Plans = kz_service_plans:plan_summary(ServicesJObj),
+    {'ok', MasterAccount} = kapps_util:get_master_account_id(),
     case kz_util:is_empty(Plans) of
+        'true' when MasterAccount == AccountId ->
+            'ok';
         'true' ->
             _ = add_service_plan(AccountId);
         _ ->
