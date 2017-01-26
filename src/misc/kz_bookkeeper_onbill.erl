@@ -22,6 +22,15 @@
 
 -spec sync(kz_service_item:items(), ne_binary()) -> 'ok'|'delinquent'|'retry'.
 sync(Items, AccountId) ->
+    case kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded')) of
+        'true' ->
+            maybe_sync(Items, AccountId);
+        'false' ->
+            'delinquent'
+    end.
+
+-spec maybe_sync(kz_service_item:items(), ne_binary()) -> 'ok'|'delinquent'|'retry'.
+maybe_sync(Items, AccountId) ->
     lager:info("IAM attempt to sync AccountId: ~p",[AccountId]), 
     case onbill_util:is_trial_account(AccountId) of
         'true' ->

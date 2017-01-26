@@ -90,10 +90,15 @@ code_change(_OldVsn, State, _Extra) ->
 
 -spec check_then_process_account(ne_binary(), {'ok', kz_account:doc()} | {'error',any()}) -> 'ok'.
 check_then_process_account(AccountId, {'ok', AccountJObj}) ->
-    case kz_doc:is_soft_deleted(AccountJObj) of
-        'true' -> 'ok'; 
+    case kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded')) of
+        'true' ->
+            case kz_doc:is_soft_deleted(AccountJObj) of
+                'true' -> 'ok'; 
+                'false' ->
+                    process_account(AccountId)
+            end;
         'false' ->
-            process_account(AccountId)
+            'ok'
     end;
 check_then_process_account(AccountId, {'error', _R}) ->
     lager:warning("unable to open account definition for ~s: ~p", [AccountId, _R]).

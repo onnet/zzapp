@@ -18,7 +18,9 @@
 -spec handle_doc_created(kz_json:object(), kz_proplist()) -> any().
 handle_doc_created(JObj, _Props) ->
     AccountId = kz_json:get_value(<<"Account-ID">>, JObj),
-    case kz_services:is_reseller(AccountId) of
+    case kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded'))
+             andalso kz_services:is_reseller(AccountId)
+    of
         'false' ->
             handle_doc_created(kz_json:get_value(<<"Type">>, JObj), AccountId, JObj);
         'true' ->
@@ -45,7 +47,9 @@ handle_doc_created(_, _, _) ->
 -spec handle_doc_edited(kz_json:object(), kz_proplist()) -> any().
 handle_doc_edited(JObj, _Props) ->
     AccountId = kz_json:get_value(<<"Account-ID">>, JObj),
-    case kz_services:is_reseller(AccountId) of
+    case kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded'))
+             andalso kz_services:is_reseller(AccountId)
+    of
         'false' ->
             handle_doc_edited(kz_json:get_value(<<"Type">>, JObj), AccountId, JObj);
         'true' ->
