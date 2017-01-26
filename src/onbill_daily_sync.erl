@@ -14,6 +14,8 @@
 -include("onbill.hrl").
 -include_lib("kazoo/include/kz_databases.hrl").
 
+-define(CB_LISTING_BY_ID, <<"accounts/listing_by_id">>).
+
 -record(state, {}).
 -type state() :: #state{}.
 
@@ -45,7 +47,7 @@ handle_cast(_Msg, State) ->
 
 -spec handle_info(any(), state()) -> handle_info_ret_state(state()).
 handle_info('crawl_accounts', _) ->
-    _ = case kz_datamgr:all_docs(?KZ_ACCOUNTS_DB) of
+    _ = case kz_datamgr:get_results(?KZ_ACCOUNTS_DB, ?CB_LISTING_BY_ID) of
             {'ok', JObjs} ->
                 self() ! 'next_account',
                 {'noreply', kz_util:shuffle_list(JObjs)};
