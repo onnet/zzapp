@@ -17,10 +17,13 @@
 
 -spec handle_doc_created(kz_json:object(), kz_proplist()) -> any().
 handle_doc_created(JObj, _Props) ->
-    handle_doc_created(kz_json:get_value(<<"Type">>, JObj)
-                      ,kz_json:get_value(<<"Account-ID">>, JObj)
-                      ,JObj 
-                      ).
+    AccountId = kz_json:get_value(<<"Account-ID">>, JObj),
+    case kz_services:is_reseller(AccountId) of
+        'false' ->
+            handle_doc_created(kz_json:get_value(<<"Type">>, JObj), AccountId, JObj);
+        'true' ->
+            'ok'
+    end.
 
 handle_doc_created(_, 'undefined', _) ->
     'ok';
@@ -41,10 +44,13 @@ handle_doc_created(_, _, _) ->
 
 -spec handle_doc_edited(kz_json:object(), kz_proplist()) -> any().
 handle_doc_edited(JObj, _Props) ->
-    handle_doc_edited(kz_json:get_value(<<"Type">>, JObj)
-                     ,kz_json:get_value(<<"Account-ID">>, JObj)
-                     ,JObj 
-                     ).
+    AccountId = kz_json:get_value(<<"Account-ID">>, JObj),
+    case kz_services:is_reseller(AccountId) of
+        'false' ->
+            handle_doc_edited(kz_json:get_value(<<"Type">>, JObj), AccountId, JObj);
+        'true' ->
+            'ok'
+    end.
 
 handle_doc_edited(_, 'undefined', _) ->
     'ok';
