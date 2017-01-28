@@ -420,4 +420,5 @@ replicate_account_doc(JObj) ->
 maybe_reconcile(AccountId) ->
     Services = kz_services:reconcile(AccountId),
     lager:info("IAM maybe_reconcile Services: ~p",[kz_services:to_json(Services)]),
+    lager:info("IAM maybe_reconcile DiffQuantities: ~p",[kz_services:diff_quantities(Services)]),
     Services.
