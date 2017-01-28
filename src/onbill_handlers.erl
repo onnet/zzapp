@@ -19,8 +19,8 @@
 handle_doc_created(JObj, _Props) ->
     AccountId = kz_json:get_value(<<"Account-ID">>, JObj),
     case kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded'))
-             andalso not kz_services:is_reseller(AccountId)
-         %    andalso not kapps_util:is_master_account(AccountId)
+         %    andalso not kz_services:is_reseller(AccountId)
+             andalso not kapps_util:is_master_account(AccountId)
     of
         'true' ->
             handle_doc_created(kz_json:get_value(<<"Type">>, JObj), AccountId, JObj);
@@ -49,8 +49,8 @@ handle_doc_created(_, _, _) ->
 handle_doc_edited(JObj, _Props) ->
     AccountId = kz_json:get_value(<<"Account-ID">>, JObj),
     case kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded'))
-             andalso not kz_services:is_reseller(AccountId)
-         %    andalso not kapps_util:is_master_account(AccountId)
+         %    andalso not kz_services:is_reseller(AccountId)
+             andalso not kapps_util:is_master_account(AccountId)
     of
         'true' ->
             handle_doc_edited(kz_json:get_value(<<"Type">>, JObj), AccountId, JObj);
@@ -69,10 +69,7 @@ handle_doc_edited(<<"service">>, AccountId, _) ->
         'true' ->
             lager:info("IAM handle_doc_edited dirty Account: ~p",[AccountId]),
             _ = kz_service_sync:sync(AccountId);
-            % nail it twice just in case of conflict somewhere...
-          %  onbill_util:maybe_reconcile(AccountId);
         'false' ->
-            lager:info("IAM handle_doc_edited clean Account: ~p",[AccountId]),
             'ok'
     end;
 handle_doc_edited(_, _, _) ->
@@ -80,5 +77,4 @@ handle_doc_edited(_, _, _) ->
 
 -spec handle_logger(kz_json:object(), kz_proplist()) -> any().
 handle_logger(JObj, _Props) ->
-    lager:info("IAM listen to JObj: ~p",[JObj]),
-    ok.
+    lager:info("IAM listen to JObj: ~p",[JObj]).
