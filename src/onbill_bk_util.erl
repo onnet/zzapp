@@ -378,7 +378,9 @@ current_usage_amount(AccountId) ->
     ItemsJObj = select_non_zero_items_list(Items,AccountId),
     items_amount(ItemsJObj, AccountId, 0.0).
 
+-spec today_dailyfee_absent(ne_binary()) -> boolean().
 today_dailyfee_absent(AccountId) ->
+    Timestamp = kz_util:current_tstamp(),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     DailyFeeId = prepare_dailyfee_doc_name(Year, Month, Day),
     case kazoo_modb:open_doc(AccountId, DailyFeeId, Year, Month) of

@@ -110,7 +110,7 @@ process_account(AccountId) ->
             lager:debug("onbill crawler syncing account ~s", [AccountId]),
             _ = onbill_util:maybe_reconcile(AccountId),
             kz_service_sync:sync(AccountId),
-            'ok'.
-        'false'
+            'ok';
+        'false' ->
             'ok'
     end.
