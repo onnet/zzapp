@@ -13,6 +13,7 @@
         ,calc_item/2
         ,current_usage_amount/1
         ,current_usage_amount_in_units/1
+        ,today_dailyfee_absent/1
         ]).
 
 -include("onbill.hrl").
@@ -376,3 +377,12 @@ current_usage_amount(AccountId) ->
     Items = current_items(AccountId),
     ItemsJObj = select_non_zero_items_list(Items,AccountId),
     items_amount(ItemsJObj, AccountId, 0.0).
+
+today_dailyfee_absent(AccountId) ->
+    {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
+    DailyFeeId = prepare_dailyfee_doc_name(Year, Month, Day),
+    case kazoo_modb:open_doc(AccountId, DailyFeeId, Year, Month) of
+        {'error', 'not_found'} -> 'true';
+        _ -> 'false'
+    end.
+

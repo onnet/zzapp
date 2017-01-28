@@ -69,7 +69,7 @@ handle_info('next_account', [Account|Accounts]) ->
                 OpenResult = kz_datamgr:open_doc(?KZ_ACCOUNTS_DB, AccountId),
                 check_then_process_account(AccountId, OpenResult)
         end,
-    Cycle = kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"interaccount_delay">>, 10 * ?MILLISECONDS_IN_SECOND),
+    Cycle = kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"interaccount_delay">>, 30 * ?MILLISECONDS_IN_SECOND),
     erlang:send_after(Cycle, self(), 'next_account'),
     {'noreply', Accounts, 'hibernate'};
 handle_info(_Info, State) ->
@@ -105,7 +105,12 @@ check_then_process_account(AccountId, {'error', _R}) ->
 
 -spec process_account (ne_binary()) -> 'ok'.
 process_account(AccountId) ->
-    lager:debug("onbill crawler syncing account ~s", [AccountId]),
-    _ = onbill_util:maybe_reconcile(AccountId),
-    kz_service_sync:sync(AccountId),
-    'ok'.
+    case onbill_bk_util:today_dailyfee_absent(AccountId) of
+        'true' ->
+            lager:debug("onbill crawler syncing account ~s", [AccountId]),
+            _ = onbill_util:maybe_reconcile(AccountId),
+            kz_service_sync:sync(AccountId),
+            'ok'.
+        'false'
+            'ok'
+    end.
