@@ -39,7 +39,6 @@ maybe_sync(Items, AccountId) ->
             lager:info("IAM Trial AccountId: ~p, CurrentBalance:~p, CurrentUsage: ~p",[AccountId, CurrentBalance, CurrentUsage]), 
             case CurrentBalance > CurrentUsage of
                 'true' ->
-                    _ = kz_services:reconcile(AccountId),
                     case onbill_util:transit_to_full_suscription_state(AccountId) of
                         {'ok', _} ->
                             sync(Items, AccountId);
@@ -86,15 +85,12 @@ sync(Timestamp, ServiceItems, AccountId, NewMax, Items) ->
 
 -spec is_good_standing(ne_binary()) -> boolean().
 is_good_standing(AccountId) ->
-  lager:info("IAM is_good_standing/1: ~p",[wht_util:current_balance(AccountId) > 0]),
+    lager:info("IAM is_good_standing/1: ~p",[wht_util:current_balance(AccountId) > 0]),
     wht_util:current_balance(AccountId) > 0.
 
 -spec is_good_standing(ne_binary(), ne_binary()) -> boolean().
-is_good_standing(AccountId, Status) ->
-    _ = kz_services:reconcile(AccountId),
-    _ = kz_service_sync:sync(AccountId),
-  lager:info("IAM is_good_standing/2: ~p, Status Arg: ~p",[Status =:= kzd_services:status_good(), Status]),
- %   wht_util:current_balance(AccountId) > 0.
+is_good_standing(_AccountId, Status) ->
+    lager:info("IAM is_good_standing/2: ~p, Status Arg: ~p",[Status =:= kzd_services:status_good(), Status]),
     Status =:= kzd_services:status_good().
 
 -spec transactions(ne_binary(), gregorian_seconds(), gregorian_seconds()) ->
@@ -102,7 +98,7 @@ is_good_standing(AccountId, Status) ->
                           {'error', 'not_found'} |
                           {'error', 'unknown_error'}.
 transactions(AccountId, From, To) ->
-  lager:info("IAM transactions AccountId: ~p, From: ~p, To: ~p",[AccountId, From, To]),
+    lager:info("IAM transactions AccountId: ~p, From: ~p, To: ~p",[AccountId, From, To]),
     case kz_transactions:fetch_local(AccountId, From, To) of
         {'error', _Reason}=Error -> Error;
         {'ok', _Transactions}=Res -> Res
@@ -110,7 +106,7 @@ transactions(AccountId, From, To) ->
 
 -spec subscriptions(ne_binary()) -> atom() | kz_json:objects().
 subscriptions(AccountId) ->
-  lager:debug("IAM subscriptions/1 call. AccountId: ~p",[AccountId]),
+    lager:debug("IAM subscriptions/1 call. AccountId: ~p",[AccountId]),
     [kz_json:new()].
 
 -spec commit_transactions(ne_binary(),kz_transactions:kz_transactions()) -> 'ok' | 'error'.
@@ -119,13 +115,13 @@ commit_transactions(BillingId, Transactions) ->
     commit_transactions(BillingId, Transactions, 3).
 
 commit_transactions(BillingId, Transactions, Try) when Try > 0 ->
-  lager:info("IAM commit_transactions BillingId: ~p, Transactions: ~p, Try: ~p", [BillingId, kz_transactions:to_json(Transactions), Try]),
+    lager:info("IAM commit_transactions BillingId: ~p, Transactions: ~p, Try: ~p", [BillingId, kz_transactions:to_json(Transactions), Try]),
     case kz_datamgr:open_doc(?KZ_SERVICES_DB, BillingId) of
         {'error', _E} ->
             lager:error("could not open services for ~p : ~p retrying...", [BillingId, _E]),
             commit_transactions(BillingId, Transactions, Try-1);
         {'ok', JObj} ->
-  lager:info("IAM commit_transactions JObj: ~p", [JObj]),
+            lager:info("IAM commit_transactions JObj: ~p", [JObj]),
             NewTransactions = kz_json:get_value(<<"transactions">>, JObj, [])
                 ++ kz_transactions:to_json(Transactions),
             JObj1 = kz_json:set_values([{<<"pvt_dirty">>, 'true'}
@@ -138,7 +134,7 @@ commit_transactions(BillingId, Transactions, Try) when Try > 0 ->
                     commit_transactions(BillingId, Transactions, Try-1);
                 {'ok', _} ->
                     lager:error("IAM commit_transactions new JObj1 saved: ~p", [JObj1]),
-                    kz_services:reconcile(BillingId),
+                  %  kz_services:reconcile(BillingId),
                     'ok'
             end
     end;

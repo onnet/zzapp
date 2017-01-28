@@ -70,7 +70,7 @@ handle_doc_edited(<<"service">>, AccountId, _) ->
             lager:info("IAM handle_doc_edited dirty Account: ~p",[AccountId]),
             _ = kz_service_sync:sync(AccountId);
             % nail it twice just in case of conflict somewhere...
-          %  kz_services:reconcile(AccountId);
+          %  onbill_util:maybe_reconcile(AccountId);
         'false' ->
             lager:info("IAM handle_doc_edited clean Account: ~p",[AccountId]),
             'ok'

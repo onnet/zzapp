@@ -39,6 +39,7 @@
         ,ensure_service_plan/1
         ,replicate_account_doc/1
         ,transit_to_full_suscription_state/1
+        ,maybe_reconcile/1
         ]).
 
 -include("onbill.hrl").
@@ -414,3 +415,9 @@ replicate_account_doc(JObj) ->
         _Else ->
             kz_datamgr:ensure_saved(?KZ_ACCOUNTS_DB, kz_doc:delete_revision(JObj))
     end.
+
+-spec maybe_reconcile(ne_binary()) -> any().
+maybe_reconcile(AccountId) ->
+    Services = kz_services:reconcile(AccountId),
+    lager:info("IAM reconcile Services: ~p",[kz_services:to_json(Services)]),
+    Services.

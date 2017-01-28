@@ -106,6 +106,6 @@ check_then_process_account(AccountId, {'error', _R}) ->
 -spec process_account (ne_binary()) -> 'ok'.
 process_account(AccountId) ->
     lager:debug("onbill crawler syncing account ~s", [AccountId]),
-    _ = kz_services:reconcile(AccountId),
+    _ = onbill_util:maybe_reconcile(AccountId),
     kz_service_sync:sync(AccountId),
     'ok'.
