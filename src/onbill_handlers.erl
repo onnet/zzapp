@@ -31,6 +31,7 @@ handle_doc_created(JObj, _Props) ->
 handle_doc_created(_, 'undefined', _) ->
     'ok';
 handle_doc_created(<<"device">>, AccountId, _JObj) ->
+            lager:info("IAM handle_doc_created before maybe_reconcile Account: ~p",[AccountId]),
     _ = onbill_util:maybe_reconcile(AccountId);
 handle_doc_created(<<"user">>, AccountId, _JObj) ->
     _ = kz_services:reconcile(AccountId);

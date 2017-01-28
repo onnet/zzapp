@@ -107,7 +107,7 @@ check_then_process_account(AccountId, {'error', _R}) ->
 process_account(AccountId) ->
     case onbill_bk_util:today_dailyfee_absent(AccountId) of
         'true' ->
-            lager:debug("onbill crawler syncing account ~s", [AccountId]),
+            lager:debug("IAM onbill crawler syncing account ~s", [AccountId]),
             _ = onbill_util:maybe_reconcile(AccountId),
             kz_service_sync:sync(AccountId),
             'ok';
