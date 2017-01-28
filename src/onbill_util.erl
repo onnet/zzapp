@@ -36,6 +36,7 @@
         ,is_trial_account/1
         ,maybe_administratively_convicted/1
         ,maybe_convicted/1
+        ,is_service_plan_assigned/1
         ,ensure_service_plan/1
         ,replicate_account_doc/1
         ,transit_to_full_suscription_state/1
@@ -359,13 +360,17 @@ maybe_administratively_convicted(AccountId) ->
             end
     end.
 
--spec ensure_service_plan(ne_binary()) -> 'ok'.
-ensure_service_plan(AccountId) ->
+-spec is_service_plan_assigned(ne_binary()) -> boolean().
+is_service_plan_assigned(AccountId) ->
     Services = kz_services:fetch(AccountId),
     ServicesJObj = kz_services:services_json(Services),
     Plans = kz_service_plans:plan_summary(ServicesJObj),
+    kz_util:is_empty(Plans).
+
+-spec ensure_service_plan(ne_binary()) -> 'ok'.
+ensure_service_plan(AccountId) ->
     {'ok', MasterAccount} = kapps_util:get_master_account_id(),
-    case kz_util:is_empty(Plans) of
+    case is_service_plan_assigned(AccountId) of
         'true' when MasterAccount == AccountId ->
             'ok';
         'true' ->

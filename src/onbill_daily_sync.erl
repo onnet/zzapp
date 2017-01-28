@@ -106,6 +106,8 @@ check_then_process_account(AccountId, {'error', _R}) ->
 -spec process_account (ne_binary()) -> 'ok'.
 process_account(AccountId) ->
     case not onbill_util:is_trial_account(AccountId) 
+           andalso not kapps_util:is_master_account(AccountId) 
+           andalso onbill_util:is_service_plan_assigned(AccountId)
            andalso onbill_bk_util:today_dailyfee_absent(AccountId)
     of
         'true' ->
