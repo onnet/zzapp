@@ -60,9 +60,7 @@ handle_info('crawl_accounts', _) ->
     end;
 handle_info('next_account', []) ->
     kz_couch_compactor:compact_db(<<"services">>),
-    NextDay = calendar:datetime_to_gregorian_seconds({erlang:date(),{0,45,0}}) + ?SECONDS_IN_DAY,
-    Cycle = NextDay - calendar:datetime_to_gregorian_seconds(erlang:localtime()),
-    erlang:send_after(Cycle, self(), 'crawl_accounts'),
+    erlang:send_after(?MILLISECONDS_IN_HOUR, self(), 'crawl_accounts'),
     {'noreply', [], 'hibernate'};
 handle_info('next_account', [Account|Accounts]) ->
     Cycle =
