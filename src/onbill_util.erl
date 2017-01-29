@@ -426,7 +426,6 @@ reconcile_and_maybe_sync(AccountId) ->
     Services = kz_services:reconcile(AccountId),
     case kz_services:is_dirty(Services) of
         'true' ->
-            lager:info("IAM reconcile_and_maybe_sync syncing account_id: ~p",[AccountId]),
             kz_service_sync:sync(AccountId);
         'false' ->
             'ok'
