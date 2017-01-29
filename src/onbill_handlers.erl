@@ -28,6 +28,8 @@ handle_doc_created(JObj, _Props) ->
             'ok'
     end.
 
+handle_doc_created(<<"account">>, AccountId, _JObj) ->
+    _ = onbill_util:ensure_service_plan(AccountId);
 handle_doc_created(<<"device">>, AccountId, _JObj) ->
     _ = onbill_util:reconcile_and_maybe_sync(AccountId);
 handle_doc_created(<<"user">>, AccountId, _JObj) ->
