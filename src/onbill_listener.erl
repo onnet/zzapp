@@ -36,7 +36,7 @@
                   ]).
 -define(RESPONDERS, [{{'onbill_handlers', 'handle_doc_created'}, [{<<"configuration">>, <<"doc_created">>}]}
                     ,{{'onbill_handlers', 'handle_doc_edited'}, [{<<"configuration">>, <<"doc_edited">>}]}
-               %     ,{{'onbill_handlers', 'handle_logger'}, [{<<"*">>, <<"*">>}]}
+                    ,{{'onbill_handlers', 'handle_logger'}, [{<<"*">>, <<"*">>}]}
                     ]).
 %%-define(QUEUE_NAME, <<>>).
 %%-define(QUEUE_OPTIONS, []).
