@@ -40,7 +40,7 @@
         ,ensure_service_plan/1
         ,replicate_account_doc/1
         ,transit_to_full_suscription_state/1
-        ,maybe_reconcile/1
+        ,reconcile_and_maybe_sync/1
         ]).
 
 -include("onbill.hrl").
@@ -365,7 +365,7 @@ is_service_plan_assigned(AccountId) ->
     Services = kz_services:fetch(AccountId),
     ServicesJObj = kz_services:services_json(Services),
     Plans = kz_service_plans:plan_summary(ServicesJObj),
-    kz_util:is_empty(Plans).
+    not kz_util:is_empty(Plans).
 
 -spec ensure_service_plan(ne_binary()) -> 'ok'.
 ensure_service_plan(AccountId) ->
@@ -421,9 +421,13 @@ replicate_account_doc(JObj) ->
             kz_datamgr:ensure_saved(?KZ_ACCOUNTS_DB, kz_doc:delete_revision(JObj))
     end.
 
--spec maybe_reconcile(ne_binary()) -> any().
-maybe_reconcile(AccountId) ->
+-spec reconcile_and_maybe_sync(ne_binary()) -> any().
+reconcile_and_maybe_sync(AccountId) ->
     Services = kz_services:reconcile(AccountId),
-    lager:info("IAM maybe_reconcile Services: ~p",[kz_services:to_json(Services)]),
-    lager:info("IAM maybe_reconcile DiffQuantities: ~p",[kz_services:diff_quantities(Services)]),
-    Services.
+    case kz_services:is_dirty(Services) of
+        'true' ->
+            lager:info("IAM reconcile_and_maybe_sync syncing account_id: ~p",[AccountId]),
+            kz_service_sync:sync(AccountId);
+        'false' ->
+            'ok'
+    end.

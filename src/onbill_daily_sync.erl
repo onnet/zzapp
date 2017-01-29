@@ -33,6 +33,7 @@ start_link() ->
 
 -spec init(list()) -> {'ok', state()}.
 init([]) ->
+            lager:debug("IAM onbill_daily_sync init"),
     self() ! 'crawl_accounts',
     kz_couch_compactor:compact_db(<<"services">>),
     {'ok', #state{}}.
@@ -50,6 +51,7 @@ handle_info('crawl_accounts', _) ->
     case kz_datamgr:get_results(?KZ_ACCOUNTS_DB, ?CB_LISTING_BY_ID) of
         {'ok', JObjs} ->
             self() ! 'next_account',
+            lager:info("IAM crawl acclout start: ~p", [JObjs]),
             {'noreply', kz_util:shuffle_list(JObjs)};
         {'error', _R} ->
             lager:warning("unable to list all docs in ~s: ~p", [?KZ_ACCOUNTS_DB, _R]),
@@ -92,14 +94,17 @@ code_change(_OldVsn, State, _Extra) ->
 
 -spec maybe_mark_account_dirty (ne_binary()) -> {'ok', 'marked_dirty'}|{'ok', 'no_need_to_mark'}|{'error', _}.
 maybe_mark_account_dirty(<<AccountId:32/binary>>) ->
+  lager:info("IAM maybe_mark_account_dirty AccountId: ~p",[AccountId]),
     case kz_datamgr:open_doc(?KZ_ACCOUNTS_DB, AccountId) of
         {'ok', AccountJObj} ->
             case not kz_doc:is_soft_deleted(AccountJObj)
                      andalso kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded'))
             of
                 'true' ->
+  lager:info("IAM maybe_mark_account_dirty processing AccountId: ~p",[AccountId]),
                     process_account(AccountId);
                 'false' ->
+  lager:info("IAM maybe_mark_account_dirty deleted_or_no_db AccountId: ~p",[AccountId]),
                     {'error', 'deleted_or_no_db'}
             end;
         _ ->
@@ -110,6 +115,11 @@ maybe_mark_account_dirty(_) ->
 
 -spec process_account (ne_binary()) -> 'ok'.
 process_account(AccountId) ->
+  lager:info("IAM process_account AccountId: ~p",[AccountId]),
+  lager:info("IAM process_account not onbill_util:is_trial_account(AccountId): ~p",[not onbill_util:is_trial_account(AccountId)]),
+  lager:info("IAM process_account not kapps_util:is_master_account(AccountId): ~p",[not kapps_util:is_master_account(AccountId)]),
+  lager:info("IAM process_account onbill_util:is_service_plan_assigned(AccountId): ~p",[onbill_util:is_service_plan_assigned(AccountId)]),
+  lager:info("IAM process_account onbill_bk_util:today_dailyfee_absent(AccountId): ~p",[onbill_bk_util:today_dailyfee_absent(AccountId)]),
     case not onbill_util:is_trial_account(AccountId) 
            andalso not kapps_util:is_master_account(AccountId) 
            andalso onbill_util:is_service_plan_assigned(AccountId)
@@ -120,5 +130,6 @@ process_account(AccountId) ->
             kz_services:save_as_dirty(AccountId),
             {'ok', 'marked_dirty'};
         'false' ->
+            lager:debug("IAM onbill process_account no_need_to_mark: ~s", [AccountId]),
             {'ok', 'no_need_to_mark'}
     end.
