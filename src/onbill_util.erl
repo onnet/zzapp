@@ -342,10 +342,10 @@ is_trial_account(AccountId) ->
 maybe_convicted(AccountId) ->
     Balance = wht_util:current_balance(AccountId),
     case onbill_util:maybe_allow_postpay(AccountId) of
-        'false' when Balance < 0 -> 'delinquent';
-        'false' -> 'ok';
-        {'true', MaxPostpay} when Balance < MaxPostpay ->  'delinquent';
-        {'true', _} -> 'ok'
+        'false' when Balance < 0 -> 'true';
+        'false' -> 'false';
+        {'true', MaxPostpay} when Balance < MaxPostpay ->  'true';
+        {'true', _} -> 'false'
     end.
 
 -spec maybe_administratively_convicted(ne_binary()) -> boolean().

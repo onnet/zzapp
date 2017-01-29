@@ -67,8 +67,13 @@ run_sync(Items, AccountId) ->
             lager:debug("max usage not exceeded, no sync needed for: ~p",[AccountId])
     end,
     case onbill_util:maybe_administratively_convicted(AccountId) of
-        'true' -> 'delinquent';
-        'false' -> onbill_util:maybe_convicted(AccountId)
+        'true' ->
+            'delinquent';
+        'false' ->
+            case onbill_util:maybe_convicted(AccountId) of
+                'true' -> 'delinquent';
+                'false' -> 'ok'
+            end
     end.
 
 sync(_Timestamp, [], _AccountId, _NewMax, _Items) ->
