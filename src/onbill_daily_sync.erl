@@ -47,15 +47,15 @@ handle_cast(_Msg, State) ->
 
 -spec handle_info(any(), state()) -> handle_info_ret_state(state()).
 handle_info('crawl_accounts', _) ->
-    _ = case kz_datamgr:get_results(?KZ_ACCOUNTS_DB, ?CB_LISTING_BY_ID) of
-            {'ok', JObjs} ->
-                self() ! 'next_account',
-                {'noreply', kz_util:shuffle_list(JObjs)};
-            {'error', _R} ->
-                lager:warning("unable to list all docs in ~s: ~p", [?KZ_ACCOUNTS_DB, _R]),
-                self() ! 'next_account',
-                {'noreply', []}
-        end;
+    case kz_datamgr:get_results(?KZ_ACCOUNTS_DB, ?CB_LISTING_BY_ID) of
+        {'ok', JObjs} ->
+            self() ! 'next_account',
+            {'noreply', kz_util:shuffle_list(JObjs)};
+        {'error', _R} ->
+            lager:warning("unable to list all docs in ~s: ~p", [?KZ_ACCOUNTS_DB, _R]),
+            self() ! 'next_account',
+            {'noreply', []}
+    end;
 handle_info('next_account', []) ->
     kz_couch_compactor:compact_db(<<"services">>),
     NextDay = calendar:datetime_to_gregorian_seconds({erlang:date(),{0,45,0}}) + ?SECONDS_IN_DAY,
@@ -63,13 +63,15 @@ handle_info('next_account', []) ->
     erlang:send_after(Cycle, self(), 'crawl_accounts'),
     {'noreply', [], 'hibernate'};
 handle_info('next_account', [Account|Accounts]) ->
-    _ = case kz_doc:id(Account) of
-            <<"_design", _/binary>> -> 'ok';
-            AccountId ->
-                OpenResult = kz_datamgr:open_doc(?KZ_ACCOUNTS_DB, AccountId),
-                check_then_process_account(AccountId, OpenResult)
+    Cycle =
+        case maybe_mark_account_dirty(kz_doc:id(Account)) of
+            {'ok', 'marked_dirty'} ->
+                kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"interaccount_delay">>, 10 * ?MILLISECONDS_IN_SECOND);
+            {'ok', 'no_need_to_mark'} ->
+                2 * ?MILLISECONDS_IN_SECOND;
+            {'error', _} ->
+                2 * ?MILLISECONDS_IN_SECOND
         end,
-    Cycle = kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"interaccount_delay">>, 10 * ?MILLISECONDS_IN_SECOND),
     erlang:send_after(Cycle, self(), 'next_account'),
     {'noreply', Accounts, 'hibernate'};
 handle_info(_Info, State) ->
@@ -88,20 +90,23 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
--spec check_then_process_account(ne_binary(), {'ok', kz_account:doc()} | {'error',any()}) -> 'ok'.
-check_then_process_account(AccountId, {'ok', AccountJObj}) ->
-    case kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded')) of
-        'true' ->
-            case kz_doc:is_soft_deleted(AccountJObj) of
-                'true' -> 'ok'; 
+-spec maybe_mark_account_dirty (ne_binary()) -> {'ok', 'marked_dirty'}|{'ok', 'no_need_to_mark'}|{'error', _}.
+maybe_mark_account_dirty(<<AccountId:32/binary>>) ->
+    case kz_datamgr:open_doc(?KZ_ACCOUNTS_DB, AccountId) of
+        {'ok', AccountJObj} ->
+            case not kz_doc:is_soft_deleted(AccountJObj)
+                     andalso kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded'))
+            of
+                'true' ->
+                    process_account(AccountId);
                 'false' ->
-                    process_account(AccountId)
+                    {'error', 'deleted_or_no_db'}
             end;
-        'false' ->
-            'ok'
+        _ ->
+            {'error', 'invalid_accounts_doc'}
     end;
-check_then_process_account(AccountId, {'error', _R}) ->
-    lager:warning("unable to open account definition for ~s: ~p", [AccountId, _R]).
+maybe_mark_account_dirty(_) ->
+    {'error', 'invalid_doc_id'}.
 
 -spec process_account (ne_binary()) -> 'ok'.
 process_account(AccountId) ->
@@ -113,7 +118,7 @@ process_account(AccountId) ->
         'true' ->
             lager:debug("IAM onbill crawler saving account ~s as dirty", [AccountId]),
             kz_services:save_as_dirty(AccountId),
-            'ok';
+            {'ok', 'marked_dirty'};
         'false' ->
-            'ok'
+            {'ok', 'no_need_to_mark'}
     end.
