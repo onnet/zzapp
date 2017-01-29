@@ -68,7 +68,7 @@ handle_info('next_account', [Account|Accounts]) ->
     Cycle =
         case maybe_mark_account_dirty(kz_doc:id(Account)) of
             {'ok', 'marked_dirty'} ->
-                kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"interaccount_delay">>, 10 * ?MILLISECONDS_IN_SECOND);
+                kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"interaccount_delay_sec">>, 10)  * ?MILLISECONDS_IN_SECOND;
             {'ok', 'no_need_to_mark'} ->
                 2 * ?MILLISECONDS_IN_SECOND;
             {'error', _} ->
