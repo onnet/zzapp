@@ -371,11 +371,11 @@ is_service_plan_assigned(AccountId) ->
 ensure_service_plan(AccountId) ->
     {'ok', MasterAccount} = kapps_util:get_master_account_id(),
     case is_service_plan_assigned(AccountId) of
-        'true' when MasterAccount == AccountId ->
+        'false' when MasterAccount == AccountId ->
             'ok';
-        'true' ->
+        'false' ->
             _ = add_service_plan(AccountId);
-        _ ->
+        'true' ->
             'ok'
     end.
 
