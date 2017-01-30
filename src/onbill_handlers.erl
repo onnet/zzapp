@@ -40,7 +40,8 @@ handle_doc_created(<<"limits">>, AccountId, _JObj) ->
     _ = onbill_util:reconcile_and_maybe_sync(AccountId);
 handle_doc_created(<<"credit">>, AccountId, _JObj) ->
     _ = onbill_util:ensure_service_plan(AccountId),
-    _ = onbill_util:reconcile_and_maybe_sync(AccountId);
+    _ = kz_services:reconcile(AccountId),
+    _ = kz_service_sync:sync(AccountId);
 handle_doc_created(_, _, _) ->
     'ok'.
 
