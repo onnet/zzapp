@@ -31,13 +31,17 @@ handle_doc_created(JObj, _Props) ->
 handle_doc_created(<<"account">>, AccountId, _JObj) ->
     _ = onbill_util:ensure_service_plan(AccountId);
 handle_doc_created(<<"device">>, AccountId, _JObj) ->
-    _ = onbill_util:reconcile_and_maybe_sync(AccountId);
+    _ = kz_services:reconcile(AccountId),
+    _ = kz_service_sync:sync(AccountId);
 handle_doc_created(<<"user">>, AccountId, _JObj) ->
-    _ = onbill_util:reconcile_and_maybe_sync(AccountId);
+    _ = kz_services:reconcile(AccountId),
+    _ = kz_service_sync:sync(AccountId);
 handle_doc_created(<<"number">>, AccountId, _JObj) ->
-    _ = onbill_util:reconcile_and_maybe_sync(AccountId);
+    _ = kz_services:reconcile(AccountId),
+    _ = kz_service_sync:sync(AccountId);
 handle_doc_created(<<"limits">>, AccountId, _JObj) ->
-    _ = onbill_util:reconcile_and_maybe_sync(AccountId);
+    _ = kz_services:reconcile(AccountId),
+    _ = kz_service_sync:sync(AccountId);
 handle_doc_created(<<"credit">>, AccountId, _JObj) ->
     _ = onbill_util:ensure_service_plan(AccountId),
     _ = kz_services:reconcile(AccountId),
@@ -59,6 +63,8 @@ handle_doc_edited(JObj, _Props) ->
     end.
 
 handle_doc_edited(<<"limits">>, AccountId, _) ->
+    _ = onbill_util:reconcile_and_maybe_sync(AccountId),
+    _ = timer:sleep(2000),
     _ = onbill_util:reconcile_and_maybe_sync(AccountId);
 handle_doc_edited(_, _, _) ->
     'ok'.
