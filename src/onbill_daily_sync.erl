@@ -108,8 +108,9 @@ maybe_mark_account_dirty(_) ->
 
 -spec process_account (ne_binary()) -> 'ok'.
 process_account(AccountId) ->
-    case not onbill_util:is_trial_account(AccountId) 
-           andalso not kapps_util:is_master_account(AccountId) 
+  %  case not onbill_util:is_trial_account(AccountId) 
+  %         andalso not kapps_util:is_master_account(AccountId) 
+    case  not kapps_util:is_master_account(AccountId) 
            andalso onbill_util:is_service_plan_assigned(AccountId)
            andalso onbill_bk_util:today_dailyfee_absent(AccountId)
     of

@@ -46,6 +46,7 @@ maybe_sync(Items, AccountId) ->
                             'retry'
                     end;
                 'false' ->
+                    onbill_bk_util:max_daily_usage_exceeded(Items, AccountId, kz_util:current_tstamp()),
                     'ok'
             end;
         'false' ->
