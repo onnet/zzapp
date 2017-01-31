@@ -64,11 +64,13 @@ leak_limits(AccountId, Context) ->
                                ]);
         {'ok', JObj} ->
             Values =
-                props:filter_undefined([{<<"allow_postpay">>
-                                        ,kz_json:get_value(<<"pvt_allow_postpay">>, JObj)}
-                                       ,{<<"max_postpay_amount">>
-                                        ,kz_json:get_value(<<"pvt_max_postpay_amount">>, JObj)}
-                                       ]),
+                props:filter_undefined(
+                    [{<<"allow_postpay">>,kz_json:get_value(<<"pvt_allow_postpay">>, JObj)}
+                    ,{<<"max_postpay_amount">>,kz_json:get_value(<<"pvt_max_postpay_amount">>, JObj)}
+                    ,{<<"twoway_trunks">>,kz_json:get_value(<<"pvt_twoway_trunks">>, JObj)}
+                    ,{<<"outbound_trunks">>,kz_json:get_value(<<"pvt_outbound_trunks">>, JObj)}
+                    ,{<<"inbound_trunks">>,kz_json:get_value(<<"pvt_inbound_trunks">>, JObj)}
+                    ]),
             cb_context:setters(Context
                               ,[{fun cb_context:set_resp_data/2, kz_json:from_list(Values)}
                                ,{fun cb_context:set_resp_status/2, 'success'}
