@@ -1,15 +1,15 @@
 -module(cb_onbill_limits).
 
 -export([init/0
-         ,allowed_methods/1
-         ,resource_exists/1
-         ,content_types_provided/2
-         ,validate/2
+         ,allowed_methods/0
+         ,resource_exists/0
+         ,content_types_provided/1
+         ,validate/1
         ]).
 
 -include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
 
--define(SERVICE_PLAN_DOC_TYPE, <<"service_plan">>).
+-define(LIMITS_DOC, <<"limits">>).
 
 -spec init() -> 'ok'.
 init() ->
@@ -18,39 +18,62 @@ init() ->
     _ = crossbar_bindings:bind(<<"*.content_types_provided.onbill_limits">>, ?MODULE, 'content_types_provided'),
     _ = crossbar_bindings:bind(<<"*.validate.onbill_limits">>, ?MODULE, 'validate').
 
--spec allowed_methods(path_token()) -> http_methods().
-allowed_methods(_) ->
+-spec allowed_methods() -> http_methods().
+allowed_methods() ->
     [?HTTP_GET, ?HTTP_POST].
 
--spec resource_exists(path_token()) -> 'true'.
-resource_exists(_) -> 'true'.
+-spec resource_exists() -> 'true'.
+resource_exists() -> 'true'.
 
--spec content_types_provided(cb_context:context(), path_token()) -> cb_context:context().
-content_types_provided(Context,_) ->
+-spec content_types_provided(cb_context:context()) -> cb_context:context().
+content_types_provided(Context) ->
     Context.
 
--spec validate(cb_context:context(), path_token()) -> cb_context:context().
-validate(Context, Id) ->
-    validate_onbill(Context, Id, cb_context:req_verb(Context)).
+-spec validate(cb_context:context()) -> cb_context:context().
+validate(Context) ->
+    validate_limits(Context, cb_context:req_verb(Context)).
 
--spec validate_onbill(cb_context:context(), path_token(), http_method()) -> cb_context:context().
-validate_onbill(Context, Id, ?HTTP_GET) ->
-    crossbar_doc:load(Id, Context, [{'expected_type', ?SERVICE_PLAN_DOC_TYPE}]);
-validate_onbill(Context, Id, ?HTTP_POST) ->
-    save(Id, kz_util:format_account_id(cb_context:account_id(Context),'encoded'), Context).
+-spec validate_limits(cb_context:context(), http_method()) -> cb_context:context().
+validate_limits(Context, ?HTTP_GET) ->
+    ResellerId = cb_context:auth_account_id(Context),
+    AccountId = cb_context:account_id(Context),
+    case onbill_util:validate_relationship(AccountId, ResellerId) of
+        'true' ->
+            leak_limits(AccountId, Context);
+        'false' ->
+            cb_context:add_system_error('forbidden', Context)
+    end;
 
--spec save(ne_binary(), ne_binary(), cb_context:context()) -> cb_context:context().
-save(Id, DbName, Context) ->
-    ReqData = kz_json:delete_key(<<"id">>, cb_context:req_data(Context)),
-    Doc = case kz_datamgr:open_doc(DbName, Id) of
-              {'ok', JObj} -> JObj;
-              {error,not_found} ->
-                  InitValues = props:filter_undefined([{<<"_id">>, Id}
-                                                  ,{<<"pvt_type">>, ?SERVICE_PLAN_DOC_TYPE}
-                                                  ]),
-                  kz_json:set_values(InitValues, kz_json:new())
-          end,
-    Values = kz_json:to_proplist(kz_doc:private_fields(Doc)),
-    NewDoc = kz_json:set_values(Values, ReqData),
-    Context1 = cb_context:set_doc(Context, NewDoc),
-    crossbar_doc:save(cb_context:set_account_db(Context1, DbName)).
+validate_limits(Context, ?HTTP_POST) ->
+    ResellerId = cb_context:auth_account_id(Context),
+    AccountId = cb_context:account_id(Context),
+    case onbill_util:validate_relationship(AccountId, ResellerId) of
+        'true' ->
+            set_pvt_values(AccountId, Context);
+        'false' ->
+            cb_context:add_system_error('forbidden', Context)
+    end.
+
+leak_limits(AccountId, Context) ->
+    AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
+    case kz_datamgr:open_doc(AccountDb, ?LIMITS_DOC) of
+        {'error', _R} ->
+            cb_context:setters(Context
+                              ,[{fun cb_context:set_resp_data/2, kz_json:new()}
+                               ,{fun cb_context:set_resp_status/2, 'success'}
+                               ]);
+        {'ok', JObj} ->
+            Values =
+                props:filter_undefined([{<<"allow_postpay">>
+                                        ,kz_json:get_value(<<"pvt_allow_postpay">>, JObj)}
+                                       ,{<<"max_postpay_amount">>
+                                        ,kz_json:get_value(<<"pvt_max_postpay_amount">>, JObj)}
+                                       ]),
+            cb_context:setters(Context
+                              ,[{fun cb_context:set_resp_data/2, kz_json:from_list(Values)}
+                               ,{fun cb_context:set_resp_status/2, 'success'}
+                               ])
+    end.
+
+set_pvt_values(_AccountId, Context) ->
+    Context.
