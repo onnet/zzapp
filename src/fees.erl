@@ -145,7 +145,7 @@ process_per_minute_calls(AccountId, Year, Month, _Day, CarrierDoc) ->
             aggregated_service_to_line({<<"per-minute-voip">>
                                        ,<<"description">>
                                        ,CallsTotalSumm
-                                       ,kz_util:to_integer(CallsTotalSec / 60)
+                                       ,kz_term:to_integer(CallsTotalSec / 60)
                                        ,<<"">>
                                        ,calendar:last_day_of_the_month(Year, Month)
                                        ,kz_json:get_value(<<"per_minute_item_name">>, CarrierDoc, <<"Per minute calls">>)
@@ -228,7 +228,7 @@ process_one_time_fees(Modb) ->
 
 process_one_time_fee(JObj, Modb) ->
     {'ok', DFDoc} =  kz_datamgr:open_doc(Modb, kz_json:get_value(<<"id">>, JObj)),
-    {Year, Month, Day} = kz_util:to_date(kz_json:get_value(<<"pvt_created">>, DFDoc)),
+    {Year, Month, Day} = kz_term:to_date(kz_json:get_value(<<"pvt_created">>, DFDoc)),
     DaysInMonth = calendar:last_day_of_the_month(Year, Month),
     Reason = kz_json:get_value(<<"pvt_reason">>, DFDoc),
     Amount = wht_util:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, DFDoc)),
@@ -278,10 +278,10 @@ name(JObj) ->
     kz_json:get_value(<<"name">>, JObj).
 
 rate(JObj) ->
-    kz_util:to_float(kz_json:get_value(<<"rate">>, JObj)).
+    kz_term:to_float(kz_json:get_value(<<"rate">>, JObj)).
 
 quantity(JObj) ->
-    kz_util:to_float(kz_json:get_value(<<"quantity">>, JObj)).
+    kz_term:to_float(kz_json:get_value(<<"quantity">>, JObj)).
 
 process_ets(RawTableId, ResultTableId) ->
     ServiceTypesList = lists:usort(ets:match(RawTableId,{'$1','_','_','_','_','_'})),
@@ -325,25 +325,25 @@ days_sequence_reduce(LongList) ->
     days_glue(days_sequence_reduce(LongList, [])).
 
 days_sequence_reduce([Digit], Acc) ->
-    Acc ++ [kz_util:to_binary(Digit)];
+    Acc ++ [kz_term:to_binary(Digit)];
 days_sequence_reduce([First,Last], Acc) ->
     case First+1 == Last of
-        'true' -> Acc ++ [<<(kz_util:to_binary(First))/binary,"-", (kz_util:to_binary(Last))/binary>>];
-        'false' -> Acc ++ [<<(kz_util:to_binary(First))/binary,",", (kz_util:to_binary(Last))/binary>>]
+        'true' -> Acc ++ [<<(kz_term:to_binary(First))/binary,"-", (kz_term:to_binary(Last))/binary>>];
+        'false' -> Acc ++ [<<(kz_term:to_binary(First))/binary,",", (kz_term:to_binary(Last))/binary>>]
     end;
 days_sequence_reduce([First,Next|T], Acc) ->
     case First+1 == Next of
-        'false' -> days_sequence_reduce([Next] ++ T, Acc ++ [kz_util:to_binary(First)]);
+        'false' -> days_sequence_reduce([Next] ++ T, Acc ++ [kz_term:to_binary(First)]);
         'true' -> days_sequence_reduce(First, [Next] ++ T, Acc)
     end.
     
 days_sequence_reduce(Prev, [], Acc) ->
     days_sequence_reduce([Prev], Acc);
 days_sequence_reduce(Prev, [Digit], Acc) ->
-    Acc ++ [<<(kz_util:to_binary(Prev))/binary,"-", (kz_util:to_binary(Digit))/binary>>];
+    Acc ++ [<<(kz_term:to_binary(Prev))/binary,"-", (kz_term:to_binary(Digit))/binary>>];
 days_sequence_reduce(Prev, [First,Next|T], Acc) ->
     case First+1 == Next of
-        'false' -> days_sequence_reduce([Next] ++ T, Acc ++ [<<(kz_util:to_binary(Prev))/binary,"-", (kz_util:to_binary(First))/binary>>]);
+        'false' -> days_sequence_reduce([Next] ++ T, Acc ++ [<<(kz_term:to_binary(Prev))/binary,"-", (kz_term:to_binary(First))/binary>>]);
         'true' -> days_sequence_reduce(Prev, [Next] ++ T, Acc)
     end.
 

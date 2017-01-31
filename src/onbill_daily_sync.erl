@@ -50,7 +50,7 @@ handle_info('crawl_accounts', _) ->
     case kz_datamgr:get_results(?KZ_ACCOUNTS_DB, ?CB_LISTING_BY_ID) of
         {'ok', JObjs} ->
             self() ! 'next_account',
-            {'noreply', kz_util:shuffle_list(JObjs)};
+            {'noreply', kz_term:shuffle_list(JObjs)};
         {'error', _R} ->
             lager:warning("unable to list all docs in ~s: ~p", [?KZ_ACCOUNTS_DB, _R]),
             self() ! 'next_account',

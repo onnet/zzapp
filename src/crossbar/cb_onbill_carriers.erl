@@ -19,7 +19,7 @@
 
 -define(CARRIER_DOC_TYPE, <<"onbill_carrier">>).
 -define(TEMPLATE_NAME(Id, AttachmentId), <<Id/binary, "_", AttachmentId/binary, ".tpl">>).
--define(CARRIER_DOC_ID(Id), <<"onbill_carrier.", (kz_util:to_binary(Id))/binary>>).
+-define(CARRIER_DOC_ID(Id), <<"onbill_carrier.", (kz_term:to_binary(Id))/binary>>).
 -define(MIME_TYPES, [{<<"text">>, <<"html">>}]).
 
 -spec init() -> 'ok'.
@@ -107,7 +107,7 @@ save_carrier_attachment(Context, DocId, AName) ->
               ,AName
               ,Contents
               ,Context
-              ,[{'content_type', kz_util:to_list(CT)}]
+              ,[{'content_type', kz_term:to_list(CT)}]
              );
         _ ->
             lager:debug("No file uploaded"),

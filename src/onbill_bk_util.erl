@@ -48,9 +48,9 @@ max_daily_usage_exceeded(Items, AccountId, Timestamp) ->
 
 -spec prepare_dailyfee_doc_name(integer(), integer(), integer()) -> ne_binary().
 prepare_dailyfee_doc_name(Y, M, D) ->
-    Year = kz_util:to_binary(Y),
-    Month = kz_util:pad_month(M),
-    Day = kz_util:pad_month(D),
+    Year = kz_term:to_binary(Y),
+    Month = kz_time:pad_month(M),
+    Day = kz_time:pad_month(D),
     <<Year/binary, Month/binary, Day/binary, "-dailyfee">>.
 
 -spec select_daily_count_items_list(kz_service_item:items(), ne_binary()) -> proplist().
@@ -151,7 +151,7 @@ save_dailyfee_doc(Timestamp, AccountId, Amount, MaxUsage, Items) ->
 -spec create_dailyfee_doc(integer(), ne_binary(), number(), any(), any()) -> any().
 create_dailyfee_doc(Timestamp, AccountId, Amount, MaxUsage, Items) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
-    MonthStrBin = kz_util:to_binary(httpd_util:month(Month)),
+    MonthStrBin = kz_term:to_binary(httpd_util:month(Month)),
     Routines = [{<<"_id">>, prepare_dailyfee_doc_name(Year, Month, Day)}
                ,{<<"pvt_type">>, <<"debit">>}
                ,{<<"description">>,<<(?TO_BIN(Day))/binary," ",MonthStrBin/binary," ",(?TO_BIN(Year))/binary," daily fee">>}
@@ -248,7 +248,7 @@ check_this_period_mrc(AccountId, NewMax, Timestamp) ->
 -spec create_monthly_recurring_doc(ne_binary(), kz_json:object(), gregorian_seconds()) -> any().
 create_monthly_recurring_doc(AccountId, NewMax, Timestamp) ->
     {Year, Month, Day} = onbill_util:period_start_date(AccountId, Timestamp),
-    MonthStrBin = kz_util:to_binary(httpd_util:month(Month)),
+    MonthStrBin = kz_term:to_binary(httpd_util:month(Month)),
     Routines = [{<<"_id">>, <<"monthly_recurring">>}
                ,{<<"description">>,<<"MRC info for period start: ",(?TO_BIN(Day))/binary," ",MonthStrBin/binary," ",(?TO_BIN(Year))/binary>>}
                ,{[<<"pvt_metadata">>,<<"items">>], NewMax}
@@ -380,7 +380,7 @@ current_usage_amount(AccountId) ->
 
 -spec today_dailyfee_absent(ne_binary()) -> boolean().
 today_dailyfee_absent(AccountId) ->
-    Timestamp = kz_util:current_tstamp(),
+    Timestamp = kz_time:current_tstamp(),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     DailyFeeId = prepare_dailyfee_doc_name(Year, Month, Day),
     case kazoo_modb:open_doc(AccountId, DailyFeeId, Year, Month) of

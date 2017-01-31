@@ -119,7 +119,7 @@ maybe_spawn_generate_billing_docs(AccountId, Year, Month, FunName, N) ->
         'true' ->
             spawn(fun() ->
                       timer:sleep(N * 2000),
-                      docs:FunName(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month))
+                      docs:FunName(AccountId, kz_term:to_integer(Year), kz_term:to_integer(Month))
                   end),
             N+1;
         'false' -> N
@@ -138,14 +138,14 @@ generate_billing_docs(Context, DocsAccountId, Year, Month, FunName) ->
     ResellerId = cb_context:account_id(Context),
     case onbill_util:validate_relationship(DocsAccountId, ResellerId) of
         'true' ->
-            _ = docs:FunName(DocsAccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
+            _ = docs:FunName(DocsAccountId, kz_term:to_integer(Year), kz_term:to_integer(Month)),
             cb_context:set_resp_status(Context, 'success');
         'false' ->
             cb_context:add_system_error('forbidden', Context)
     end.
 
 generate_per_minute_reports(Context, DocsAccountId, Year, Month) ->
-    docs:per_minute_reports(DocsAccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
+    docs:per_minute_reports(DocsAccountId, kz_term:to_integer(Year), kz_term:to_integer(Month)),
     cb_context:set_resp_status(Context, 'success').
 
 -spec validate_onbill(cb_context:context(), http_method()) -> cb_context:context().
@@ -169,7 +169,7 @@ onbills_modb_summary(Context) ->
                             {kz_json:get_value(<<"year">>,QueryString), kz_json:get_value(<<"month">>,QueryString)}
                     end,
     AccountId = cb_context:account_id(Context),
-    Modb = kazoo_modb:get_modb(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
+    Modb = kazoo_modb:get_modb(AccountId, kz_term:to_integer(Year), kz_term:to_integer(Month)),
     onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
     Context1 = cb_context:set_account_db(Context, Modb),
     crossbar_doc:load_view(?CB_LIST, [], Context1, fun onbill_util:normalize_view_results/2).
@@ -178,9 +178,9 @@ load_modb_attachment(Context0, Id) ->
     QueryString = cb_context:query_string(Context0),
     Year = kz_json:get_value(<<"year">>,QueryString),
     Month = kz_json:get_value(<<"month">>,QueryString),
-    Context = crossbar_doc:load(Id, cb_context:set_account_modb(Context0, kz_util:to_integer(Year), kz_util:to_integer(Month))),
+    Context = crossbar_doc:load(Id, cb_context:set_account_modb(Context0, kz_term:to_integer(Year), kz_term:to_integer(Month))),
     AccountId = cb_context:account_id(Context),
-    Modb = kazoo_modb:get_modb(AccountId, kz_util:to_integer(Year), kz_util:to_integer(Month)),
+    Modb = kazoo_modb:get_modb(AccountId, kz_term:to_integer(Year), kz_term:to_integer(Month)),
     case onbill_util:get_attachment(Id, Modb) of
         {'ok', Attachment} ->
             cb_context:set_resp_etag(
@@ -189,11 +189,11 @@ load_modb_attachment(Context0, Id) ->
                                                                ,{fun cb_context:set_resp_etag/2, 'undefined'}
                                                                ])
                                             ,[{<<"Content-Disposition">>, <<"attachment; filename="
-                                                                            ,(kz_util:to_binary(Id))/binary
+                                                                            ,(kz_term:to_binary(Id))/binary
                                                                             ,"-"
-                                                                            ,(kz_util:to_binary(Id))/binary
+                                                                            ,(kz_term:to_binary(Id))/binary
                                                                             ,"-"
-                                                                            ,(kz_util:to_binary(Id))/binary>>
+                                                                            ,(kz_term:to_binary(Id))/binary>>
                                               }
                                              ,{<<"Content-Type">>, <<"application/pdf">>}
                                              |cb_context:resp_headers(Context)

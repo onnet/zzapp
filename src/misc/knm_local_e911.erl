@@ -76,7 +76,7 @@ update_e911(Number) ->
     CurrentE911 = feature(Number),
     E911 = kz_json:get_ne_value(?FEATURE_E911, knm_phone_number:doc(knm_number:phone_number(Number))),
     NotChanged = kz_json:are_equal(CurrentE911, E911),
-    case kz_util:is_empty(E911) of
+    case kz_term:is_empty(E911) of
         'true' ->
             lager:debug("dry run: information has been removed, updating upstream"),
             knm_services:deactivate_feature(Number, ?FEATURE_E911);

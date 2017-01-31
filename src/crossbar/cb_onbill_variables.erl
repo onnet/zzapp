@@ -111,7 +111,7 @@ save_variables_attachment(Context, DocId, AName) ->
               ,AName
               ,Contents
               ,Context
-              ,[{'content_type', kz_util:to_list(CT)}]
+              ,[{'content_type', kz_term:to_list(CT)}]
              );
         _ ->
             lager:debug("No file uploaded"),

@@ -157,14 +157,14 @@ render_tpl(ErlyMod, Vars) ->
     erlang:iolist_to_binary(IoList).
 
 create_pdf(Vars, TemplateId, Carrier, AccountId) ->
-    Rand = kz_util:rand_hex_binary(5),
+    Rand = kz_binary:rand_hex(5),
     Prefix = <<AccountId/binary, "-", (?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, "-", Rand/binary>>,
     HTMLFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".html">>]),
     PDFFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".pdf">>]),
     HTMLTpl = prepare_tpl(Vars, TemplateId, Carrier, AccountId),
     file:write_file(HTMLFile, HTMLTpl),
     Cmd = <<?HTML_TO_PDF/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
-    case os:cmd(kz_util:to_list(Cmd)) of
+    case os:cmd(kz_term:to_list(Cmd)) of
         [] ->
             file:read_file(PDFFile);
         "\n" ->

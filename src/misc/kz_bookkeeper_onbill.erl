@@ -47,7 +47,7 @@ maybe_sync(Items, AccountId) ->
                     end;
                 'false' ->
                   %  initial charge affected if dily usage applied to trial, check needed
-                  %  onbill_bk_util:max_daily_usage_exceeded(Items, AccountId, kz_util:current_tstamp()),
+                  %  onbill_bk_util:max_daily_usage_exceeded(Items, AccountId, kz_time:current_tstamp()),
                     'ok'
             end;
         'false' ->
@@ -56,7 +56,7 @@ maybe_sync(Items, AccountId) ->
 
 -spec run_sync(kz_service_item:items(), ne_binary()) -> 'ok'|'delinquent'|'retry'.
 run_sync(Items, AccountId) ->
-    Timestamp = kz_util:current_tstamp(),
+    Timestamp = kz_time:current_tstamp(),
     case onbill_bk_util:max_daily_usage_exceeded(Items, AccountId, Timestamp) of
         {'true', NewMax, ExcessDets} ->
             lager:debug("sync daily AccountId: ~p; excess details: ~p",[AccountId, ExcessDets]),
@@ -132,7 +132,7 @@ commit_transactions(BillingId, Transactions, Try) when Try > 0 ->
             NewTransactions = kz_json:get_value(<<"transactions">>, JObj, [])
                 ++ kz_transactions:to_json(Transactions),
             JObj1 = kz_json:set_values([{<<"pvt_dirty">>, 'true'}
-                                        ,{<<"pvt_modified">>, kz_util:current_tstamp()}
+                                        ,{<<"pvt_modified">>, kz_time:current_tstamp()}
                                         ,{<<"transactions">>, NewTransactions}
                                        ], JObj),
             case kz_datamgr:save_doc(?KZ_SERVICES_DB, JObj1) of
@@ -231,7 +231,7 @@ handle_quick_sale_response(BtTransaction) ->
     Transaction = braintree_transaction:record_to_json(BtTransaction),
     RespCode = kz_json:get_value(<<"processor_response_code">>, Transaction, ?CODE_UNKNOWN),
     %% https://www.braintreepayments.com/docs/ruby/reference/processor_responses
-    kz_util:to_integer(RespCode) < 2000.
+    kz_term:to_integer(RespCode) < 2000.
 
 -spec populate_modb_with_fees(ne_binary(), integer(), integer()) -> proplist().
 populate_modb_with_fees(AccountId, Year, Month) ->

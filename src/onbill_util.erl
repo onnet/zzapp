@@ -71,7 +71,7 @@ maybe_add_design_doc(DbName, ViewName) ->
 
 -spec get_attachment(ne_binary(), ne_binary()) -> ok.
 get_attachment(AttachmentId, Db) ->
-    case kz_datamgr:fetch_attachment(Db, AttachmentId, <<(kz_util:to_binary(AttachmentId))/binary, ".pdf">>) of
+    case kz_datamgr:fetch_attachment(Db, AttachmentId, <<(kz_term:to_binary(AttachmentId))/binary, ".pdf">>) of
         {'ok', _} = OK -> OK;
         E -> E
     end.
@@ -109,7 +109,7 @@ reseller_vars(AccountId) ->
 
 -spec reseller_country_of_residence(ne_binary()) -> proplist().
 reseller_country_of_residence(AccountId) ->
-    kz_util:to_lower_binary(kz_json:get_value(<<"iso_code_country_of_residence">>, reseller_vars(AccountId), <<"uk">>)).
+    kz_term:to_lower_binary(kz_json:get_value(<<"iso_code_country_of_residence">>, reseller_vars(AccountId), <<"uk">>)).
 
 -spec maybe_main_carrier(ne_binary(), kz_json:object()) -> boolean(). 
 maybe_main_carrier(Carrier, AccountId) when is_binary(Carrier) ->
@@ -135,7 +135,7 @@ get_main_carrier(AccountId, _) ->
 format_datetime(TStamp) ->
     {{Year, Month, Day}, {Hour, Minute, Second}} = calendar:gregorian_seconds_to_datetime(TStamp),
     StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])),
-    kz_util:to_binary(StrTime).
+    kz_term:to_binary(StrTime).
 
 -spec is_billable(ne_binary()) -> boolean().
 is_billable(AccountId) ->
@@ -166,7 +166,7 @@ normalize_view_results(JObj, Acc) ->
 
 -spec normalize_view_active_results(kz_json:object(), kz_json:objects()) -> kz_json:objects().
 normalize_view_active_results(JObj, Acc) ->
-    case maybe_fee_active(kz_util:current_tstamp(), JObj) of
+    case maybe_fee_active(kz_time:current_tstamp(), JObj) of
         'true' ->
             [kz_json:get_value(<<"value">>, JObj)|Acc];
         'false' ->
@@ -260,13 +260,13 @@ period_tuple(Year, Month, Day) when is_integer(Day) ->
 period_tuple(Year, Month, Day) ->
     [{<<"year">>, ?TO_BIN(Year)}
     ,{<<"month_short">>, ?TO_BIN(httpd_util:month(?TO_INT(Month)))}
-    ,{<<"month_pad">>, ?TO_BIN(kz_util:pad_month(Month))}
+    ,{<<"month_pad">>, ?TO_BIN(kz_time:pad_month(Month))}
     ,{<<"day">>, Day}
     ].
 
 -spec period_start_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
 period_start_date(AccountId) ->
-    Timestamp = kz_util:current_tstamp(),
+    Timestamp = kz_time:current_tstamp(),
     period_start_date(AccountId, Timestamp).
 
 -spec period_start_date(ne_binary(), gregorian_seconds()) -> {kz_year(), kz_month(), kz_day()}.
@@ -281,7 +281,7 @@ period_start_date(AccountId, Year, Month, Day) ->
             _ = set_billing_day(AccountId),
             period_start_date(AccountId, Year, Month, Day);
         BillingDay ->
-            BDay = kz_util:to_integer(BillingDay),
+            BDay = kz_term:to_integer(BillingDay),
             case Day >= BDay of
                 'true' ->
                      {Year, Month, BDay};
@@ -365,7 +365,7 @@ is_service_plan_assigned(AccountId) ->
     Services = kz_services:fetch(AccountId),
     ServicesJObj = kz_services:services_json(Services),
     Plans = kz_service_plans:plan_summary(ServicesJObj),
-    not kz_util:is_empty(Plans).
+    not kz_term:is_empty(Plans).
 
 -spec ensure_service_plan(ne_binary()) -> 'ok'.
 ensure_service_plan(AccountId) ->
