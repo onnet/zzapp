@@ -13,6 +13,7 @@
 -define(ATTACHMENT, <<"attachment">>).
 -define(GENERATE, <<"generate">>).
 -define(CURRENT_SERVICES, <<"current_services">>).
+-define(CURRENT_BILLING_PERIOD, <<"current_billing_period">>).
 -define(CURRENCY_SIGN, <<"currency_sign">>).
 -define(MODB, <<"onbills_modb">>).
 -define(ALL_CHILDREN, <<"all_children">>).
@@ -35,6 +36,8 @@ init() ->
 allowed_methods() ->
     [?HTTP_GET].
 allowed_methods(?CURRENT_SERVICES) ->
+    [?HTTP_GET];
+allowed_methods(?CURRENT_BILLING_PERIOD) ->
     [?HTTP_GET];
 allowed_methods(?CURRENCY_SIGN) ->
     [?HTTP_GET].
@@ -74,6 +77,8 @@ validate(Context) ->
     validate_onbill(Context, cb_context:req_verb(Context)).
 validate(Context, ?CURRENT_SERVICES) ->
     validate_current_services(Context, cb_context:req_verb(Context));
+validate(Context, ?CURRENT_BILLING_PERIOD) ->
+    validate_current_billing_period(Context, cb_context:req_verb(Context));
 validate(Context, ?CURRENCY_SIGN) ->
     validate_currency_sign(Context, cb_context:req_verb(Context)).
 validate(Context, ?GENERATE, Id) ->
@@ -241,4 +246,20 @@ validate_currency_sign(Context, ?HTTP_GET) ->
                        ,{fun cb_context:set_resp_data/2, JObj}
                        ]);
 validate_currency_sign(Context, _) ->
+    Context.
+
+-spec validate_current_billing_period(cb_context:context(), http_method()) -> cb_context:context().
+validate_current_billing_period(Context, ?HTTP_GET) ->
+    AccountId = cb_context:account_id(Context),
+    {Year, Month, Day} = onbill_util:period_start_date(AccountId),
+    JObj =
+        kz_json:from_list([{<<"account_id">>, AccountId}
+                          ,{<<"period_start">>, onbill_util:period_start_tuple(Year, Month, Day)}
+                          ,{<<"period_end">>, onbill_util:period_end_tuple_by_start(Year, Month, Day)}
+                          ]),
+    cb_context:setters(Context
+                      ,[{fun cb_context:set_resp_status/2, 'success'}
+                       ,{fun cb_context:set_resp_data/2, JObj}
+                       ]);
+validate_current_billing_period(Context, _) ->
     Context.
