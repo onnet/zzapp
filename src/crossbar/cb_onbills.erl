@@ -254,8 +254,8 @@ validate_current_billing_period(Context, ?HTTP_GET) ->
     {Year, Month, Day} = onbill_util:period_start_date(AccountId),
     JObj =
         kz_json:from_list([{<<"account_id">>, AccountId}
-                          ,{<<"period_start">>, onbill_util:period_start_tuple(Year, Month, Day)}
-                          ,{<<"period_end">>, onbill_util:period_end_tuple_by_start(Year, Month, Day)}
+                          ,{<<"period_start">>, kz_json:from_list(onbill_util:period_start_tuple(Year, Month, Day))}
+                          ,{<<"period_end">>, kz_json:from_list(onbill_util:period_end_tuple_by_start(Year, Month, Day))}
                           ]),
     cb_context:setters(Context
                       ,[{fun cb_context:set_resp_status/2, 'success'}
