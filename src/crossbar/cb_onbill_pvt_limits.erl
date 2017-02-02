@@ -77,5 +77,29 @@ leak_limits(AccountId, Context) ->
                                ])
     end.
 
-set_pvt_values(_AccountId, Context) ->
-    Context.
+set_pvt_values(AccountId, Context) ->
+    ReqData = cb_context:req_data(Context),
+    AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
+    Doc = case kz_datamgr:open_doc(AccountDb, ?LIMITS_DOC) of
+              {'error', _} ->
+                  {[{<<"_id">>, <<"limits">>}]};
+              {'ok', JObj} ->
+                  JObj
+          end,
+    Values =
+        props:filter_undefined(
+            [{<<"pvt_allow_postpay">>,kz_json:get_value(<<"allow_postpay">>, ReqData)}
+            ,{<<"pvt_max_postpay_amount">>,kz_json:get_value(<<"max_postpay_amount">>, ReqData)}
+            ,{<<"pvt_twoway_trunks">>,kz_json:get_value(<<"twoway_trunks">>, ReqData)}
+            ,{<<"pvt_outbound_trunks">>,kz_json:get_value(<<"outbound_trunks">>, ReqData)}
+            ,{<<"pvt_inbound_trunks">>,kz_json:get_value(<<"inbound_trunks">>, ReqData)}
+            ]),
+    case kz_datamgr:ensure_saved(AccountDb, kz_json:set_values(Values, Doc)) of
+        {'error', _} ->
+            cb_context:setters(Context
+                              ,[{fun cb_context:set_resp_data/2, kz_json:new()}
+                               ,{fun cb_context:set_resp_status/2, 'success'}
+                               ]);
+        {'ok', _} ->
+            leak_limits(AccountId, Context)
+    end.
