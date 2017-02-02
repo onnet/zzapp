@@ -13,10 +13,10 @@
 
 -spec init() -> 'ok'.
 init() ->
-    _ = crossbar_bindings:bind(<<"*.allowed_methods.onbill_limits">>, ?MODULE, 'allowed_methods'),
-    _ = crossbar_bindings:bind(<<"*.resource_exists.onbill_limits">>, ?MODULE, 'resource_exists'),
-    _ = crossbar_bindings:bind(<<"*.content_types_provided.onbill_limits">>, ?MODULE, 'content_types_provided'),
-    _ = crossbar_bindings:bind(<<"*.validate.onbill_limits">>, ?MODULE, 'validate').
+    _ = crossbar_bindings:bind(<<"*.allowed_methods.onbill_pvt_limits">>, ?MODULE, 'allowed_methods'),
+    _ = crossbar_bindings:bind(<<"*.resource_exists.onbill_pvt_limits">>, ?MODULE, 'resource_exists'),
+    _ = crossbar_bindings:bind(<<"*.content_types_provided.onbill_pvt_limits">>, ?MODULE, 'content_types_provided'),
+    _ = crossbar_bindings:bind(<<"*.validate.onbill_pvt_limits">>, ?MODULE, 'validate').
 
 -spec allowed_methods() -> http_methods().
 allowed_methods() ->
