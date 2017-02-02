@@ -88,11 +88,11 @@ set_pvt_values(AccountId, Context) ->
           end,
     Values =
         props:filter_undefined(
-            [{<<"pvt_allow_postpay">>,kz_json:get_value(<<"allow_postpay">>, ReqData)}
-            ,{<<"pvt_max_postpay_amount">>,kz_json:get_value(<<"max_postpay_amount">>, ReqData)}
-            ,{<<"pvt_twoway_trunks">>,kz_json:get_value(<<"twoway_trunks">>, ReqData)}
-            ,{<<"pvt_outbound_trunks">>,kz_json:get_value(<<"outbound_trunks">>, ReqData)}
-            ,{<<"pvt_inbound_trunks">>,kz_json:get_value(<<"inbound_trunks">>, ReqData)}
+            [{<<"pvt_allow_postpay">>,kz_json:get_atom_value(<<"allow_postpay">>, ReqData)}
+            ,{<<"pvt_max_postpay_amount">>,kz_json:get_number_value(<<"max_postpay_amount">>, ReqData)}
+            ,{<<"pvt_twoway_trunks">>,kz_json:get_integer_value(<<"twoway_trunks">>, ReqData)}
+            ,{<<"pvt_outbound_trunks">>,kz_json:get_integer_value(<<"outbound_trunks">>, ReqData)}
+            ,{<<"pvt_inbound_trunks">>,kz_json:get_integer_value(<<"inbound_trunks">>, ReqData)}
             ]),
     case kz_datamgr:ensure_saved(AccountDb, kz_json:set_values(Values, Doc)) of
         {'error', _} ->
