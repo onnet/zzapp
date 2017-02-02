@@ -1,4 +1,4 @@
--module(cb_onbill_limits).
+-module(cb_onbill_pvt_limits).
 
 -export([init/0
          ,allowed_methods/0
