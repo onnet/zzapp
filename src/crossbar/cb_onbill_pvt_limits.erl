@@ -67,9 +67,15 @@ leak_limits(AccountId, Context) ->
                 props:filter_undefined(
                     [{<<"allow_postpay">>,kz_json:get_value(<<"pvt_allow_postpay">>, JObj)}
                     ,{<<"max_postpay_amount">>,kz_json:get_value(<<"pvt_max_postpay_amount">>, JObj)}
+                    ,{<<"calls">>,kz_json:get_value(<<"pvt_calls">>, JObj)}
+                    ,{<<"resource_consuming_calls">>,kz_json:get_value(<<"pvt_resource_consuming_calls">>, JObj)}
+                    ,{<<"burst_trunks">>,kz_json:get_value(<<"pvt_burst_trunks">>, JObj)}
                     ,{<<"twoway_trunks">>,kz_json:get_value(<<"pvt_twoway_trunks">>, JObj)}
                     ,{<<"outbound_trunks">>,kz_json:get_value(<<"pvt_outbound_trunks">>, JObj)}
                     ,{<<"inbound_trunks">>,kz_json:get_value(<<"pvt_inbound_trunks">>, JObj)}
+                    ,{<<"bundled_twoway_trunks">>,kz_json:get_value(<<"pvt_bundled_twoway_trunks">>, JObj)}
+                    ,{<<"bundled_outbound_trunks">>,kz_json:get_value(<<"pvt_bundled_outbound_trunks">>, JObj)}
+                    ,{<<"bundled_inbound_trunks">>,kz_json:get_value(<<"pvt_bundled_inbound_trunks">>, JObj)}
                     ]),
             cb_context:setters(Context
                               ,[{fun cb_context:set_resp_data/2, kz_json:from_list(Values)}
@@ -90,9 +96,15 @@ set_pvt_values(AccountId, Context) ->
         props:filter_undefined(
             [{<<"pvt_allow_postpay">>,kz_json:get_atom_value(<<"allow_postpay">>, ReqData)}
             ,{<<"pvt_max_postpay_amount">>,kz_json:get_number_value(<<"max_postpay_amount">>, ReqData)}
+            ,{<<"pvt_calls">>,kz_json:get_integer_value(<<"calls">>, ReqData)}
+            ,{<<"pvt_resource_consuming_calls">>,kz_json:get_integer_value(<<"resource_consuming_calls">>, ReqData)}
+            ,{<<"pvt_burst_trunks">>,kz_json:get_integer_value(<<"burst_trunks">>, ReqData)}
             ,{<<"pvt_twoway_trunks">>,kz_json:get_integer_value(<<"twoway_trunks">>, ReqData)}
             ,{<<"pvt_outbound_trunks">>,kz_json:get_integer_value(<<"outbound_trunks">>, ReqData)}
             ,{<<"pvt_inbound_trunks">>,kz_json:get_integer_value(<<"inbound_trunks">>, ReqData)}
+            ,{<<"pvt_bundled_twoway_trunks">>,kz_json:get_integer_value(<<"bundled_twoway_trunks">>, ReqData)}
+            ,{<<"pvt_bundled_outbound_trunks">>,kz_json:get_integer_value(<<"bundled_outbound_trunks">>, ReqData)}
+            ,{<<"pvt_bundled_inbound_trunks">>,kz_json:get_integer_value(<<"bundled_inbound_trunks">>, ReqData)}
             ]),
     case kz_datamgr:ensure_saved(AccountDb, kz_json:set_values(Values, Doc)) of
         {'error', _} ->
