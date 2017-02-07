@@ -41,6 +41,7 @@
         ,replicate_account_doc/1
         ,transit_to_full_suscription_state/1
         ,reconcile_and_maybe_sync/1
+        ,send_account_update/1
         ]).
 
 -include("onbill.hrl").
@@ -430,3 +431,31 @@ reconcile_and_maybe_sync(AccountId) ->
         'false' ->
             'ok'
     end.
+
+-spec send_account_update(ne_binary()) -> 'ok'.
+send_account_update(AccountId) ->
+    case kz_amqp_worker:call(build_customer_update_payload(AccountId)
+                            ,fun kapi_notifications:publish_customer_update/1
+                            ,fun kapi_notifications:customer_update_v/1
+                            )
+    of
+        {'ok', _Resp} ->
+            lager:debug("published customer_update notification");
+        {'error', _E} ->
+            lager:debug("failed to publish_customer update notification: ~p", [_E])
+    end.
+
+-spec build_customer_update_payload(cb_context:context()) -> kz_proplist().
+build_customer_update_payload(AccountId) ->
+    props:filter_empty(
+      [{<<"Account-ID">>, kz_services:find_reseller_id(AccountId)}
+      ,{<<"Recipient-ID">>, AccountId}
+      ,{<<"User-Type">>, <<"admins_only">>}
+      ,{<<"Subject">>, <<"OnBill test subject">>}
+      ,{<<"From">>, <<"crm@onnet.su">>}
+      ,{<<"DataBag">>, {[{<<"field1">>,<<"value1">>},{<<"field2">>,{[{<<"subfield1">>,<<"subvalue1">>},{<<"subfield2">>,<<"subvalue2">>}]}}]}}
+      ,{<<"Reply-To">>, <<"iam@onnet.info">>}
+      ,{<<"HTML">>, base64:encode(<<"Dear {{user.first_name}} {{user.last_name}}. <br /><br />DataBag test: {{databag.field2.subfield1}} <br /><br /> Kind regards,">>)}
+      ,{<<"Text">>, <<"Oh Dear {{user.first_name}} {{user.last_name}}.\n\nDataBag test: {{databag.field2.subfield2}}\n\nBest regards,">>}
+       | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
+      ]).
