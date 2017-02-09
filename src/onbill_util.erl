@@ -450,11 +450,12 @@ build_customer_update_payload(AccountId) ->
     props:filter_empty(
       [{<<"Account-ID">>, kz_services:find_reseller_id(AccountId)}
       ,{<<"Recipient-ID">>, AccountId}
-      ,{<<"User-Type">>, <<"admins_only">>}
-      ,{<<"Subject">>, <<"OnBill test subject">>}
-      ,{<<"From">>, <<"crm@onnet.su">>}
+   %   ,{<<"User-Type">>, <<"admins_only">>}
+   %   ,{<<"Subject">>, <<"OnBill test subject">>}
+   %   ,{<<"From">>, <<"crm@onnet.su">>}
+      ,{<<"Template-ID">>, <<"customer_update_billing_period">>}
       ,{<<"DataBag">>, {[{<<"field1">>,<<"value1">>},{<<"field2">>,{[{<<"subfield1">>,<<"subvalue1">>},{<<"subfield2">>,<<"subvalue2">>}]}}]}}
-      ,{<<"Reply-To">>, <<"iam@onnet.info">>}
+   %   ,{<<"Reply-To">>, <<"iam@onnet.info">>}
       ,{<<"HTML">>, base64:encode(<<"Dear {{user.first_name}} {{user.last_name}}. <br /><br />DataBag test: {{databag.field2.subfield1}} <br /><br /> Kind regards,">>)}
       ,{<<"Text">>, <<"Oh Dear {{user.first_name}} {{user.last_name}}.\n\nDataBag test: {{databag.field2.subfield2}}\n\nBest regards,">>}
        | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
