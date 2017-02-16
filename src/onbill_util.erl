@@ -460,3 +460,6 @@ build_customer_update_payload(AccountId) ->
       ,{<<"Text">>, <<"Oh Dear {{user.first_name}} {{user.last_name}}.\n\nDataBag test: {{databag.field2.subfield2}}\n\nBest regards,">>}
        | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
       ]).
+
+% maybe_send_account_updates(AccountId) ->
+    

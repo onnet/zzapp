@@ -62,10 +62,10 @@ handle_info('next_account', []) ->
     {'noreply', [], 'hibernate'};
 handle_info('next_account', [Account|Accounts]) ->
     Cycle =
-        case maybe_mark_account_dirty(kz_doc:id(Account)) of
-            {'ok', 'marked_dirty'} ->
+        case maybe_process_account(kz_doc:id(Account)) of
+            {'ok', 'account_processed'} ->
                 kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"interaccount_delay_sec">>, 10)  * ?MILLISECONDS_IN_SECOND;
-            {'ok', 'no_need_to_mark'} ->
+            {'ok', 'no_need_to_process'} ->
                 2 * ?MILLISECONDS_IN_SECOND;
             {'error', _} ->
                 2 * ?MILLISECONDS_IN_SECOND
@@ -88,8 +88,8 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
--spec maybe_mark_account_dirty (ne_binary()) -> {'ok', 'marked_dirty'}|{'ok', 'no_need_to_mark'}|{'error', _}.
-maybe_mark_account_dirty(<<AccountId:32/binary>>) ->
+-spec maybe_process_account (ne_binary()) -> {'ok', 'account_processed'}|{'ok', 'no_need_to_process'}|{'error', _}.
+maybe_process_account(<<AccountId:32/binary>>) ->
     case kz_datamgr:open_doc(?KZ_ACCOUNTS_DB, AccountId) of
         {'ok', AccountJObj} ->
             case not kz_doc:is_soft_deleted(AccountJObj)
@@ -103,7 +103,7 @@ maybe_mark_account_dirty(<<AccountId:32/binary>>) ->
         _ ->
             {'error', 'invalid_accounts_doc'}
     end;
-maybe_mark_account_dirty(_) ->
+maybe_process_account(_) ->
     {'error', 'invalid_doc_id'}.
 
 -spec process_account (ne_binary()) -> 'ok'.
@@ -117,7 +117,8 @@ process_account(AccountId) ->
         'true' ->
             lager:debug("onbill crawler saving account ~s as dirty", [AccountId]),
             kz_services:save_as_dirty(AccountId),
-            {'ok', 'marked_dirty'};
+            onbill_util:maybe_send_account_updates(AccountId),
+            {'ok', 'account_processed'};
         'false' ->
-            {'ok', 'no_need_to_mark'}
+            {'ok', 'no_need_to_process'}
     end.
