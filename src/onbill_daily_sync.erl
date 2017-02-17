@@ -117,7 +117,7 @@ process_account(AccountId) ->
         'true' ->
             lager:debug("onbill crawler saving account ~s as dirty", [AccountId]),
             kz_services:save_as_dirty(AccountId),
-            onbill_util:maybe_send_account_updates(AccountId),
+            onbill_notifications:maybe_send_account_updates(AccountId),
             {'ok', 'account_processed'};
         'false' ->
             {'ok', 'no_need_to_process'}
