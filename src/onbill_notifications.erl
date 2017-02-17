@@ -6,7 +6,9 @@
 
 -include("onbill.hrl").
 
--define(KEY_TRIAL_EXPIRATION, <<"pvt_trial_expires">>).
+-define(MRC_APPROACHING_SENT, [<<"notifications">>, <<"mrc_approaching">>, <<"sent_low_balance">>]).
+-define(MRC_APPROACHING_ENABLED, [<<"notifications">>, <<"mrc_approaching">>, <<"enabled">>]).
+-define(MRC_APPROACHING_TSTAMP, [<<"notifications">>, <<"mrc_approaching">>, <<"last_notification">>]).
 
 -spec send_account_update(ne_binary()) -> 'ok'.
 send_account_update(AccountId) ->
