@@ -30,7 +30,7 @@
 -define(BINDINGS, [{'self', []}
                %   ,{'resource', []}
                   ,{'conf', []}
-               %   ,{'notifications', []}
+                  ,{'notifications', []}
                %   ,{'registration', []}
                   ,{'money', []}
                   ]).

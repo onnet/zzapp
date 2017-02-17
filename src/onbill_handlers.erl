@@ -17,6 +17,7 @@
 
 -spec handle_doc_created(kz_json:object(), kz_proplist()) -> any().
 handle_doc_created(JObj, _Props) ->
+  lager:info("IAM Created: ~p",[JObj]),
     AccountId = kz_json:get_value(<<"Account-ID">>, JObj),
     case (AccountId /= 'undefined')
          andalso kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded'))
@@ -29,6 +30,7 @@ handle_doc_created(JObj, _Props) ->
     end.
 
 handle_doc_created(<<"account">>, AccountId, _JObj) ->
+    _ = timer:sleep(2000),
     _ = onbill_util:ensure_service_plan(AccountId);
 handle_doc_created(<<"device">>, AccountId, _JObj) ->
     _ = kz_services:reconcile(AccountId),

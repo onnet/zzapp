@@ -42,6 +42,7 @@
         ,transit_to_full_suscription_state/1
         ,reconcile_and_maybe_sync/1
         ,send_account_update/1
+        ,maybe_send_account_updates/1
         ]).
 
 -include("onbill.hrl").
@@ -402,12 +403,14 @@ default_service_plan(AccountId) ->
 
 -spec transit_to_full_suscription_state(ne_binary()) -> 'ok'.
 transit_to_full_suscription_state(AccountId) ->
+    _ = ensure_service_plan(AccountId),
     set_billing_day(AccountId),
     {'ok', Doc} = kz_account:fetch(AccountId),
     NewDoc = kz_json:delete_key(?KEY_TRIAL_EXPIRATION, Doc),
     AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
     {'ok', JObj} = kz_datamgr:ensure_saved(AccountDb, NewDoc),
-    replicate_account_doc(JObj),
+    _ = replicate_account_doc(JObj),
+    reconcile_and_sync(AccountId),
     {'ok', JObj}.
 
 -spec replicate_account_doc(kz_json:object()) ->
@@ -431,6 +434,11 @@ reconcile_and_maybe_sync(AccountId) ->
         'false' ->
             'ok'
     end.
+
+-spec reconcile_and_sync(ne_binary()) -> any().
+reconcile_and_sync(AccountId) ->
+    _ = kz_services:reconcile(AccountId),
+    kz_service_sync:sync(AccountId).
 
 -spec send_account_update(ne_binary()) -> 'ok'.
 send_account_update(AccountId) ->
@@ -461,5 +469,6 @@ build_customer_update_payload(AccountId) ->
        | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
       ]).
 
-% maybe_send_account_updates(AccountId) ->
-    
+-spec maybe_send_account_updates(ne_binary()) -> 'ok'.
+maybe_send_account_updates(_AccountId) ->
+   'ok'. 

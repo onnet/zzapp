@@ -35,14 +35,18 @@ validate(Context) ->
 
 -spec validate_limits(cb_context:context(), http_method()) -> cb_context:context().
 validate_limits(Context, ?HTTP_GET) ->
-    ResellerId = cb_context:auth_account_id(Context),
     AccountId = cb_context:account_id(Context),
-    case onbill_util:validate_relationship(AccountId, ResellerId) of
-        'true' ->
-            leak_limits(AccountId, Context);
-        'false' ->
-            cb_context:add_system_error('forbidden', Context)
-    end;
+    leak_limits(AccountId, Context);
+%
+%  Waiting for KAZOO-5342: leak_max_postpay
+%
+%    ResellerId = cb_context:auth_account_id(Context),
+%    case onbill_util:validate_relationship(AccountId, ResellerId) of
+%        'true' ->
+%            leak_limits(AccountId, Context);
+%        'false' ->
+%            cb_context:add_system_error('forbidden', Context)
+%    end;
 
 validate_limits(Context, ?HTTP_POST) ->
     ResellerId = cb_context:auth_account_id(Context),
