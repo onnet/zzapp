@@ -197,17 +197,20 @@ charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], T
             DaysLeft = onbill_util:days_left_in_period(StartYear, StartMonth, StartDay, Timestamp),
             ItemJObj = kz_json:get_value(Path, NewMax),
             Ratio = DaysLeft / DaysInPeriod,
+	    Reason =
+	        case Ratio of
+		    1.0 -> <<"monthly_recurring">>;
+		    _ -> <<"recurring_prorate">>
+		end,
             Upd =
-                case kz_json:get_value(<<"apply_discount_to_prorated">>, ResellerVars, 'false') of
+                case kz_json:get_value(<<"apply_discount_to_prorated">>, ResellerVars, 'false')
+                     orelse Ratio == 1.0
+                of
                     'true' ->
                         %% TODO if anyone needed:
                         %% Apply single discount if it is the very first unit
                         %% Count if cumulative discounts left
-                        [{<<"quantity">>, Qty}
-                        ,{<<"single_discount">>, 'false'}
-                        ,{<<"cumulative_discount">>, 0.0}
-                        ,{<<"cumulative_discount_rate">>, 0.0}
-                        ];
+                        discount_newly_added(Qty, ItemJObj);
                     _ ->
                         [{<<"quantity">>, Qty}
                         ,{<<"single_discount">>, false}
@@ -215,9 +218,28 @@ charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], T
                         ,{<<"cumulative_discount_rate">>, 0.0}
                         ]
                 end,
-            create_debit_tansaction(AccountId, kz_json:set_values(Upd, ItemJObj), Timestamp, <<"recurring_prorate">>, Ratio)
+            create_debit_tansaction(AccountId, kz_json:set_values(Upd, ItemJObj), Timestamp, Reason, Ratio)
     end,
     charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp). 
+
+discount_newly_added(Qty, ItemJObj) ->
+    SingleDiscount =
+        (kz_json:get_value(<<"quantity">>, ItemJObj) == Qty)
+        andalso (kz_json:get_value(<<"single_discount">>, ItemJObj) == 'true'),
+    ItemJObjQuantity = kz_json:get_value(<<"quantity">>, ItemJObj),
+    CumulativeDiscount =
+        case kz_json:get_value(<<"cumulative_discount">>, ItemJObj) of
+            ItemJObjQuantity ->
+                Qty;
+            JObjCumulativeDiscount when (ItemJObjQuantity - JObjCumulativeDiscount) > Qty ->
+                0.0;
+            JObjCumulativeDiscount ->
+                ItemJObjQuantity - JObjCumulativeDiscount
+        end,
+    [{<<"quantity">>, Qty}
+    ,{<<"single_discount">>, SingleDiscount}
+    ,{<<"cumulative_discount">>, CumulativeDiscount}
+    ].
 
 -spec check_this_period_mrc(ne_binary(), kz_json:object(), gregorian_seconds()) -> 'ok'|proplist(). 
 check_this_period_mrc(AccountId, NewMax, Timestamp) ->
@@ -319,8 +341,8 @@ calc_item(ItemJObj, AccountId) ->
         Rate = kz_json:get_value(<<"rate">>, ItemJObj),
         SingleDiscountAmount =
             case kz_json:get_value(<<"single_discount">>, ItemJObj) of
-                'false' -> 0;
-                'true' -> kz_json:get_value(<<"single_discount_rate">>, ItemJObj)
+                'true' -> kz_json:get_value(<<"single_discount_rate">>, ItemJObj);
+                _ -> 0
             end,
         CumulativeDiscount = kz_json:get_value(<<"cumulative_discount">>, ItemJObj),
         CumulativeDiscountRate = kz_json:get_value(<<"cumulative_discount_rate">>, ItemJObj),
