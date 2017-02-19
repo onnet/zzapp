@@ -11,6 +11,7 @@
 
 -include("onbill.hrl").
 
+-define(ONBILL_NOTIFICATION_ENABLED, <<"onbill_notification_enabled">>).
 -define(MRC_APPROACHING_TEMPLATE, <<"customer_update_billing_period">>).
 -define(MRC_APPROACHING_SENT, [<<"notifications">>, <<"mrc_approaching">>, <<"sent_mrc_approaching">>]).
 -define(MRC_APPROACHING_ENABLED, [<<"notifications">>, <<"mrc_approaching">>, <<"enabled">>]).
@@ -38,10 +39,15 @@ send_account_update(AccountId, TemplateId, DataBag) ->
 
 -spec build_customer_update_payload(ne_binary(), ne_binary(), kz_json:object()) -> kz_proplist().
 build_customer_update_payload(AccountId, TemplateId, DataBag) ->
+    ResellerId = kz_services:find_reseller_id(AccountId),
+    RecipientId =
+        case onbill_notification_enabled(AccountId) of
+            'true' -> AccountId;
+            'false' -> ResellerId
+        end,
     props:filter_empty(
-      [{<<"Account-ID">>, kz_services:find_reseller_id(AccountId)}
-   %   ,{<<"Recipient-ID">>, AccountId}
-      ,{<<"Recipient-ID">>, <<"9dab2e56e27b4d1ce381ca9aaa8b0303">>}
+      [{<<"Account-ID">>, ResellerId}
+      ,{<<"Recipient-ID">>, RecipientId}
       ,{<<"Template-ID">>, TemplateId}
       ,{<<"DataBag">>, DataBag}
        | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
@@ -126,6 +132,10 @@ update_account_mrc_approaching_sent(AccountJObj0) ->
     AccountJObj2 = set_mrc_approaching_tstamp(AccountJObj1),
     _ = kz_util:account_update(AccountJObj2),
    'ok'.
+
+-spec onbill_notification_enabled(ne_binary()) -> boolean().
+onbill_notification_enabled(AccountId) ->
+    kz_json:is_true(?ONBILL_NOTIFICATION_ENABLED, onbill_util:reseller_vars(AccountId)).
 
 -spec mrc_approaching_sent(kz_account:doc()) -> boolean().
 mrc_approaching_sent(JObj) ->
