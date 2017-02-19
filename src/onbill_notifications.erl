@@ -1,7 +1,7 @@
 -module(onbill_notifications).
 
 -export([send_account_update/3
-         ,mrc_approaching_databag/1
+        ,init/0
         ,maybe_send_account_updates/2
         ,mrc_approaching_sent/1, set_mrc_approaching_sent/1, reset_mrc_approaching_sent/1
         ,mrc_approaching_enabled/1, set_mrc_approaching_enabled/1, reset_mrc_approaching_enabled/1
@@ -19,13 +19,69 @@
 -define(MRC_APPROACHING_REPEAT,
         kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"mrc_approaching_repeat_s">>, 1 * ?SECONDS_IN_DAY)).
 
+-define(MACRO_VALUE(Key, Label, Name, Description)
+       ,{Key
+        ,kz_json:from_list([{<<"i18n_label">>, Label}
+                           ,{<<"friendly_name">>, Name}
+                           ,{<<"description">>, Description}
+                           ])
+        }).
+
+-define(USER_MACROS
+       ,[?MACRO_VALUE(<<"user.first_name">>, <<"user_first_name">>, <<"First Name">>, <<"First name of the user">>)
+        ,?MACRO_VALUE(<<"user.last_name">>, <<"user_last_name">>, <<"Last Name">>, <<"Last name of the user">>)
+        ,?MACRO_VALUE(<<"user.email">>, <<"user_email">>, <<"Email">>, <<"Email of the user">>)
+        ,?MACRO_VALUE(<<"user.timezone">>, <<"user_timezone">>, <<"Timezone">>, <<"Timezone of the user">>)
+        ,?MACRO_VALUE(<<"user.username">>, <<"username">>, <<"Username">>, <<"Username">>)
+        ]).
+
+-define(TEMPLATE_MACROS
+       ,kz_json:from_list(
+          [?MACRO_VALUE(<<"user.first_name">>, <<"first_name">>, <<"First Name">>, <<"First Name">>)
+          ,?MACRO_VALUE(<<"user.last_name">>, <<"last_name">>, <<"Last Name">>, <<"Last Name">>)
+           | ?USER_MACROS
+          ])
+       ).
+
+-define(EMAIL_SPECIFIED, <<"specified">>).
+-define(EMAIL_ORIGINAL, <<"original">>).
+-define(EMAIL_ADMINS, <<"admins">>).
+
+-define(CONFIGURED_EMAILS(Type, Addresses)
+       ,kz_json:from_list(
+          props:filter_undefined(
+            [{<<"type">>, Type}
+            ,{<<"email_addresses">>, Addresses}
+            ])
+         )
+       ).
+-define(CONFIGURED_EMAILS(Type), kz_json:from_list([{<<"type">>, Type}])).
+
+-define(TEMPLATE_TO, ?CONFIGURED_EMAILS(?EMAIL_ORIGINAL)).
+-define(TEMPLATE_FROM, teletype_util:default_from_address(?MOD_CONFIG_CRAWLER)).
+-define(TEMPLATE_CC, ?CONFIGURED_EMAILS(?EMAIL_SPECIFIED, [])).
+-define(TEMPLATE_BCC, ?CONFIGURED_EMAILS(?EMAIL_SPECIFIED, [])).
+-define(TEMPLATE_REPLY_TO, teletype_util:default_reply_to(?MOD_CONFIG_CRAWLER)).
+
+-spec init() -> 'ok'.
+init() ->
+    mrc_approaching_init().
+
+-spec mrc_approaching_init() -> 'ok'.
+mrc_approaching_init() ->
+    teletype_templates:init(?MRC_APPROACHING_TEMPLATE, [{'macros', ?TEMPLATE_MACROS}
+                                                       ,{'subject', <<"New billing period">> }
+                                                       ,{'category', <<"user">>}
+                                                       ,{'friendly_name', <<"New billing period">>}
+                                                       ,{'to', ?TEMPLATE_TO}
+                                                       ,{'from', ?TEMPLATE_FROM}
+                                                       ,{'cc', ?TEMPLATE_CC}
+                                                       ,{'bcc', ?TEMPLATE_BCC}
+                                                       ,{'reply_to', ?TEMPLATE_REPLY_TO}
+                                                       ]).
 
 -spec send_account_update(ne_binary(), ne_binary(), kz_json:object()) -> 'ok'.
 send_account_update(AccountId, TemplateId, DataBag) ->
-    lager:info("IAM send_account_update AccountId: ~p",[AccountId]),
-    lager:info("IAM send_account_update TemplateId: ~p",[TemplateId]),
-    lager:info("IAM send_account_update DataBag: ~p",[DataBag]),
-    lager:info("IAM send_account_update Payload: ~p",[build_customer_update_payload(AccountId, TemplateId, DataBag)]),
     case kz_amqp_worker:call(build_customer_update_payload(AccountId, TemplateId, DataBag)
                             ,fun kapi_notifications:publish_customer_update/1
                             ,fun kapi_notifications:customer_update_v/1
@@ -71,13 +127,8 @@ maybe_new_billing_period_approaching(AccountId, AccountJObj) ->
                 > wht_util:current_balance(AccountId)
             of
                 'true' ->
-                    lager:info("IAM maybe_new_billing_period_approaching true"),
-                    lager:info("IAM maybe_new_billing_period_approaching AccountId: ~p",[AccountId]),
-                    lager:info("IAM maybe_new_billing_period_approaching AccountJObj: ~p",[AccountJObj]),
-                    lager:info("IAM maybe_new_billing_period_approaching mrc_approaching_enabled(AccountJObj): ~p",[mrc_approaching_enabled(AccountJObj)]),
                     maybe_send_new_billing_period_approaching_update(AccountId, AccountJObj, mrc_approaching_enabled(AccountJObj));
                 _ ->
-                    lager:info("IAM maybe_new_billing_period_approaching false"),
                     'ok'
             end;
         _ -> 'ok'
