@@ -92,12 +92,13 @@ code_change(_OldVsn, State, _Extra) ->
 maybe_process_account(<<AccountId:32/binary>>) ->
     case kz_datamgr:open_doc(?KZ_ACCOUNTS_DB, AccountId) of
         {'ok', AccountJObj} ->
-            case not kz_doc:is_soft_deleted(AccountJObj)
-                     andalso kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded'))
+            case kz_doc:is_soft_deleted(AccountJObj)
+                orelse not kz_account:is_enabled(AccountJObj)
+                orelse not kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded'))
             of
-                'true' ->
-                    process_account(AccountId);
                 'false' ->
+                    process_account(AccountId, AccountJObj);
+                'true' ->
                     {'error', 'deleted_or_no_db'}
             end;
         _ ->
@@ -106,8 +107,8 @@ maybe_process_account(<<AccountId:32/binary>>) ->
 maybe_process_account(_) ->
     {'error', 'invalid_doc_id'}.
 
--spec process_account (ne_binary()) -> 'ok'.
-process_account(AccountId) ->
+-spec process_account (ne_binary(), kz_account:doc()) -> 'ok'.
+process_account(AccountId, AccountJObj) ->
   %  case not onbill_util:is_trial_account(AccountId) 
   %         andalso not kapps_util:is_master_account(AccountId) 
     case  not kapps_util:is_master_account(AccountId) 
@@ -117,7 +118,7 @@ process_account(AccountId) ->
         'true' ->
             lager:debug("onbill crawler saving account ~s as dirty", [AccountId]),
             kz_services:save_as_dirty(AccountId),
-            onbill_notifications:maybe_send_account_updates(AccountId),
+            onbill_notifications:maybe_send_account_updates(AccountId, AccountJObj),
             {'ok', 'account_processed'};
         'false' ->
             {'ok', 'no_need_to_process'}
