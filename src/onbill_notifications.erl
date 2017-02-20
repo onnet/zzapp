@@ -12,7 +12,7 @@
 -include("onbill.hrl").
 
 -define(ONBILL_NOTIFICATION_ENABLED, <<"onbill_notification_enabled">>).
--define(MRC_APPROACHING_TEMPLATE, <<"customer_update_billing_period">>).
+-define(MRC_APPROACHING_TEMPLATE, <<"customer_update_mrc_approaching">>).
 -define(MRC_APPROACHING_SENT, [<<"notifications">>, <<"mrc_approaching">>, <<"sent_mrc_approaching">>]).
 -define(MRC_APPROACHING_ENABLED, [<<"notifications">>, <<"mrc_approaching">>, <<"enabled">>]).
 -define(MRC_APPROACHING_TSTAMP, [<<"notifications">>, <<"mrc_approaching">>, <<"last_notification">>]).

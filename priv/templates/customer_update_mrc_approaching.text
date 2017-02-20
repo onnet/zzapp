@@ -1,0 +1,6 @@
+Dear {{ user.first_name }} at "{{account.name}}"
+
+Account name: {{databag.account.name}}.
+
+Kind regards.
+{{ databag.reseller.name }}
