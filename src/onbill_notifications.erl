@@ -302,3 +302,33 @@ template_filename(TemplateId, Type) ->
                   ,Basename
                   ]).
 
+-spec save_attachment(ne_binary(), ne_binary(), ne_binary(), binary()) ->
+                             {'ok', kz_json:object()} |
+                             {'error', any()}.
+save_attachment(DocId, AName, ContentType, Contents) ->
+    case
+        kz_datamgr:put_attachment(
+          ?KZ_CONFIG_DB
+                                 ,DocId
+                                 ,AName
+                                 ,Contents
+                                 ,[{'content_type', kz_term:to_list(ContentType)}]
+         )
+    of
+        {'ok', _UpdatedJObj}=OK ->
+            lager:debug("added attachment ~s to ~s", [AName, DocId]),
+            OK;
+        {'error', 'conflict'}=E ->
+            case does_attachment_exist(DocId, AName) of
+                'true' ->
+                    lager:debug("added attachment ~s to ~s", [AName, DocId]),
+                    kz_datamgr:open_doc(?KZ_CONFIG_DB, DocId);
+                'false' ->
+                    lager:debug("failed to add attachment ~s to ~s", [AName, DocId]),
+                    E
+            end;
+        {'error', _E}=E ->
+            lager:debug("failed to add attachment ~s to ~s: ~p", [AName, DocId, _E]),
+            E
+    end.
+
