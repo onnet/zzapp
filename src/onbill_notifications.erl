@@ -16,6 +16,8 @@
 -define(MRC_APPROACHING_SENT, [<<"notifications">>, <<"mrc_approaching">>, <<"sent_mrc_approaching">>]).
 -define(MRC_APPROACHING_ENABLED, [<<"notifications">>, <<"mrc_approaching">>, <<"enabled">>]).
 -define(MRC_APPROACHING_TSTAMP, [<<"notifications">>, <<"mrc_approaching">>, <<"last_notification">>]).
+-define(MRC_APPROACHING_PERIOD,
+        kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"mrc_approaching_period_days">>, 5)).
 -define(MRC_APPROACHING_REPEAT,
         kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"mrc_approaching_repeat_s">>, 1 * ?SECONDS_IN_DAY)).
 
@@ -26,6 +28,9 @@
                            ,{<<"description">>, Description}
                            ])
         }).
+
+-define(TEXT_PLAIN, <<"text/plain">>).
+-define(TEXT_HTML, <<"text/html">>).
 
 -define(USER_MACROS
        ,[?MACRO_VALUE(<<"user.first_name">>, <<"user_first_name">>, <<"First Name">>, <<"First name of the user">>)
@@ -78,7 +83,10 @@ mrc_approaching_init() ->
                                                        ,{'cc', ?TEMPLATE_CC}
                                                        ,{'bcc', ?TEMPLATE_BCC}
                                                        ,{'reply_to', ?TEMPLATE_REPLY_TO}
-                                                       ]).
+                                                       ]),
+    maybe_upload_attachments(?MRC_APPROACHING_TEMPLATE).
+
+
 
 -spec send_account_update(ne_binary(), ne_binary(), kz_json:object()) -> 'ok'.
 send_account_update(AccountId, TemplateId, DataBag) ->
@@ -120,9 +128,10 @@ maybe_send_account_updates(AccountId, AccountJObj) ->
 -spec maybe_new_billing_period_approaching(ne_binary(), kz_account:doc()) -> 'ok'.
 maybe_new_billing_period_approaching(AccountId, AccountJObj) ->
     Timestamp = kz_time:current_tstamp(),
+    Days_Before_MRC_Update = ?MRC_APPROACHING_PERIOD,
     {StartYear, StartMonth, StartDay} = onbill_util:period_start_date(AccountId, Timestamp),
     case onbill_util:days_left_in_period(StartYear, StartMonth, StartDay, Timestamp) of
-        DaysLeft when DaysLeft < 10 ->
+        DaysLeft when DaysLeft < Days_Before_MRC_Update ->
             case onbill_bk_util:current_usage_amount_in_units(AccountId)
                 > wht_util:current_balance(AccountId)
             of
@@ -232,4 +241,64 @@ set_mrc_approaching_tstamp(JObj, TStamp) ->
 -spec remove_mrc_approaching_tstamp(kz_account:doc()) -> kz_account:doc().
 remove_mrc_approaching_tstamp(JObj) ->
     kz_json:delete_key(?MRC_APPROACHING_TSTAMP, JObj).
+
+maybe_upload_attachments(TemplateId) ->
+    Id = kz_notification:db_id(TemplateId),
+    case does_attachment_exist(Id, attachment_name(?TEXT_HTML)) of
+        'true' -> 'ok';
+        'false' ->
+            case read_template_from_disk(TemplateId, 'html') of
+                {'ok', HTML} ->
+                    upload_attachment(HTML, ?TEXT_HTML, Id, attachment_name(?TEXT_HTML));
+                {'error', _EHTML} ->
+                    lager:info("failed to find template '~s.html': ~p", [TemplateId, _EHTML])
+            end
+    end,
+    case does_attachment_exist(Id, attachment_name(?TEXT_PLAIN)) of
+        'true' -> 'ok';
+        'false' ->
+            case read_template_from_disk(TemplateId, 'text') of
+                {'ok', Text} ->
+                    upload_attachment(Text, ?TEXT_PLAIN, Id, attachment_name(?TEXT_PLAIN));
+                {'error', _ETEXT} ->
+                    lager:info("failed to find template '~s.text': ~p", [TemplateId, _ETEXT])
+            end
+    end.
+
+-spec does_attachment_exist(ne_binary(), ne_binary()) -> boolean().
+does_attachment_exist(DocId, AName) ->
+    case kz_datamgr:open_doc(?KZ_CONFIG_DB, DocId) of
+        {'ok', JObj} ->
+            kz_doc:attachment(JObj, cow_qs:urldecode(AName)) =/= 'undefined';
+        {'error', _E} ->
+            lager:debug("failed to open ~s to check for ~s: ~p", [DocId, AName, _E]),
+            'false'
+    end.
+
+-spec read_template_from_disk(ne_binary(), 'html' | 'text') ->
+                {'ok', binary()} |
+                {'error', file:posix() | 'badarg' | 'terminated' | 'system_limit'}.
+read_template_from_disk(TemplateId, Type) ->
+    File = template_filename(TemplateId, Type),
+    file:read_file(File).
+
+upload_attachment(Contents, ContentType, Id, AName) ->
+    case save_attachment(Id, AName, ContentType, Contents) of
+        {'ok', AttachmentJObj} ->
+            lager:debug("saved attachment: ~p", [AttachmentJObj]);
+        {'error', _E} ->
+            lager:debug("failed to save attachment ~s: ~p", [AName, _E])
+    end.
+
+-spec attachment_name(ne_binary()) -> ne_binary().
+attachment_name(ContentType) ->
+    kz_binary:clean(<<"template.", (kz_http_util:urlencode(ContentType))/binary>>).
+
+-spec template_filename(ne_binary(), 'html' | 'text') -> file:filename_all().
+template_filename(TemplateId, Type) ->
+    Basename = iolist_to_binary([TemplateId, ".", kz_term:to_list(Type)]),
+    filename:join([code:priv_dir('onbill')
+                  ,"templates"
+                  ,Basename
+                  ]).
 
