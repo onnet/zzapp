@@ -172,6 +172,8 @@ reseller_info_databag(AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     {'ok', ResellerDoc} = kz_account:fetch(ResellerId),
     Values = [{<<"name">>, kz_account:name(ResellerDoc)}
+             ,{<<"currency_short">>, kz_json:get_value(<<"currency_short">>, ResellerDoc)}
+             ,{<<"currency_sign">>, kz_json:get_value(<<"currency_sign">>, ResellerDoc)}
              ],
     kz_json:set_values(Values, kz_json:new()).
 
