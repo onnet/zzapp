@@ -73,7 +73,7 @@ init() ->
 -spec mrc_approaching_init() -> 'ok'.
 mrc_approaching_init() ->
     teletype_templates:init(?MRC_APPROACHING_TEMPLATE, [{'macros', ?TEMPLATE_MACROS}
-                                                       ,{'subject', <<"New billing period">> }
+                                                       ,{'subject', <<"New billing period approaching for {{databag.account.name}}">> }
                                                        ,{'category', <<"account">>}
                                                        ,{'friendly_name', <<"New billing period">>}
                                                        ,{'to', ?TEMPLATE_TO}
@@ -189,9 +189,16 @@ services_info_databag(AccountId) ->
     {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
     ItemsList = onbill_bk_util:select_non_zero_items_list(Items, AccountId),
     ItemsCalculatedList = [onbill_bk_util:calc_item(ItemJObj, AccountId) || ItemJObj <- ItemsList],
+
+    Timestamp = kz_time:current_tstamp(),
+    {StartYear, StartMonth, StartDay} = onbill_util:period_start_date(AccountId, Timestamp),
+    DaysLeft =  onbill_util:days_left_in_period(StartYear, StartMonth, StartDay, Timestamp),
+               
     kz_json:from_list([{<<"total_amount">>, onbill_bk_util:items_amount(ItemsList, AccountId, 0.0)}
                       ,{<<"services_list">>, ItemsCalculatedList}
                       ,{<<"account_id">>, AccountId}
+                      ,{<<"days_left">>, DaysLeft}
+                      ,{<<"next_period_date">>, kz_json:from_list(onbill_util:period_tuple(StartYear, StartMonth, StartDay))}
                       ]).
 
 -spec update_account_mrc_approaching_sent(kz_account:doc()) -> 'ok'.

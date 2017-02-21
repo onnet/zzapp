@@ -1,32 +1,37 @@
 <html>
   <body>
-    <h2>Dear {{ user.first_name }} {{ user.last_name }} at "{{account.name}}"</h2>
-    <p>Account name: {{databag.account.name}}.</p>
-    <p>Total services: {{ databag.services.total_amount }}</p>
+    <h2>Dear {{ user.first_name }} {{ user.last_name }} at "{{databag.account.name}}"</h2>
+    <p></p>
+    <p>Please be informed that new billing period will starts in {{ databag.services.days_left }} ({{ databag.services.next_period_date.day }} {{ databag.services.next_period_date.month_short }} {{ databag.services.next_period_date.year }})</p>
+    <p>In order to continue purchase services, your account should contain enough funds for monthly recurring fees charges.</p>
+    <p></p>
     <p>Services list:</p>
-    {% for service in databag.services.services_list %}
-    <p>{{ service.name }} - {{ service.quantity }}</p>
-    {% endfor %}
-
     <table border="1" cellspacing="0" cellpadding="10">
       <thead>
-        <td>{_ Fee name _}</td>
-        <td>{_ Rate _}</td>
-        <td>{_ Quantity _}</td>
-        <td>{_ Discount _}</td>
-        <td>{_ Cost _}</td>
+        <tr>
+          <th style="text-align: center;">Fee name</td>
+          <th style="text-align: center;">Rate</td>
+          <th style="text-align: center;">Quantity</td>
+          <th style="text-align: center;">Discount</td>
+          <th style="text-align: center;">Cost</td>
+        </tr>
       </thead>
       <tbody>
+       {% for service in databag.services.services_list %}
         <tr>
-          <td>{{ service.name }}</td>
-          <td>{{ service.rate }}</td>
-          <td>{{ service.quantity }}</td>
-          <td>{{ service.total_discount }}</td>
-          <td>{{ service.discounted_item_cost }}</td>
+          <td style="text-align: center;">{{ service.name }}</td>
+          <td style="text-align: center;">{{ service.rate }}</td>
+          <td style="text-align: center;">{{ service.quantity }}</td>
+          <td style="text-align: center;">{{ service.total_discount }}</td>
+          <td style="text-align: center;">{{ service.discounted_item_cost }}</td>
+        </tr>
+       {% endfor %}
+        <tr>
+          <td style="text-align: right;" colspan="4">Total services:</td>
+          <td style="text-align: center;">{{ databag.services.total_amount }}</td>
         </tr>
       </tbody>
     </table>
-
     <p>Kind regards.</p>
     <p>{{ databag.reseller.name }}</p>
   </body>
