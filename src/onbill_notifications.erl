@@ -74,7 +74,7 @@ init() ->
 
 -spec mrc_approaching_init() -> 'ok'.
 mrc_approaching_init() ->
-    teletype_templates:init(?MRC_APPROACHING_TEMPLATE, [{'macros', ?TEMPLATE_MACROS}
+    onbill_teletype_templates:init(?MRC_APPROACHING_TEMPLATE, [{'macros', ?TEMPLATE_MACROS}
                                                        ,{'subject', <<"New billing period">> }
                                                        ,{'category', <<"user">>}
                                                        ,{'friendly_name', <<"New billing period">>}
@@ -83,10 +83,7 @@ mrc_approaching_init() ->
                                                        ,{'cc', ?TEMPLATE_CC}
                                                        ,{'bcc', ?TEMPLATE_BCC}
                                                        ,{'reply_to', ?TEMPLATE_REPLY_TO}
-                                                       ]),
-    maybe_upload_attachments(?MRC_APPROACHING_TEMPLATE).
-
-
+                                                       ]).
 
 -spec send_account_update(ne_binary(), ne_binary(), kz_json:object()) -> 'ok'.
 send_account_update(AccountId, TemplateId, DataBag) ->
@@ -241,94 +238,4 @@ set_mrc_approaching_tstamp(JObj, TStamp) ->
 -spec remove_mrc_approaching_tstamp(kz_account:doc()) -> kz_account:doc().
 remove_mrc_approaching_tstamp(JObj) ->
     kz_json:delete_key(?MRC_APPROACHING_TSTAMP, JObj).
-
-maybe_upload_attachments(TemplateId) ->
-    Id = kz_notification:db_id(TemplateId),
-    case does_attachment_exist(Id, attachment_name(?TEXT_HTML)) of
-        'true' -> 'ok';
-        'false' ->
-            case read_template_from_disk(TemplateId, 'html') of
-                {'ok', HTML} ->
-                    upload_attachment(HTML, ?TEXT_HTML, Id, attachment_name(?TEXT_HTML));
-                {'error', _EHTML} ->
-                    lager:info("failed to find template '~s.html': ~p", [TemplateId, _EHTML])
-            end
-    end,
-    case does_attachment_exist(Id, attachment_name(?TEXT_PLAIN)) of
-        'true' -> 'ok';
-        'false' ->
-            case read_template_from_disk(TemplateId, 'text') of
-                {'ok', Text} ->
-                    upload_attachment(Text, ?TEXT_PLAIN, Id, attachment_name(?TEXT_PLAIN));
-                {'error', _ETEXT} ->
-                    lager:info("failed to find template '~s.text': ~p", [TemplateId, _ETEXT])
-            end
-    end.
-
--spec does_attachment_exist(ne_binary(), ne_binary()) -> boolean().
-does_attachment_exist(DocId, AName) ->
-    case kz_datamgr:open_doc(?KZ_CONFIG_DB, DocId) of
-        {'ok', JObj} ->
-            kz_doc:attachment(JObj, cow_qs:urldecode(AName)) =/= 'undefined';
-        {'error', _E} ->
-            lager:debug("failed to open ~s to check for ~s: ~p", [DocId, AName, _E]),
-            'false'
-    end.
-
--spec read_template_from_disk(ne_binary(), 'html' | 'text') ->
-                {'ok', binary()} |
-                {'error', file:posix() | 'badarg' | 'terminated' | 'system_limit'}.
-read_template_from_disk(TemplateId, Type) ->
-    File = template_filename(TemplateId, Type),
-    file:read_file(File).
-
-upload_attachment(Contents, ContentType, Id, AName) ->
-    case save_attachment(Id, AName, ContentType, Contents) of
-        {'ok', AttachmentJObj} ->
-            lager:debug("saved attachment: ~p", [AttachmentJObj]);
-        {'error', _E} ->
-            lager:debug("failed to save attachment ~s: ~p", [AName, _E])
-    end.
-
--spec attachment_name(ne_binary()) -> ne_binary().
-attachment_name(ContentType) ->
-    kz_binary:clean(<<"template.", (kz_http_util:urlencode(ContentType))/binary>>).
-
--spec template_filename(ne_binary(), 'html' | 'text') -> file:filename_all().
-template_filename(TemplateId, Type) ->
-    Basename = iolist_to_binary([TemplateId, ".", kz_term:to_list(Type)]),
-    filename:join([code:priv_dir('onbill')
-                  ,"templates"
-                  ,Basename
-                  ]).
-
--spec save_attachment(ne_binary(), ne_binary(), ne_binary(), binary()) ->
-                             {'ok', kz_json:object()} |
-                             {'error', any()}.
-save_attachment(DocId, AName, ContentType, Contents) ->
-    case
-        kz_datamgr:put_attachment(
-          ?KZ_CONFIG_DB
-                                 ,DocId
-                                 ,AName
-                                 ,Contents
-                                 ,[{'content_type', kz_term:to_list(ContentType)}]
-         )
-    of
-        {'ok', _UpdatedJObj}=OK ->
-            lager:debug("added attachment ~s to ~s", [AName, DocId]),
-            OK;
-        {'error', 'conflict'}=E ->
-            case does_attachment_exist(DocId, AName) of
-                'true' ->
-                    lager:debug("added attachment ~s to ~s", [AName, DocId]),
-                    kz_datamgr:open_doc(?KZ_CONFIG_DB, DocId);
-                'false' ->
-                    lager:debug("failed to add attachment ~s to ~s", [AName, DocId]),
-                    E
-            end;
-        {'error', _E}=E ->
-            lager:debug("failed to add attachment ~s to ~s: ~p", [AName, DocId, _E]),
-            E
-    end.
 
