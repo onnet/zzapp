@@ -165,6 +165,7 @@ maybe_send_new_billing_period_approaching_update(AccountId, _AccountJObj, 'false
 mrc_approaching_databag(AccountId) ->
     Values = [{<<"reseller">>, reseller_info_databag(AccountId)}
              ,{<<"account">>, account_info_databag(AccountId)}
+             ,{<<"services">>, services_info_databag(AccountId)}
              ],
     kz_json:set_values(Values, kz_json:new()).
 
@@ -182,6 +183,18 @@ account_info_databag(AccountId) ->
     Values = [{<<"name">>, kz_account:name(AccountDoc)}
              ],
     kz_json:set_values(Values, kz_json:new()).
+
+-spec services_info_databag(ne_binary()) -> kz_json:object().
+services_info_databag(AccountId) ->
+    Services = kz_services:fetch(AccountId),
+    ServicesJObj = kz_services:services_json(Services),
+    {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
+    ItemsList = onbill_bk_util:select_non_zero_items_list(Items, AccountId),
+    ItemsCalculatedList = [onbill_bk_util:calc_item(ItemJObj, AccountId) || ItemJObj <- ItemsList],
+    kz_json:from_list([{<<"total_amount">>, onbill_bk_util:items_amount(ItemsList, AccountId, 0.0)}
+                      ,{<<"services_list">>, ItemsCalculatedList}
+                      ,{<<"account_id">>, AccountId}
+                      ]).
 
 -spec update_account_mrc_approaching_sent(kz_account:doc()) -> 'ok'.
 update_account_mrc_approaching_sent(AccountJObj0) ->
