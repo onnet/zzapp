@@ -60,7 +60,8 @@
        ).
 -define(CONFIGURED_EMAILS(Type), kz_json:from_list([{<<"type">>, Type}])).
 
--define(TEMPLATE_TO, ?CONFIGURED_EMAILS(?EMAIL_ORIGINAL)).
+-define(TEMPLATE_CATEGORY, <<"account">>).
+-define(TEMPLATE_TO, ?CONFIGURED_EMAILS(?EMAIL_ADMINS)).
 -define(TEMPLATE_FROM, teletype_util:default_from_address(?MOD_CONFIG_CRAWLER)).
 -define(TEMPLATE_CC, ?CONFIGURED_EMAILS(?EMAIL_SPECIFIED, [])).
 -define(TEMPLATE_BCC, ?CONFIGURED_EMAILS(?EMAIL_SPECIFIED, [])).
@@ -74,7 +75,7 @@ init() ->
 mrc_approaching_init() ->
     teletype_templates:init(?MRC_APPROACHING_TEMPLATE, [{'macros', ?TEMPLATE_MACROS}
                                                        ,{'subject', <<"New billing period approaching for {{databag.account.name}}">> }
-                                                       ,{'category', <<"account">>}
+                                                       ,{'category', ?TEMPLATE_CATEGORY}
                                                        ,{'friendly_name', <<"New billing period">>}
                                                        ,{'to', ?TEMPLATE_TO}
                                                        ,{'from', ?TEMPLATE_FROM}
