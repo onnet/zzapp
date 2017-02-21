@@ -1,0 +1,13 @@
+Dear {{ user.first_name }} {{ user.last_name }} at "{{account.name}}"
+
+Account name: {{databag.account.name}}.
+
+Total services: {{ databag.services.total_amount }}
+
+Services list:
+{% for service in databag.services.services_list %}
+   <p>{{ service.name }} - {{ service.quantity }}</p>
+{% endfor %}
+
+Kind regards.
+{{ databag.reseller.name }}

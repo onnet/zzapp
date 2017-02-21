@@ -1,0 +1,33 @@
+<html>
+  <body>
+    <h2>Dear {{ user.first_name }} {{ user.last_name }} at "{{account.name}}"</h2>
+    <p>Account name: {{databag.account.name}}.</p>
+    <p>Total services: {{ databag.services.total_amount }}</p>
+    <p>Services list:</p>
+    {% for service in databag.services.services_list %}
+    <p>{{ service.name }} - {{ service.quantity }}</p>
+    {% endfor %}
+
+    <table border="1" cellspacing="0" cellpadding="10">
+      <thead>
+        <td>{_ Fee name _}</td>
+        <td>{_ Rate _}</td>
+        <td>{_ Quantity _}</td>
+        <td>{_ Discount _}</td>
+        <td>{_ Cost _}</td>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ service.name }}</td>
+          <td>{{ service.rate }}</td>
+          <td>{{ service.quantity }}</td>
+          <td>{{ service.total_discount }}</td>
+          <td>{{ service.discounted_item_cost }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>Kind regards.</p>
+    <p>{{ databag.reseller.name }}</p>
+  </body>
+</html>

@@ -7,6 +7,7 @@
         ,mrc_approaching_enabled/1, set_mrc_approaching_enabled/1, reset_mrc_approaching_enabled/1
         ,mrc_approaching_tstamp/1, set_mrc_approaching_tstamp/1, remove_mrc_approaching_tstamp/1
         ,mrc_approaching_enabled_exists/1
+        ,services_info_databag/1
         ]).
 
 -include("onbill.hrl").
@@ -28,9 +29,6 @@
                            ,{<<"description">>, Description}
                            ])
         }).
-
--define(TEXT_PLAIN, <<"text/plain">>).
--define(TEXT_HTML, <<"text/html">>).
 
 -define(USER_MACROS
        ,[?MACRO_VALUE(<<"user.first_name">>, <<"user_first_name">>, <<"First Name">>, <<"First name of the user">>)
@@ -74,9 +72,9 @@ init() ->
 
 -spec mrc_approaching_init() -> 'ok'.
 mrc_approaching_init() ->
-    onbill_teletype_templates:init(?MRC_APPROACHING_TEMPLATE, [{'macros', ?TEMPLATE_MACROS}
+    teletype_templates:init(?MRC_APPROACHING_TEMPLATE, [{'macros', ?TEMPLATE_MACROS}
                                                        ,{'subject', <<"New billing period">> }
-                                                       ,{'category', <<"user">>}
+                                                       ,{'category', <<"account">>}
                                                        ,{'friendly_name', <<"New billing period">>}
                                                        ,{'to', ?TEMPLATE_TO}
                                                        ,{'from', ?TEMPLATE_FROM}
