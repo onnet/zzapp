@@ -7,7 +7,6 @@
         ,mrc_approaching_enabled/1, set_mrc_approaching_enabled/1, reset_mrc_approaching_enabled/1
         ,mrc_approaching_tstamp/1, set_mrc_approaching_tstamp/1, remove_mrc_approaching_tstamp/1
         ,mrc_approaching_enabled_exists/1
-        ,services_info_databag/1
         ]).
 
 -include("onbill.hrl").
