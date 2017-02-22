@@ -7,6 +7,7 @@
         ,mrc_approaching_enabled/1, set_mrc_approaching_enabled/1, reset_mrc_approaching_enabled/1
         ,mrc_approaching_tstamp/1, set_mrc_approaching_tstamp/1, remove_mrc_approaching_tstamp/1
         ,mrc_approaching_enabled_exists/1
+        ,mrc_approaching_databag/1
         ]).
 
 -include("onbill.hrl").
@@ -172,8 +173,6 @@ reseller_info_databag(AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     {'ok', ResellerDoc} = kz_account:fetch(ResellerId),
     Values = [{<<"name">>, kz_account:name(ResellerDoc)}
-             ,{<<"currency_short">>, kz_json:get_value(<<"currency_short">>, ResellerDoc)}
-             ,{<<"currency_sign">>, kz_json:get_value(<<"currency_sign">>, ResellerDoc)}
              ],
     kz_json:set_values(Values, kz_json:new()).
 
@@ -195,12 +194,23 @@ services_info_databag(AccountId) ->
     Timestamp = kz_time:current_tstamp(),
     {StartYear, StartMonth, StartDay} = onbill_util:period_start_date(AccountId, Timestamp),
     DaysLeft =  onbill_util:days_left_in_period(StartYear, StartMonth, StartDay, Timestamp),
+    {NextPeriodYear, NextPeriodMonth, NextPeriodDay} = onbill_util:next_period_start_date(StartYear, StartMonth, StartDay),
+
+    ResellerVars = onbill_util:reseller_vars(AccountId),
+    CurrencySign = kz_json:get_value(<<"currency_sign">>, ResellerVars, <<"£"/utf8>>),
                
-    kz_json:from_list([{<<"total_amount">>, onbill_bk_util:items_amount(ItemsList, AccountId, 0.0)}
+    kz_json:from_list([{<<"total_amount">>, currency_sign:add_currency_sign(CurrencySign
+                                                                           ,onbill_bk_util:items_amount(ItemsList, AccountId, 0.0))}
                       ,{<<"services_list">>, ItemsCalculatedList}
                       ,{<<"account_id">>, AccountId}
                       ,{<<"days_left">>, DaysLeft}
-                      ,{<<"next_period_date">>, kz_json:from_list(onbill_util:period_tuple(StartYear, StartMonth, StartDay))}
+                      ,{<<"current_balance">>, currency_sign:add_currency_sign(CurrencySign
+                                                                              ,wht_util:current_account_dollars(AccountId))}
+                      ,{<<"next_period_date">>, kz_json:from_list(onbill_util:period_tuple(NextPeriodYear
+                                                                                          ,NextPeriodMonth
+                                                                                          ,NextPeriodDay))}
+                      ,{<<"currency_short">>, kz_json:get_value(<<"currency_short">>, ResellerVars, <<"GBP">>)}
+                      ,{<<"currency_sign">>, CurrencySign}
                       ]).
 
 -spec update_account_mrc_approaching_sent(kz_account:doc()) -> 'ok'.

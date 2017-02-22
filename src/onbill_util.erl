@@ -31,6 +31,7 @@
         ,period_start_date/1
         ,period_start_date/2
         ,period_start_date/4
+        ,next_period_start_date/3
         ,get_account_created_date/1
         ,maybe_allow_postpay/1
         ,is_trial_account/1
@@ -239,19 +240,19 @@ days_left_in_period(StartYear, StartMonth, StartDay, Timestamp) ->
 
 -spec period_start_tuple(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
 period_start_tuple(Year, Month, Day) ->
-    {Y, M, D} = onbill_util:adjust_period_first_day(Year, Month, Day),
+    {Y, M, D} = adjust_period_first_day(Year, Month, Day),
     period_tuple(Y, M, D).
 
 -spec period_end_modb_by_start(ne_binary(), kz_year(), kz_month(), kz_day()) -> ne_binary().
 period_end_modb_by_start(AccountId, Year, Month, Day) ->
-    {SY, SM, SD} = onbill_util:adjust_period_first_day(Year, Month, Day),
-    {Y, M, _} = onbill_util:period_last_day_by_first_one(SY, SM, SD),
+    {SY, SM, SD} = adjust_period_first_day(Year, Month, Day),
+    {Y, M, _} = period_last_day_by_first_one(SY, SM, SD),
     kazoo_modb:get_modb(AccountId, Y, M).
 
 -spec period_end_tuple_by_start(kz_year(), kz_month(), kz_day()) -> proplist().
 period_end_tuple_by_start(Year, Month, Day) ->
-    {SY, SM, SD} = onbill_util:adjust_period_first_day(Year, Month, Day),
-    {Y, M, D} = onbill_util:period_last_day_by_first_one(SY, SM, SD),
+    {SY, SM, SD} = adjust_period_first_day(Year, Month, Day),
+    {Y, M, D} = period_last_day_by_first_one(SY, SM, SD),
     period_tuple(Y, M, D).
 
 -spec period_tuple(kz_year(), kz_month(), kz_day()) -> proplist().
@@ -290,6 +291,11 @@ period_start_date(AccountId, Year, Month, Day) ->
                      {PrevYear, PrevMonth, BDay}
             end
     end.
+
+-spec next_period_start_date(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+next_period_start_date(Year, Month, Day) ->
+    {NextMonthYear, NextMonth} = next_month(Year, Month),
+    adjust_period_first_day(NextMonthYear, NextMonth, Day).
 
 set_billing_day(AccountId) ->
     BillingDay =
@@ -341,7 +347,7 @@ is_trial_account(AccountId) ->
 -spec maybe_convicted(ne_binary()) -> 'ok'|'delinquent'.
 maybe_convicted(AccountId) ->
     Balance = wht_util:current_balance(AccountId),
-    case onbill_util:maybe_allow_postpay(AccountId) of
+    case maybe_allow_postpay(AccountId) of
         'false' when Balance < 0 -> 'true';
         'false' -> 'false';
         {'true', MaxPostpay} when Balance < MaxPostpay ->  'true';
