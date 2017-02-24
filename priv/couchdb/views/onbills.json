@@ -8,6 +8,9 @@
         "daily_fees": {
             "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason != 'daily_fee' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"
         },
+        "monthly_recurring": {
+            "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason != 'monthly_recurring' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"
+        },
         "one_time_fees": {
             "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason == 'daily_fee' || doc.pvt_reason == 'per_minute_call' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"
         },
