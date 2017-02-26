@@ -12,6 +12,9 @@
                  , kazoo_amqp
                  , kazoo_data
 
+                 , hotornot
+                 , jonny5
+
                  , lager
                  ]},
   {mod, {onbill_app, []}}
