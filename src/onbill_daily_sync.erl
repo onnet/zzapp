@@ -116,10 +116,11 @@ process_account(AccountId, AccountJObj) ->
            andalso onbill_bk_util:today_dailyfee_absent(AccountId)
     of
         'true' ->
-            lager:debug("onbill crawler saving account ~s as dirty", [AccountId]),
+            lager:debug("crawler - saving account ~s as dirty", [AccountId]),
             kz_services:save_as_dirty(AccountId),
             onbill_notifications:maybe_send_account_updates(AccountId, AccountJObj),
             {'ok', 'account_processed'};
         'false' ->
+            lager:debug("crawler - no need to process account ~p", [AccountId]),
             {'ok', 'no_need_to_process'}
     end.
