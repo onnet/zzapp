@@ -8,7 +8,7 @@
         ,select_non_zero_items_list/2
         ,save_dailyfee_doc/5
         ,charge_newly_added/4
-        ,check_this_period_mrc/3
+        ,process_new_billing_period_mrc/3
         ,items_amount/3
         ,calc_item/2
         ,current_usage_amount/1
@@ -42,8 +42,9 @@ max_daily_usage_exceeded(Items, AccountId, Timestamp) ->
                     end
             end;
         {'error', 'not_found'} ->
-            _ = create_dailyfee_doc(Timestamp, AccountId, 0, select_non_zero_items_json(Items), Items),
-            {'true', select_non_zero_items_json(Items), []}
+            ItemsJObj = select_non_zero_items_list(Items, AccountId),
+            _ = create_dailyfee_doc(Timestamp, AccountId, 0, ItemsJObj, Items),
+            {'true', ItemsJObj, []}
     end.
 
 -spec prepare_dailyfee_doc_name(integer(), integer(), integer()) -> ne_binary().
@@ -241,31 +242,15 @@ discount_newly_added(Qty, ItemJObj) ->
     ,{<<"cumulative_discount">>, CumulativeDiscount}
     ].
 
--spec check_this_period_mrc(ne_binary(), kz_json:object(), gregorian_seconds()) -> 'ok'|proplist(). 
-check_this_period_mrc(AccountId, NewMax, Timestamp) ->
-    {Year, Month, _Day} = onbill_util:period_start_date(AccountId, Timestamp),
-    case kazoo_modb:open_doc(AccountId, ?MRC_DOC, Year, Month) of
-        {'ok', _} ->
-            'ok';
-        {'error', 'not_found'} ->
-            lager:debug("monthly_recurring doc not found, trying to create"),
-            {'ok',_} = create_monthly_recurring_doc(AccountId, NewMax, Timestamp),
-            [charge_mrc_category(AccountId, Category, NewMax, Timestamp)
-             || Category <- kz_json:get_keys(NewMax)
-             ,not lists:member(Category, kz_json:get_value(<<"pvt_daily_count_categories">>, onbill_util:reseller_vars(AccountId), []))
-            ]
-      %      case onbill_util:get_account_created_date(AccountId) of
-      %          {Year, Month, Day} ->
-      %              lager:debug("first period customer, no monthly_recurring needed");
-      %          _ ->
-      %              lager:debug("monthly_recurring doc not found, trying to create"),
-      %              {'ok',_} = create_monthly_recurring_doc(AccountId, NewMax, Timestamp),
-      %              [charge_mrc_category(AccountId, Category, NewMax, Timestamp)
-      %               || Category <- kz_json:get_keys(NewMax)
-      %               ,not lists:member(Category, kz_json:get_value(<<"pvt_daily_count_categories">>, onbill_util:reseller_vars(AccountId), []))
-      %              ]
-      %      end            
-    end.
+-spec process_new_billing_period_mrc(ne_binary(), kz_service_item:items(), gregorian_seconds()) -> 'ok'|proplist(). 
+process_new_billing_period_mrc(AccountId, Items, Timestamp) ->
+    lager:debug("monthly_recurring doc not found, trying to create"),
+    ItemsJObj = select_non_zero_items_list(Items, AccountId),
+    {'ok',_} = create_monthly_recurring_doc(AccountId, ItemsJObj, Timestamp),
+    [charge_mrc_category(AccountId, Category, ItemsJObj, Timestamp)
+     || Category <- kz_json:get_keys(ItemsJObj)
+     ,not lists:member(Category, kz_json:get_value(<<"pvt_daily_count_categories">>, onbill_util:reseller_vars(AccountId), []))
+    ].
 
 -spec create_monthly_recurring_doc(ne_binary(), kz_json:object(), gregorian_seconds()) -> any().
 create_monthly_recurring_doc(AccountId, NewMax, Timestamp) ->

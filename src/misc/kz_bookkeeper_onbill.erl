@@ -51,16 +51,26 @@ maybe_sync(Items, AccountId) ->
                     'ok'
             end;
         'false' ->
-            run_sync(Items, AccountId)
+            maybe_billing_period_starts(Items, AccountId)
     end.
 
--spec run_sync(kz_service_item:items(), ne_binary()) -> 'ok'|'delinquent'|'retry'.
-run_sync(Items, AccountId) ->
+maybe_billing_period_starts(Items, AccountId) ->
     Timestamp = kz_time:current_tstamp(),
+    {Year, Month, _Day} = onbill_util:period_start_date(AccountId, Timestamp),
+    case kazoo_modb:open_doc(AccountId, ?MRC_DOC, Year, Month) of
+        {'ok', _} ->
+            run_sync(Items, AccountId, Timestamp);
+        {'error', 'not_found'} ->
+            lager:debug("monthly_recurring doc not found, trying to create"),
+            _ = onbill_bk_util:process_new_billing_period_mrc(AccountId, Items, Timestamp),
+            'retry'
+    end.
+
+-spec run_sync(kz_service_item:items(), ne_binary(), gregorian_seconds()) -> 'ok'|'delinquent'|'retry'.
+run_sync(Items, AccountId, Timestamp) ->
     case onbill_bk_util:max_daily_usage_exceeded(Items, AccountId, Timestamp) of
         {'true', NewMax, ExcessDets} ->
             lager:debug("sync daily AccountId: ~p; excess details: ~p",[AccountId, ExcessDets]),
-            _ = onbill_bk_util:check_this_period_mrc(AccountId, NewMax, Timestamp),
             _ = onbill_bk_util:charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp),
             DailyCountItems = onbill_bk_util:select_daily_count_items_list(NewMax, AccountId),
             lager:debug("sync daily AccountId: ~p; daily count items: ~p",[AccountId, DailyCountItems]),
