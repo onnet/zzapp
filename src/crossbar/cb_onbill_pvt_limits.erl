@@ -92,7 +92,8 @@ set_pvt_values(AccountId, Context) ->
     AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
     Doc = case kz_datamgr:open_doc(AccountDb, ?LIMITS_DOC) of
               {'error', _} ->
-                  {[{<<"_id">>, <<"limits">>}]};
+                  {[{<<"_id">>, <<"limits">>}
+                   ,{<<"pvt_type">>, <<"limits">>}]};
               {'ok', JObj} ->
                   JObj
           end,
