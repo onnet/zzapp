@@ -8,7 +8,7 @@
         ,select_non_zero_items_list/2
         ,save_dailyfee_doc/5
         ,charge_newly_added/4
-        ,process_new_billing_period_mrc/3
+        ,process_new_billing_period_mrc/2
         ,items_amount/3
         ,calc_item/2
         ,current_usage_amount/1
@@ -42,7 +42,7 @@ max_daily_usage_exceeded(Items, AccountId, Timestamp) ->
                     end
             end;
         {'error', 'not_found'} ->
-            ItemsJObj = select_non_zero_items_list(Items, AccountId),
+            ItemsJObj = select_non_zero_items_json(Items),
             _ = create_dailyfee_doc(Timestamp, AccountId, 0, ItemsJObj, Items),
             {'true', ItemsJObj, []}
     end.
@@ -242,9 +242,10 @@ discount_newly_added(Qty, ItemJObj) ->
     ,{<<"cumulative_discount">>, CumulativeDiscount}
     ].
 
--spec process_new_billing_period_mrc(ne_binary(), kz_service_item:items(), gregorian_seconds()) -> 'ok'|proplist(). 
-process_new_billing_period_mrc(AccountId, Items, Timestamp) ->
+-spec process_new_billing_period_mrc(ne_binary(), gregorian_seconds()) -> 'ok'|proplist(). 
+process_new_billing_period_mrc(AccountId, Timestamp) ->
     lager:debug("monthly_recurring doc not found, trying to create"),
+    Items = current_items(AccountId),
     ItemsJObj = select_non_zero_items_list(Items, AccountId),
     {'ok',_} = create_monthly_recurring_doc(AccountId, ItemsJObj, Timestamp),
     [charge_mrc_category(AccountId, Category, ItemsJObj, Timestamp)

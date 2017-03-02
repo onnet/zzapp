@@ -18,8 +18,6 @@
 -include_lib("/opt/kazoo/core/kazoo/include/kz_databases.hrl").
 -include_lib("/opt/kazoo/core/kazoo_transactions/include/kazoo_transactions.hrl").
 
--define(TR_DESCRIPTION, <<"braintree transaction">>).
-
 -spec sync(kz_service_item:items(), ne_binary()) -> 'ok'|'delinquent'|'retry'.
 sync(Items, AccountId) ->
     case kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded')) of
@@ -62,7 +60,7 @@ maybe_billing_period_starts(Items, AccountId) ->
             run_sync(Items, AccountId, Timestamp);
         {'error', 'not_found'} ->
             lager:debug("monthly_recurring doc not found, trying to create"),
-            _ = onbill_bk_util:process_new_billing_period_mrc(AccountId, Items, Timestamp),
+            _ = onbill_bk_util:process_new_billing_period_mrc(AccountId, Timestamp),
             'retry'
     end.
 
