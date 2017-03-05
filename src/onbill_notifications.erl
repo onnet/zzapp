@@ -69,7 +69,8 @@
 
 -spec init() -> 'ok'.
 init() ->
-    mrc_approaching_init().
+    mrc_approaching_init(),
+    limits_set_to_zero_init().
 
 -spec mrc_approaching_init() -> 'ok'.
 mrc_approaching_init() ->
@@ -77,6 +78,19 @@ mrc_approaching_init() ->
                                                        ,{'subject', <<"New billing period approaching for {{databag.account.name}}">> }
                                                        ,{'category', ?TEMPLATE_CATEGORY}
                                                        ,{'friendly_name', <<"New billing period">>}
+                                                       ,{'to', ?TEMPLATE_TO}
+                                                       ,{'from', ?TEMPLATE_FROM}
+                                                       ,{'cc', ?TEMPLATE_CC}
+                                                       ,{'bcc', ?TEMPLATE_BCC}
+                                                       ,{'reply_to', ?TEMPLATE_REPLY_TO}
+                                                       ]).
+
+-spec limits_set_to_zero_init() -> 'ok'.
+limits_set_to_zero_init() ->
+    teletype_templates:init(?LIMITS_SET_TO_ZERO_TEMPLATE, [{'macros', ?TEMPLATE_MACROS}
+                                                       ,{'subject', <<"Trunks services canceled for {{databag.account.name}}">> }
+                                                       ,{'category', ?TEMPLATE_CATEGORY}
+                                                       ,{'friendly_name', <<"Trunks services canceled">>}
                                                        ,{'to', ?TEMPLATE_TO}
                                                        ,{'from', ?TEMPLATE_FROM}
                                                        ,{'cc', ?TEMPLATE_CC}

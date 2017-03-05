@@ -1,0 +1,18 @@
+Dear {{ user.first_name }} {{ user.last_name }} at "{{databag.account.name}}"
+
+Please be informed that some services were canceled due to insufficient funds.
+
+{% if databag.limits.twoway_trunks > 0 %}
+  Twoway_trunks: {{databag.limits.twoway_trunks}}
+{% endif %}
+{% if databag.limits.inbound_trunks > 0 %}
+  Inbound_trunks: {{databag.limits.inbound_trunks}}
+{% endif %}
+{% if databag.limits.outbound_trunks > 0 %}
+  Outbound_trunks: {{databag.limits.outbound_trunks}}
+{% endif %}
+You should top up your account and purchase services again in case needed.
+
+Current account balance: <strong>{{ databag.services.current_balance }}
+Kind regards,
+{{ databag.reseller.name }}

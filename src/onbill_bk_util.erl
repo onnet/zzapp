@@ -244,9 +244,53 @@ discount_newly_added(Qty, ItemJObj) ->
 
 -spec process_new_billing_period_mrc(ne_binary(), gregorian_seconds()) -> 'ok'|proplist(). 
 process_new_billing_period_mrc(AccountId, Timestamp) ->
-    lager:debug("monthly_recurring doc not found, trying to create"),
-    Items = current_items(AccountId),
-    ItemsJObj = select_non_zero_items_list(Items, AccountId),
+    case onbill_bk_util:current_usage_amount_in_units(AccountId)
+        > (wht_util:current_balance(AccountId) + abs(j5_limits:max_postpay(j5_limits:get(AccountId))))
+    of
+        'true' ->
+            lager:debug("not sufficient amount of funds for charging monthly_recurring services"),
+            maybe_cancel_trunk_subscriptions(AccountId);
+        'false' ->
+            lager:debug("amount of funds enough for charging monthly_recurring services"),
+            Items = current_items(AccountId),
+            ItemsJObj = select_non_zero_items_list(Items, AccountId),
+            charge_new_billing_period_mrc(ItemsJObj, AccountId, Timestamp),
+            {'ok', 'mrc_processed'}
+    end.
+
+maybe_cancel_trunk_subscriptions(AccountId) ->
+    AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
+    case kz_datamgr:open_doc(AccountDb, <<"limits">>) of
+        {'error', _R} ->
+            lager:debug("unable (~p) to get current limits for: ~p, assuming no limits set", [_R, AccountId]),
+            {'not_enough_funds', 'no_trunks_set'};
+        {'ok', LimitsDoc} ->
+            case kz_json:get_integer_value(<<"twoway_trunks">>, LimitsDoc) =/= 0
+                orelse kz_json:get_integer_value(<<"inbound_trunks">>, LimitsDoc) =/= 0
+                orelse kz_json:get_integer_value(<<"outbound_trunks">>, LimitsDoc) =/= 0
+            of
+                'true' ->
+                    Values =
+                        [{<<"twoway_trunks">>, 0}
+                        ,{<<"inbound_trunks">>, 0}
+                        ,{<<"inbound_trunks">>, 0}],
+                    NewLimitsDoc = kz_json:set_values(Values, LimitsDoc),
+                    kz_datamgr:ensure_saved(AccountDb, NewLimitsDoc),
+                    kzs_cache:flush_cache_doc(AccountDb, NewLimitsDoc),
+                    j5_limits:fetch(AccountId),
+                    kz_services:reconcile(AccountId),
+                    DataBag = kz_json:set_value(<<"limits">>
+                                               ,LimitsDoc
+                                               ,onbill_notifications:mrc_approaching_databag(AccountId)),
+                    onbill_notifications:send_account_update(AccountId, ?LIMITS_SET_TO_ZERO_TEMPLATE, DataBag),
+                    {'not_enough_funds', 'trunks_canceled'};
+                'false' ->
+                    lager:debug("Zero limits already set for ~p", [AccountId]),
+                    {'not_enough_funds', 'no_trunks_set'}
+            end
+    end.
+
+charge_new_billing_period_mrc(ItemsJObj, AccountId, Timestamp) ->
     {'ok',_} = create_monthly_recurring_doc(AccountId, ItemsJObj, Timestamp),
     [charge_mrc_category(AccountId, Category, ItemsJObj, Timestamp)
      || Category <- kz_json:get_keys(ItemsJObj)

@@ -33,5 +33,7 @@
                                 ,(kz_term:to_binary(Year))/binary>>).
 -define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
 
+-define(LIMITS_SET_TO_ZERO_TEMPLATE, <<"customer_update_limits_set_to_zero">>).
+
 -define(ONBILL_HRL, 'true').
 -endif.

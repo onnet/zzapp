@@ -60,8 +60,15 @@ maybe_billing_period_starts(Items, AccountId) ->
             run_sync(Items, AccountId, Timestamp);
         {'error', 'not_found'} ->
             lager:debug("monthly_recurring doc not found, trying to create"),
-            _ = onbill_bk_util:process_new_billing_period_mrc(AccountId, Timestamp),
-            'retry'
+            case onbill_bk_util:process_new_billing_period_mrc(AccountId, Timestamp) of
+                {'ok', 'mrc_processed'} -> 
+                    run_sync(Items, AccountId, Timestamp);
+                {'not_enough_funds', 'trunks_canceled'} ->
+                    lager:debug("trunks cancelled due to lack of funds, let's start from the beginning for ~p",[AccountId]),
+                    kz_service_sync:sync(AccountId);
+                {'not_enough_funds', 'no_trunks_set'} ->
+                    'delinquent'
+            end
     end.
 
 -spec run_sync(kz_service_item:items(), ne_binary(), gregorian_seconds()) -> 'ok'|'delinquent'|'retry'.
