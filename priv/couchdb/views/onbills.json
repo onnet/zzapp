@@ -8,6 +8,9 @@
         "daily_fees": {
             "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason != 'daily_fee' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"
         },
+        "proforma_invoice": {
+            "map": "function(doc) { if (doc.pvt_type != 'proforma_invoice' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, total_netto: doc.total_netto, total_vat: doc.total_vat, total_brutto: doc.total_brutto, doc_date:doc.doc_date}); }"
+        },
         "monthly_recurring": {
             "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason != 'monthly_recurring' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"
         },
