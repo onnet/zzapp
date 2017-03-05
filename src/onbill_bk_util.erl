@@ -255,6 +255,8 @@ process_new_billing_period_mrc(AccountId, Timestamp) ->
             Items = current_items(AccountId),
             ItemsJObj = select_non_zero_items_list(Items, AccountId),
             charge_new_billing_period_mrc(ItemsJObj, AccountId, Timestamp),
+            DataBag = onbill_notifications:mrc_approaching_databag(AccountId),
+            onbill_notifications:send_account_update(AccountId, ?MRC_TEMPLATE, DataBag),
             {'ok', 'mrc_processed'}
     end.
 

@@ -3,23 +3,22 @@
 -export([send_account_update/3
         ,init/0
         ,maybe_send_account_updates/2
-        ,mrc_approaching_sent/1, set_mrc_approaching_sent/1, reset_mrc_approaching_sent/1
-        ,mrc_approaching_enabled/1, set_mrc_approaching_enabled/1, reset_mrc_approaching_enabled/1
-        ,mrc_approaching_tstamp/1, set_mrc_approaching_tstamp/1, remove_mrc_approaching_tstamp/1
-        ,mrc_approaching_enabled_exists/1
         ,mrc_approaching_databag/1
+        ,maybe_send_service_suspend_update/1
         ]).
 
 -include("onbill.hrl").
 
+-define(MRC_APPROACHING_KEY, <<"mrc_approaching">>).
+-define(SERVICE_SUSPEND_KEY, <<"service_suspend">>).
 -define(ONBILL_NOTIFICATION_ENABLED, <<"onbill_notification_enabled">>).
--define(MRC_APPROACHING_SENT, [<<"notifications">>, <<"mrc_approaching">>, <<"sent_mrc_approaching">>]).
--define(MRC_APPROACHING_ENABLED, [<<"notifications">>, <<"mrc_approaching">>, <<"enabled">>]).
--define(MRC_APPROACHING_TSTAMP, [<<"notifications">>, <<"mrc_approaching">>, <<"last_notification">>]).
--define(MRC_APPROACHING_PERIOD,
-        kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"mrc_approaching_period_days">>, 5)).
--define(MRC_APPROACHING_REPEAT,
-        kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<"mrc_approaching_repeat_s">>, 1 * ?SECONDS_IN_DAY)).
+-define(KEY_SENT(Key), [<<"notifications">>, Key, <<"sent_mrc_approaching">>]).
+-define(KEY_ENABLED(Key), [<<"notifications">>, Key, <<"enabled">>]).
+-define(KEY_TSTAMP(Key), [<<"notifications">>, Key, <<"last_notification">>]).
+-define(KEY_PERIOD(Key),
+        kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<Key/binary, "_period_days">>, 5)).
+-define(KEY_REPEAT(Key),
+        kapps_config:get_integer(?MOD_CONFIG_CRAWLER, <<Key/binary, "_repeat_s">>, 1 * ?SECONDS_IN_DAY)).
 
 -define(MACRO_VALUE(Key, Label, Name, Description)
        ,{Key
@@ -166,7 +165,7 @@ maybe_send_account_updates(AccountId, AccountJObj) ->
 -spec maybe_new_billing_period_approaching(ne_binary(), kz_account:doc()) -> 'ok'.
 maybe_new_billing_period_approaching(AccountId, AccountJObj) ->
     Timestamp = kz_time:current_tstamp(),
-    Days_Before_MRC_Update = ?MRC_APPROACHING_PERIOD,
+    Days_Before_MRC_Update = ?KEY_PERIOD(?MRC_APPROACHING_KEY),
     {StartYear, StartMonth, StartDay} = onbill_util:period_start_date(AccountId, Timestamp),
     case onbill_util:days_left_in_period(StartYear, StartMonth, StartDay, Timestamp) of
         DaysLeft when DaysLeft < Days_Before_MRC_Update ->
@@ -174,7 +173,9 @@ maybe_new_billing_period_approaching(AccountId, AccountJObj) ->
                 > wht_util:current_balance(AccountId)
             of
                 'true' ->
-                    maybe_send_new_billing_period_approaching_update(AccountId, AccountJObj, mrc_approaching_enabled(AccountJObj));
+                    maybe_send_new_billing_period_approaching_update(AccountId
+                                                                    ,AccountJObj
+                                                                    ,key_enabled(?MRC_APPROACHING_KEY, AccountJObj));
                 _ ->
                     'ok'
             end;
@@ -183,20 +184,20 @@ maybe_new_billing_period_approaching(AccountId, AccountJObj) ->
 
 -spec maybe_send_new_billing_period_approaching_update(ne_binary(), kz_account:doc(), boolean()) -> 'ok'.
 maybe_send_new_billing_period_approaching_update(AccountId, AccountJObj, 'true') ->
-    case mrc_approaching_tstamp(AccountJObj) of
+    case key_tstamp(?MRC_APPROACHING_KEY, AccountJObj) of
         MRC_ApproachingSent when is_number(MRC_ApproachingSent) ->
-            Cycle = ?MRC_APPROACHING_REPEAT,
+            Cycle = ?KEY_REPEAT(?MRC_APPROACHING_KEY),
             Diff = kz_time:current_tstamp() - MRC_ApproachingSent,
             case Diff >= Cycle of
                'true' ->
                    'ok' = send_account_update(AccountId, ?MRC_APPROACHING_TEMPLATE, mrc_approaching_databag(AccountId)),
-                   update_account_mrc_approaching_sent(AccountJObj);
+                   update_account_key_sent(?MRC_APPROACHING_KEY, AccountJObj);
                'false' ->
                    lager:debug("mrc approaching alert sent ~w seconds ago, repeats every ~w", [Diff, Cycle])
             end;
         _Else ->
             'ok' = send_account_update(AccountId, ?MRC_APPROACHING_TEMPLATE, mrc_approaching_databag(AccountId)),
-            update_account_mrc_approaching_sent(AccountJObj)
+            update_account_key_sent(?MRC_APPROACHING_KEY, AccountJObj)
     end,
     'ok';
 maybe_send_new_billing_period_approaching_update(AccountId, _AccountJObj, 'false') ->
@@ -255,10 +256,10 @@ services_info_databag(AccountId) ->
                       ,{<<"currency_sign">>, CurrencySign}
                       ]).
 
--spec update_account_mrc_approaching_sent(kz_account:doc()) -> 'ok'.
-update_account_mrc_approaching_sent(AccountJObj0) ->
-    AccountJObj1 = set_mrc_approaching_sent(AccountJObj0),
-    AccountJObj2 = set_mrc_approaching_tstamp(AccountJObj1),
+-spec update_account_key_sent(ne_binary(), kz_account:doc()) -> 'ok'.
+update_account_key_sent(Key, AccountJObj0) ->
+    AccountJObj1 = set_key_sent(Key, AccountJObj0),
+    AccountJObj2 = set_key_tstamp(Key, AccountJObj1),
     _ = kz_util:account_update(AccountJObj2),
    'ok'.
 
@@ -266,48 +267,46 @@ update_account_mrc_approaching_sent(AccountJObj0) ->
 onbill_notification_enabled(AccountId) ->
     kz_json:is_true(?ONBILL_NOTIFICATION_ENABLED, onbill_util:reseller_vars(AccountId)).
 
--spec mrc_approaching_sent(kz_account:doc()) -> boolean().
-mrc_approaching_sent(JObj) ->
-    kz_json:is_true(?MRC_APPROACHING_SENT, JObj).
+-spec set_key_sent(ne_binary(), kz_account:doc()) -> kz_account:doc().
+set_key_sent(Key, JObj) ->
+    kz_json:set_value(?KEY_SENT(Key), 'true', JObj).
 
--spec set_mrc_approaching_sent(kz_account:doc()) -> kz_account:doc().
-set_mrc_approaching_sent(JObj) ->
-    kz_json:set_value(?MRC_APPROACHING_SENT, 'true', JObj).
+-spec key_enabled(ne_binary(), kz_account:doc()) -> boolean().
+key_enabled(Key, JObj) ->
+    kz_json:is_true(?KEY_ENABLED(Key), JObj, 'true').
 
--spec reset_mrc_approaching_sent(kz_account:doc()) -> kz_account:doc().
-reset_mrc_approaching_sent(JObj) ->
-    kz_json:set_value(?MRC_APPROACHING_SENT, 'false', JObj).
+%-spec reset_key_enabled(ne_binary(), kz_account:doc()) -> boolean().
+%reset_key_enabled(Key, JObj) ->
+%    kz_json:is_true(?KEY_ENABLED(Key), JObj, 'false').
 
--spec mrc_approaching_enabled(kz_account:doc()) -> boolean().
-mrc_approaching_enabled(JObj) ->
-    kz_json:is_true(?MRC_APPROACHING_ENABLED, JObj, 'true').
+-spec key_tstamp(ne_binary(), kz_account:doc()) -> api_number().
+key_tstamp(Key, JObj) ->
+    kz_json:get_integer_value(?KEY_TSTAMP(Key), JObj).
 
--spec set_mrc_approaching_enabled(kz_account:doc()) -> kz_account:doc().
-set_mrc_approaching_enabled(JObj) ->
-    kz_json:set_value(?MRC_APPROACHING_ENABLED, 'true', JObj).
-
--spec reset_mrc_approaching_enabled(kz_account:doc()) -> kz_account:doc().
-reset_mrc_approaching_enabled(JObj) ->
-    kz_json:set_value(?MRC_APPROACHING_ENABLED, 'false', JObj).
-
--spec mrc_approaching_enabled_exists(kz_account:doc()) -> boolean().
-mrc_approaching_enabled_exists(JObj) ->
-    kz_json:get_ne_value(?MRC_APPROACHING_ENABLED, JObj) =/= 'undefined'.
-
--spec mrc_approaching_tstamp(kz_account:doc()) -> api_number().
-mrc_approaching_tstamp(JObj) ->
-    kz_json:get_integer_value(?MRC_APPROACHING_TSTAMP, JObj).
-
--spec set_mrc_approaching_tstamp(kz_account:doc()) -> kz_account:doc().
-set_mrc_approaching_tstamp(JObj) ->
+-spec set_key_tstamp(ne_binary(), kz_account:doc()) -> kz_account:doc().
+set_key_tstamp(Key, JObj) ->
     TStamp = kz_time:current_tstamp(),
-    set_mrc_approaching_tstamp(JObj, TStamp).
+    set_key_tstamp(Key, JObj, TStamp).
 
--spec set_mrc_approaching_tstamp(kz_account:doc(), number()) -> kz_account:doc().
-set_mrc_approaching_tstamp(JObj, TStamp) ->
-    kz_json:set_value(?MRC_APPROACHING_TSTAMP, TStamp, JObj).
+-spec set_key_tstamp(ne_binary(), kz_account:doc(), number()) -> kz_account:doc().
+set_key_tstamp(Key, JObj, TStamp) ->
+    kz_json:set_value(?KEY_TSTAMP(Key), TStamp, JObj).
 
--spec remove_mrc_approaching_tstamp(kz_account:doc()) -> kz_account:doc().
-remove_mrc_approaching_tstamp(JObj) ->
-    kz_json:delete_key(?MRC_APPROACHING_TSTAMP, JObj).
-
+-spec maybe_send_service_suspend_update(ne_binary()) -> any().
+maybe_send_service_suspend_update(AccountId) ->
+    {'ok', AccountJObj} = kz_account:fetch(AccountId),
+    case key_tstamp(?SERVICE_SUSPEND_KEY, AccountJObj) of
+        ServiceSuspendSent when is_number(ServiceSuspendSent) ->
+            Cycle = ?KEY_REPEAT(?SERVICE_SUSPEND_KEY),
+            Diff = kz_time:current_tstamp() - ServiceSuspendSent,
+            case Diff >= Cycle of
+               'true' ->
+                   'ok' = send_account_update(AccountId, ?SERVICE_SUSPENDED_TEMPLATE, mrc_approaching_databag(AccountId)),
+                   update_account_key_sent(?SERVICE_SUSPEND_KEY, AccountJObj);
+               'false' ->
+                   lager:debug("service suspended alert sent ~w seconds ago, repeats every ~w", [Diff, Cycle])
+            end;
+        _Else ->
+            'ok' = send_account_update(AccountId, ?SERVICE_SUSPENDED_TEMPLATE, mrc_approaching_databag(AccountId)),
+            update_account_key_sent(?SERVICE_SUSPEND_KEY, AccountJObj)
+    end.

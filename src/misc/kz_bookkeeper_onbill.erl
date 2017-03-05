@@ -67,6 +67,7 @@ maybe_billing_period_starts(Items, AccountId) ->
                     lager:debug("trunks cancelled due to lack of funds, let's start from the beginning for ~p",[AccountId]),
                     kz_service_sync:sync(AccountId);
                 {'not_enough_funds', 'no_trunks_set'} ->
+                    onbill_notifications:maybe_send_service_suspend_update(AccountId),
                     'delinquent'
             end
     end.
