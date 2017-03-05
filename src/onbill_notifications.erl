@@ -70,6 +70,7 @@
 -spec init() -> 'ok'.
 init() ->
     mrc_approaching_init(),
+    service_suspended_init(),
     limits_set_to_zero_init().
 
 -spec mrc_approaching_init() -> 'ok'.
@@ -91,6 +92,19 @@ limits_set_to_zero_init() ->
                                                        ,{'subject', <<"Trunks services canceled for {{databag.account.name}}">> }
                                                        ,{'category', ?TEMPLATE_CATEGORY}
                                                        ,{'friendly_name', <<"Trunks services canceled">>}
+                                                       ,{'to', ?TEMPLATE_TO}
+                                                       ,{'from', ?TEMPLATE_FROM}
+                                                       ,{'cc', ?TEMPLATE_CC}
+                                                       ,{'bcc', ?TEMPLATE_BCC}
+                                                       ,{'reply_to', ?TEMPLATE_REPLY_TO}
+                                                       ]).
+
+-spec service_suspended_init() -> 'ok'.
+service_suspended_init() ->
+    teletype_templates:init(?SERVICE_SUSPENDED_TEMPLATE, [{'macros', ?TEMPLATE_MACROS}
+                                                       ,{'subject', <<"Service suspended for {{databag.account.name}}">> }
+                                                       ,{'category', ?TEMPLATE_CATEGORY}
+                                                       ,{'friendly_name', <<"Service suspended">>}
                                                        ,{'to', ?TEMPLATE_TO}
                                                        ,{'from', ?TEMPLATE_FROM}
                                                        ,{'cc', ?TEMPLATE_CC}
