@@ -3,7 +3,7 @@
 -export([send_account_update/3
         ,init/0
         ,maybe_send_account_updates/2
-        ,mrc_approaching_databag/1
+        ,customer_update_databag/1
         ,maybe_send_service_suspend_update/1
         ]).
 
@@ -190,21 +190,21 @@ maybe_send_new_billing_period_approaching_update(AccountId, AccountJObj, 'true')
             Diff = kz_time:current_tstamp() - MRC_ApproachingSent,
             case Diff >= Cycle of
                'true' ->
-                   'ok' = send_account_update(AccountId, ?MRC_APPROACHING_TEMPLATE, mrc_approaching_databag(AccountId)),
+                   'ok' = send_account_update(AccountId, ?MRC_APPROACHING_TEMPLATE, customer_update_databag(AccountId)),
                    update_account_key_sent(?MRC_APPROACHING_KEY, AccountJObj);
                'false' ->
                    lager:debug("mrc approaching alert sent ~w seconds ago, repeats every ~w", [Diff, Cycle])
             end;
         _Else ->
-            'ok' = send_account_update(AccountId, ?MRC_APPROACHING_TEMPLATE, mrc_approaching_databag(AccountId)),
+            'ok' = send_account_update(AccountId, ?MRC_APPROACHING_TEMPLATE, customer_update_databag(AccountId)),
             update_account_key_sent(?MRC_APPROACHING_KEY, AccountJObj)
     end,
     'ok';
 maybe_send_new_billing_period_approaching_update(AccountId, _AccountJObj, 'false') ->
     lager:debug("mrc approaching alert disabled for Account: ~p", [AccountId]).
 
--spec mrc_approaching_databag(ne_binary()) -> kz_json:object().
-mrc_approaching_databag(AccountId) ->
+-spec customer_update_databag(ne_binary()) -> kz_json:object().
+customer_update_databag(AccountId) ->
     Values = [{<<"reseller">>, reseller_info_databag(AccountId)}
              ,{<<"account">>, account_info_databag(AccountId)}
              ,{<<"services">>, services_info_databag(AccountId)}
@@ -301,12 +301,12 @@ maybe_send_service_suspend_update(AccountId) ->
             Diff = kz_time:current_tstamp() - ServiceSuspendSent,
             case Diff >= Cycle of
                'true' ->
-                   'ok' = send_account_update(AccountId, ?SERVICE_SUSPENDED_TEMPLATE, mrc_approaching_databag(AccountId)),
+                   'ok' = send_account_update(AccountId, ?SERVICE_SUSPENDED_TEMPLATE, customer_update_databag(AccountId)),
                    update_account_key_sent(?SERVICE_SUSPEND_KEY, AccountJObj);
                'false' ->
                    lager:debug("service suspended alert sent ~w seconds ago, repeats every ~w", [Diff, Cycle])
             end;
         _Else ->
-            'ok' = send_account_update(AccountId, ?SERVICE_SUSPENDED_TEMPLATE, mrc_approaching_databag(AccountId)),
+            'ok' = send_account_update(AccountId, ?SERVICE_SUSPENDED_TEMPLATE, customer_update_databag(AccountId)),
             update_account_key_sent(?SERVICE_SUSPEND_KEY, AccountJObj)
     end.
