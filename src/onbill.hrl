@@ -33,6 +33,8 @@
                                 ,(kz_term:to_binary(Year))/binary>>).
 -define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
 
+-define(MRC_TEMPLATE, <<"customer_update_mrc">>).
+-define(MRC_APPROACHING_TEMPLATE, <<"customer_update_mrc_approaching">>).
 -define(LIMITS_SET_TO_ZERO_TEMPLATE, <<"customer_update_limits_set_to_zero">>).
 -define(SERVICE_SUSPENDED_TEMPLATE, <<"customer_update_service_suspended">>).
 

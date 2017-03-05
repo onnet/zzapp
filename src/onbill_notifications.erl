@@ -13,7 +13,6 @@
 -include("onbill.hrl").
 
 -define(ONBILL_NOTIFICATION_ENABLED, <<"onbill_notification_enabled">>).
--define(MRC_APPROACHING_TEMPLATE, <<"customer_update_mrc_approaching">>).
 -define(MRC_APPROACHING_SENT, [<<"notifications">>, <<"mrc_approaching">>, <<"sent_mrc_approaching">>]).
 -define(MRC_APPROACHING_ENABLED, [<<"notifications">>, <<"mrc_approaching">>, <<"enabled">>]).
 -define(MRC_APPROACHING_TSTAMP, [<<"notifications">>, <<"mrc_approaching">>, <<"last_notification">>]).
@@ -60,7 +59,8 @@
        ).
 -define(CONFIGURED_EMAILS(Type), kz_json:from_list([{<<"type">>, Type}])).
 
--define(TEMPLATE_CATEGORY, <<"account">>).
+% -define(TEMPLATE_CATEGORY, <<"account">>).
+-define(TEMPLATE_CATEGORY, <<"onbill">>).
 -define(TEMPLATE_TO, ?CONFIGURED_EMAILS(?EMAIL_ADMINS)).
 -define(TEMPLATE_FROM, teletype_util:default_from_address(?MOD_CONFIG_CRAWLER)).
 -define(TEMPLATE_CC, ?CONFIGURED_EMAILS(?EMAIL_SPECIFIED, [])).
@@ -69,16 +69,30 @@
 
 -spec init() -> 'ok'.
 init() ->
+    mrc_init(),
     mrc_approaching_init(),
     service_suspended_init(),
     limits_set_to_zero_init().
+
+-spec mrc_init() -> 'ok'.
+mrc_init() ->
+    teletype_templates:init(?MRC_TEMPLATE, [{'macros', ?TEMPLATE_MACROS}
+                                                       ,{'subject', <<"New billing period for {{databag.account.name}}">> }
+                                                       ,{'category', ?TEMPLATE_CATEGORY}
+                                                       ,{'friendly_name', <<"New billing period">>}
+                                                       ,{'to', ?TEMPLATE_TO}
+                                                       ,{'from', ?TEMPLATE_FROM}
+                                                       ,{'cc', ?TEMPLATE_CC}
+                                                       ,{'bcc', ?TEMPLATE_BCC}
+                                                       ,{'reply_to', ?TEMPLATE_REPLY_TO}
+                                                       ]).
 
 -spec mrc_approaching_init() -> 'ok'.
 mrc_approaching_init() ->
     teletype_templates:init(?MRC_APPROACHING_TEMPLATE, [{'macros', ?TEMPLATE_MACROS}
                                                        ,{'subject', <<"New billing period approaching for {{databag.account.name}}">> }
                                                        ,{'category', ?TEMPLATE_CATEGORY}
-                                                       ,{'friendly_name', <<"New billing period">>}
+                                                       ,{'friendly_name', <<"New billing period approaching">>}
                                                        ,{'to', ?TEMPLATE_TO}
                                                        ,{'from', ?TEMPLATE_FROM}
                                                        ,{'cc', ?TEMPLATE_CC}
