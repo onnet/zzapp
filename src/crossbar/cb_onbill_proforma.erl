@@ -90,8 +90,20 @@ create(Context) ->
     ReqData = cb_context:req_data(Context),
     lager:info("IAM proforma ReqData: ~p",[ReqData]),
     AccountId = cb_context:account_id(Context),
-    _Modb = kazoo_modb:get_modb(AccountId, kz_term:to_integer(Year), kz_term:to_integer(Month)),
-    Context.
+    Amount = kz_json:get_number_value(<<"amount">>, ReqData),
+    case docs:create_proforma_invoice(Amount, AccountId) of
+        {'ok', JObj} ->
+            cb_context:set_resp_status(crossbar_doc:load(kz_doc:id(JObj)
+                                                        ,cb_context:set_account_modb(Context
+                                                                                    ,kz_term:to_integer(Year)
+                                                                                    ,kz_term:to_integer(Month)
+                                                                                    )
+                                                        ,?TYPE_CHECK_OPTION(<<"onbill">>)
+                                                        )
+                                       ,'success');
+        _ ->
+            cb_context:add_system_error('error', Context)
+    end.
 
 load_attachment(Context0, <<Year:4/binary, Month:2/binary, _/binary>> = Id) ->
     Context = crossbar_doc:load(Id, cb_context:set_account_modb(Context0, kz_term:to_integer(Year), kz_term:to_integer(Month))),

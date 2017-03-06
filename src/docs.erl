@@ -188,13 +188,14 @@ save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->
                               ,kz_json:new()) 
     end,
     kz_datamgr:ensure_saved(Modb, NewDoc),
-    kz_datamgr:put_attachment(Modb
-                             ,?DOC_NAME_FORMAT(Carrier, TemplateId)
-                             ,<<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".pdf">>
-                             ,PDF_Data
-                             ,[{'content_type', <<"application/pdf">>}]
-                            ),
-    kz_datamgr:flush_cache_doc(Modb, NewDoc).
+    Result = kz_datamgr:put_attachment(Modb
+                                      ,?DOC_NAME_FORMAT(Carrier, TemplateId)
+                                      ,<<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".pdf">>
+                                      ,PDF_Data
+                                      ,[{'content_type', <<"application/pdf">>}]
+                                      ),
+    kz_datamgr:flush_cache_doc(Modb, NewDoc),
+    Result.
 
 total_to_words(Total) ->
     [TotalDiv, TotalRem] = binary:split(float_to_binary(Total,[{decimals,2}]), <<".">>),
