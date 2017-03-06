@@ -66,7 +66,7 @@ validate(Context, Id, ?ATTACHMENT) ->
 validate_onbill_poforma(Context, ?HTTP_GET) ->
     summary(Context);
 validate_onbill_poforma(Context, ?HTTP_PUT) ->
-    Context.
+    create(Context).
 
 validate_onbill_poforma(Context, <<Year:4/binary, Month:2/binary, _/binary>> = Id, ?HTTP_GET) ->
     crossbar_doc:load(Id, cb_context:set_account_modb(Context, kz_term:to_integer(Year), kz_term:to_integer(Month))).
@@ -83,6 +83,15 @@ summary(Context) ->
     crossbar_doc:load_view(?CB_PROFORMA_INVOICE, []
                           ,cb_context:set_account_db(Context, Modb)
                           ,fun onbill_util:normalize_view_results/2).
+
+-spec create(cb_context:context()) -> cb_context:context().
+create(Context) ->
+    {Year, Month, _} = erlang:date(),
+    ReqData = cb_context:req_data(Context),
+    lager:info("IAM proforma ReqData: ~p",[ReqData]),
+    AccountId = cb_context:account_id(Context),
+    _Modb = kazoo_modb:get_modb(AccountId, kz_term:to_integer(Year), kz_term:to_integer(Month)),
+    Context.
 
 load_attachment(Context0, <<Year:4/binary, Month:2/binary, _/binary>> = Id) ->
     Context = crossbar_doc:load(Id, cb_context:set_account_modb(Context0, kz_term:to_integer(Year), kz_term:to_integer(Month))),

@@ -17,15 +17,15 @@
 </td></tr>
 </table>
 <br />
-Продавец: {{ oper_name }}<br />
-Адрес: {{ oper_addr }}<br />
-ИНН/КПП продавца: {{ inn }} / {{ kpp }} <br />
+Продавец: {{ carrier_vars.oper_name }}<br />
+Адрес: {{ carrier_vars.oper_addr }}<br />
+ИНН/КПП продавца: {{ carrier_vars.inn }} / {{ carrier_vars.kpp }} <br />
 Грузоотправитель и его адрес: ----<br />
 Грузополучатель и его адрес: ----<br />
 К платежно-расчетному документу № ______ от ______ <br />
-Покупатель: {{ account_name }}<br />
-Адрес: {{ account_addr }}<br />
-ИНН/КПП покупателя: {{ account_inn }} / {{ account_kpp }} <br />
+Покупатель: {{ account_vars.account_name }}<br />
+Адрес: {{ account_vars.account_addr }}<br />
+ИНН/КПП покупателя: {{ account_vars.account_inn }} / {{ account_vars.account_kpp }} <br />
 Валюта: наименование, код <u>Российский рубль, 643</u><br />
 <font size="9">Дополнительные (условия оплаты по договору (контракту), способ отправления и т.д.)</font> Договор № {{ agrm_num }} от {{ agrm_date }}<br />
 <table border="1">
@@ -183,7 +183,7 @@
 	<tr>
 		<td width="50%">
 			Руководитель организации<br />
-			или иное уполномоченное лицо ________________ ({{ oper_dir }})<br />
+			или иное уполномоченное лицо ________________ ({{ carrier_vars.oper_dir }})<br />
 			<table border="0">
 				<tr>
 					<td width="50%" align="right"><font size=6>(подпись)</font></td>
@@ -191,14 +191,14 @@
 				</tr>
                                 {% if oper_dov %}
             			<tr>
-                                        <td width="90%" align="right"><h5>{{ oper_dov }}</h5></td>
+                                        <td width="90%" align="right"><h5>{{ carrier_vars.oper_dov }}</h5></td>
                                 </tr>
                                 {% endif %}
 			</table>			
 		</td>
 		<td width="50%">
 			Главный бухгалтер<br />
-			или иное уполномоченное лицо ________________ ({{ oper_buh }})<br />
+			или иное уполномоченное лицо ________________ ({{ carrier_vars.oper_buh }})<br />
 			<table border="0">
 				<tr>
 					<td width="50%" align="right"><font size=6>(подпись)</font></td>
@@ -206,7 +206,7 @@
                                 </tr>
                                 {% if oper_dov %}
                                 <tr>
-                                        <td width="90%" align="right"><h5>{{ oper_dov }}</h5></td>
+                                        <td width="90%" align="right"><h5>{{ carrier_vars.oper_dov }}</h5></td>
                                 </tr>
                                 {% endif %}
 			</table>	
@@ -214,6 +214,6 @@
 	</tr>
 </table>
 <br />
-{{ comment1 }}
+{{ carrier_vars.comment1 }}
 <br />
 Примечание. Первый экземпляр — покупателю, второй экземпляр — продавцу

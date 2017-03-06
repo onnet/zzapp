@@ -3,6 +3,7 @@
 -export([generate_docs/3
         ,generate_docs/4
         ,per_minute_reports/3
+        ,create_proforma_invoice/2
         ]).
 
 -include("onbill.hrl").
@@ -300,3 +301,39 @@ per_minute_report(AccountId, Year, Month, Carrier, CallsJObjs, CallsTotalSec, Ca
     save_pdf(Vars, DocType, Carrier, AccountId, Year, Month);
 per_minute_report(_, _, _, _, _, _, _) ->
     'ok'.
+
+-spec create_proforma_invoice(number(), ne_binary()) -> any().
+create_proforma_invoice(Amount, AccountId) ->
+    {Year, Month, Day} = erlang:date(),
+    DocType = <<"proforma_invoice">>,
+    OnbillResellerVars = onbill_util:reseller_vars(AccountId),
+    Carriers = onbill_util:account_carriers_list(AccountId),
+    MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
+    MainCarrierDoc = onbill_util:carrier_doc(MainCarrier, AccountId),
+    AccountOnbillDoc = onbill_util:account_vars(AccountId),
+    VatifiedAmount = fees:vatify_amount(<<"total">>, kz_term:to_float(Amount), OnbillResellerVars),
+    {TotalBruttoDiv, TotalBruttoRem} = total_to_words(props:get_value(<<"total_brutto">>, VatifiedAmount)),
+    {TotalVatDiv, TotalVatRem} = total_to_words(props:get_value(<<"total_vat">>, VatifiedAmount)),
+    Vars = [{<<"doc_date_tuple">>, kz_json:from_list(onbill_util:period_tuple(Year, Month, Day))}
+           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillResellerVars, 0.0)}
+           ,{<<"total_vat_div">>, TotalVatDiv}
+           ,{<<"total_vat_rem">>, TotalVatRem}
+           ,{<<"total_brutto_div">>, TotalBruttoDiv}
+           ,{<<"total_brutto_rem">>, TotalBruttoRem}
+           ,{<<"onbill_doc_type">>, DocType}
+           ,{<<"doc_number">>, docs_numbering:get_binary_number(AccountId, MainCarrier, DocType, Year, Month)}
+           ,{<<"carrier_vars">>, kz_json:set_values([{Key, kz_json:get_value(Key, MainCarrierDoc)}
+                                                     || Key <- kz_json:get_keys(MainCarrierDoc), filter_vars(Key)
+                                                    ]
+                                                   ,kz_json:new()
+                                                   )
+            }
+           ,{<<"account_vars">>, kz_json:set_values([{Key, kz_json:get_value(Key, AccountOnbillDoc)}
+                                                     || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)
+                                                    ]
+                                                   ,kz_json:new()
+                                                   )
+            }
+           ]
+           ++ VatifiedAmount,
+    save_pdf(Vars, DocType, MainCarrier, AccountId, Year, Month).
