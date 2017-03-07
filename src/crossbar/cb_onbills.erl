@@ -1,10 +1,10 @@
 -module(cb_onbills).
 
 -export([init/0
-         ,allowed_methods/0, allowed_methods/1, allowed_methods/2, allowed_methods/3
-         ,resource_exists/0, resource_exists/1, resource_exists/2, resource_exists/3
-         ,content_types_provided/1, content_types_provided/3, content_types_provided/4
-         ,validate/1, validate/2, validate/3, validate/4
+         ,allowed_methods/0, allowed_methods/1, allowed_methods/2
+         ,resource_exists/0, resource_exists/1, resource_exists/2
+         ,content_types_provided/1, content_types_provided/3
+         ,validate/1, validate/2, validate/3
         ]).
 
 -include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
@@ -15,7 +15,6 @@
 -define(CURRENT_SERVICES, <<"current_services">>).
 -define(CURRENT_BILLING_PERIOD, <<"current_billing_period">>).
 -define(CURRENCY_SIGN, <<"currency_sign">>).
--define(MODB, <<"onbills_modb">>).
 -define(ALL_CHILDREN, <<"all_children">>).
 -define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
 -define(NOTIFICATION_MIME_TYPES, [{<<"text">>, <<"html">>}
@@ -32,47 +31,36 @@ init() ->
 -spec allowed_methods() -> http_methods().
 -spec allowed_methods(path_token()) -> http_methods().
 -spec allowed_methods(path_token(),path_token()) -> http_methods().
--spec allowed_methods(path_token(),path_token(),path_token()) -> http_methods().
 allowed_methods() ->
     [?HTTP_GET].
-allowed_methods(?CURRENT_SERVICES) ->
-    [?HTTP_GET];
-allowed_methods(?CURRENT_BILLING_PERIOD) ->
-    [?HTTP_GET];
-allowed_methods(?CURRENCY_SIGN) ->
+allowed_methods(_) ->
     [?HTTP_GET].
 allowed_methods(?GENERATE,_) ->
     [?HTTP_PUT];
-allowed_methods(?MODB,_) ->
-    [?HTTP_GET].
-allowed_methods(?MODB,_,?ATTACHMENT) ->
+allowed_methods(_,?ATTACHMENT) ->
     [?HTTP_GET].
 
 -spec resource_exists() -> 'true'.
 -spec resource_exists(path_token()) -> 'true'.
 -spec resource_exists(path_token(), path_token()) -> 'true'.
--spec resource_exists(path_token(), path_token(), path_token()) -> 'true'.
 resource_exists() -> 'true'.
 resource_exists(_) -> 'true'.
 resource_exists(?GENERATE,_) -> 'true';
-resource_exists(?MODB,_) -> 'true'.
-resource_exists(?MODB,_,?ATTACHMENT) -> 'true'.
+resource_exists(_,?ATTACHMENT) -> 'true'.
 
 -spec content_types_provided(cb_context:context()) -> cb_context:context().
 -spec content_types_provided(cb_context:context(), path_token(), path_token()) -> cb_context:context().
--spec content_types_provided(cb_context:context(), path_token(), path_token(), path_token()) -> cb_context:context().
 content_types_provided(Context) ->
     Context.
 content_types_provided(Context,_,?GENERATE) ->
-    Context.
-content_types_provided(Context,?MODB,_,?ATTACHMENT) ->
+    Context;
+content_types_provided(Context,_,?ATTACHMENT) ->
     CTP = [{'to_binary', [{<<"application">>, <<"pdf">>}]}],
     cb_context:set_content_types_provided(Context, CTP).
 
 -spec validate(cb_context:context()) -> cb_context:context().
 -spec validate(cb_context:context(), path_token()) -> cb_context:context().
 -spec validate(cb_context:context(), path_token(), path_token()) -> cb_context:context().
--spec validate(cb_context:context(), path_token(), path_token(), path_token()) -> cb_context:context().
 validate(Context) ->
     validate_onbill(Context, cb_context:req_verb(Context)).
 validate(Context, ?CURRENT_SERVICES) ->
@@ -82,9 +70,9 @@ validate(Context, ?CURRENT_BILLING_PERIOD) ->
 validate(Context, ?CURRENCY_SIGN) ->
     validate_currency_sign(Context, cb_context:req_verb(Context)).
 validate(Context, ?GENERATE, Id) ->
-    validate_generate(Context, Id, cb_context:req_verb(Context)).
-validate(Context,?MODB, Id, ?ATTACHMENT) ->
-    validate_onbill(Context,?MODB, Id, ?ATTACHMENT, cb_context:req_verb(Context)).
+    validate_generate(Context, Id, cb_context:req_verb(Context));
+validate(Context, Id, ?ATTACHMENT) ->
+    validate_onbill(Context, Id, ?ATTACHMENT, cb_context:req_verb(Context)).
 
 -spec validate_generate(cb_context:context(), ne_binary(), http_method()) -> cb_context:context().
 validate_generate(Context, DocsAccountId, ?HTTP_PUT) ->
@@ -157,8 +145,14 @@ generate_per_minute_reports(Context, DocsAccountId, Year, Month) ->
 validate_onbill(Context, ?HTTP_GET) ->
     onbills_modb_summary(Context).
 
-validate_onbill(Context,?MODB, Id, ?ATTACHMENT, ?HTTP_GET) ->
-    load_modb_attachment(Context, Id).
+validate_onbill(Context0, <<Year:4/binary, Month:2/binary, "-", _/binary>> = Id, ?ATTACHMENT, ?HTTP_GET) ->
+    Context = crossbar_doc:load(Id, cb_context:set_account_modb(Context0, kz_term:to_integer(Year), kz_term:to_integer(Month))),
+    case kz_doc:attachment_names(cb_context:doc(Context)) of
+        [] -> 
+            cb_context:add_system_error('no_attachment_found', Context);
+        [AttachmentId|_] ->
+            crossbar_doc:load_attachment(Id, AttachmentId, [], Context)
+    end.
 
 -spec onbills_modb_summary(cb_context:context()) -> cb_context:context().
 onbills_modb_summary(Context) ->
@@ -178,36 +172,6 @@ onbills_modb_summary(Context) ->
     onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
     Context1 = cb_context:set_account_db(Context, Modb),
     crossbar_doc:load_view(?CB_LIST, [], Context1, fun onbill_util:normalize_view_results/2).
-
-load_modb_attachment(Context0, Id) ->
-    QueryString = cb_context:query_string(Context0),
-    Year = kz_json:get_value(<<"year">>,QueryString),
-    Month = kz_json:get_value(<<"month">>,QueryString),
-    Context = crossbar_doc:load(Id, cb_context:set_account_modb(Context0, kz_term:to_integer(Year), kz_term:to_integer(Month))),
-    AccountId = cb_context:account_id(Context),
-    Modb = kazoo_modb:get_modb(AccountId, kz_term:to_integer(Year), kz_term:to_integer(Month)),
-    case onbill_util:get_attachment(Id, Modb) of
-        {'ok', Attachment} ->
-            cb_context:set_resp_etag(
-                cb_context:set_resp_headers(cb_context:setters(Context
-                                                              ,[{fun cb_context:set_resp_data/2, Attachment}
-                                                               ,{fun cb_context:set_resp_etag/2, 'undefined'}
-                                                               ])
-                                            ,[{<<"Content-Disposition">>, <<"attachment; filename="
-                                                                            ,(kz_term:to_binary(Id))/binary
-                                                                            ,"-"
-                                                                            ,(kz_term:to_binary(Id))/binary
-                                                                            ,"-"
-                                                                            ,(kz_term:to_binary(Id))/binary>>
-                                              }
-                                             ,{<<"Content-Type">>, <<"application/pdf">>}
-                                             |cb_context:resp_headers(Context)
-                                           ])
-                ,'undefined'
-            );
-        _ ->
-            cb_context:add_system_error('faulty_request', Context0)
-    end.
 
 -spec validate_current_services(cb_context:context(), http_method()) -> cb_context:context().
 validate_current_services(Context, ?HTTP_GET) ->

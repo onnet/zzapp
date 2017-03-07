@@ -178,7 +178,7 @@ create_pdf(Vars, TemplateId, Carrier, AccountId) ->
 save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->
     DocId = case props:get_value(<<"doc_number">>, Vars) of
                 'undefined' ->
-                    ?ONBILL_DOC_ID_FORMAT(Year, Month,Carrier, TemplateId);
+                    ?ONBILL_DOC_ID_FORMAT(Year, Month, Carrier, TemplateId);
                 DocNumber ->
                     ?ONBILL_DOC_ID_FORMAT(Year, Month, DocNumber, Carrier, TemplateId)
             end,
