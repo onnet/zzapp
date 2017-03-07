@@ -176,20 +176,29 @@ create_pdf(Vars, TemplateId, Carrier, AccountId) ->
     end.
 
 save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->
+    DocId = case props:get_value(<<"doc_number">>, Vars) of
+                'undefined' ->
+                    ?ONBILL_DOC_ID_FORMAT(Year, Month,Carrier, TemplateId);
+                DocNumber ->
+                    ?ONBILL_DOC_ID_FORMAT(Year, Month, DocNumber, Carrier, TemplateId)
+            end,
+    save_pdf(DocId, Vars, TemplateId, Carrier, AccountId, Year, Month).
+
+save_pdf(DocId, Vars, TemplateId, Carrier, AccountId, Year, Month) ->
     {'ok', PDF_Data} = create_pdf(Vars, TemplateId, Carrier, AccountId),
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-    NewDoc = case kz_datamgr:open_doc(Modb, ?DOC_NAME_FORMAT(Carrier, TemplateId)) of
+    NewDoc = case kz_datamgr:open_doc(Modb, DocId) of
         {ok, Doc} ->
             kz_json:set_values(Vars, Doc);
         {'error', 'not_found'} ->
-            kz_json:set_values(Vars ++ [{<<"_id">>, ?DOC_NAME_FORMAT(Carrier, TemplateId)}
+            kz_json:set_values(Vars ++ [{<<"_id">>, DocId}
                                        ,{<<"pvt_type">>, ?ONBILL_DOC}
                                        ]
                               ,kz_json:new()) 
     end,
     kz_datamgr:ensure_saved(Modb, NewDoc),
     Result = kz_datamgr:put_attachment(Modb
-                                      ,?DOC_NAME_FORMAT(Carrier, TemplateId)
+                                      ,DocId
                                       ,<<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".pdf">>
                                       ,PDF_Data
                                       ,[{'content_type', <<"application/pdf">>}]
@@ -312,6 +321,7 @@ create_proforma_invoice(Amount, AccountId) ->
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
     MainCarrierDoc = onbill_util:carrier_doc(MainCarrier, AccountId),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
+    DocNumber = docs_numbering:get_new_binary_number(AccountId, MainCarrier, DocType),
     VatifiedAmount = fees:vatify_amount(<<"total">>, kz_term:to_float(Amount), OnbillResellerVars),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(props:get_value(<<"total_brutto">>, VatifiedAmount)),
     {TotalVatDiv, TotalVatRem} = total_to_words(props:get_value(<<"total_vat">>, VatifiedAmount)),
@@ -322,7 +332,7 @@ create_proforma_invoice(Amount, AccountId) ->
            ,{<<"total_brutto_div">>, TotalBruttoDiv}
            ,{<<"total_brutto_rem">>, TotalBruttoRem}
            ,{<<"onbill_doc_type">>, DocType}
-           ,{<<"doc_number">>, docs_numbering:get_binary_number(AccountId, MainCarrier, DocType, Year, Month)}
+           ,{<<"doc_number">>, DocNumber}
            ,{<<"carrier_vars">>, kz_json:set_values([{Key, kz_json:get_value(Key, MainCarrierDoc)}
                                                      || Key <- kz_json:get_keys(MainCarrierDoc), filter_vars(Key)
                                                     ]

@@ -1,6 +1,7 @@
 -module(docs_numbering).
 
 -export([get_binary_number/5
+        ,get_new_binary_number/3
         ,number_lookup/5
         ]).
 
@@ -16,6 +17,14 @@
 -spec get_binary_number(ne_binary(), ne_binary(), ne_binary(), integer(), integer()) -> ne_binary().
 get_binary_number(AccountId, Carrier, DocType, Year, Month) ->
     case get_number(AccountId, Carrier, DocType, Year, Month) of
+        {'ok', Number} -> ?TO_BIN(Number);
+        _E -> <<"ERROR WRONG NUMBER">>
+    end.
+
+-spec get_new_binary_number(ne_binary(), ne_binary(), ne_binary()) -> ne_binary().
+get_new_binary_number(AccountId, Carrier, DocType) ->
+    {Year, Month, _} = erlang:date(),
+    case get_new_number(AccountId, Carrier, DocType, Year, Month) of
         {'ok', Number} -> ?TO_BIN(Number);
         _E -> <<"ERROR WRONG NUMBER">>
     end.
@@ -38,10 +47,13 @@ number_lookup(AccountId, Carrier, DocType, Year, Month) ->
     _ = onbill_util:check_db(DbName),
     onbill_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
     Opts = [{'startkey', [Carrier, DocType, Month, AccountId]}
-           ,{'endkey', [Carrier, DocType, Month, AccountId]}],
+           ,{'endkey', [Carrier, DocType, Month, AccountId]}
+           ],
     case kz_datamgr:get_results(DbName, ?NUMBER_LOOKUP_VIEW, Opts) of
         {'ok', []} -> {'error', 'not_found'};
-        {'ok', [JObj]} -> {'ok', kz_json:get_integer_value(<<"value">>,JObj)};
+        {'ok', Result} ->
+            {_,Numbers} = kz_json:get_values(Result),
+            {'ok', lists:max(Numbers)};
         E -> E
     end.
 
@@ -90,7 +102,8 @@ reserve_number(AccountId, Carrier, DocType, Year, Month, NumberToReserve, Attemp
              ],
     NewDoc = kz_json:set_values(Values, kz_json:new()),
     case kz_datamgr:save_doc(DbName, NewDoc) of
-        {'ok', _} -> get_number(AccountId, Carrier, DocType, Year, Month);
+     %   {'ok', _} -> get_number(AccountId, Carrier, DocType, Year, Month);
+        {'ok', _} -> {'ok', NumberToReserve};
         {error,conflict} -> reserve_number(AccountId, Carrier, DocType, Year, Month, NumberToReserve, Attempt+1);
         E -> E
     end.
