@@ -3,7 +3,7 @@
     "language": "javascript",
     "views": {
         "crossbar_listing": {
-            "map": "function(doc) { if (doc.pvt_type != 'onbill' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name, oper_name_short: doc.oper_name_short, total_netto: doc.total_netto, total_vat: doc.total_vat, total_brutto: doc.total_brutto, doc_date:doc.doc_date, type: doc.onbill_doc_type}); }"
+            "map": "function(doc) { if (doc.pvt_type != 'onbill' || doc.onbill_doc_type == 'proforma_invoice' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name, oper_name_short: doc.oper_name_short, total_netto: doc.total_netto, total_vat: doc.total_vat, total_brutto: doc.total_brutto, doc_date:doc.doc_date, type: doc.onbill_doc_type}); }"
         },
         "daily_fees": {
             "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason != 'daily_fee' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"
@@ -18,7 +18,7 @@
             "map": "function(doc) { if (doc.pvt_ledger_type != 'debit' || doc.source.service != 'per-minute-voip' || doc.pvt_deleted) return; emit(doc.period.start, {id: doc._id, cost: doc.amount, duration: doc.usage.quantity, name: doc.name, amount: doc.pvt_amount, from: doc.metadata.caller_id_number, to: doc.metadata.callee_id_number, rate: doc.metadata.rate.value, rate_name: doc.metadata.rate.name, rate_description: doc.metadata.rate.description, rate_increment: doc.metadata.rate.increment, rate_minimum: doc.metadata.rate.minimum, start: doc.period.start }); }"
         },
         "proforma_invoice": {
-            "map": "function(doc) { if (doc.pvt_type != 'proforma_invoice' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, total_netto: doc.total_netto, total_vat: doc.total_vat, total_brutto: doc.total_brutto, doc_date:doc.doc_date}); }"
+            "map": "function(doc) { if (doc.pvt_type != 'onbill' || doc.onbill_doc_type != 'proforma_invoice' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, doc_number: doc.doc_number, doc_date_tuple: doc.doc_date_tuple, total_netto: doc.total_netto, total_vat: doc.total_vat, total_brutto: doc.total_brutto, doc_date:doc.doc_date}); }"
         }
     }
 }
