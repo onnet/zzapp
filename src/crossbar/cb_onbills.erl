@@ -52,7 +52,7 @@ resource_exists(_,?ATTACHMENT) -> 'true'.
 -spec content_types_provided(cb_context:context(), path_token(), path_token()) -> cb_context:context().
 content_types_provided(Context) ->
     Context.
-content_types_provided(Context,_,?GENERATE) ->
+content_types_provided(Context,?GENERATE,_) ->
     Context;
 content_types_provided(Context,_,?ATTACHMENT) ->
     CTP = [{'to_binary', [{<<"application">>, <<"pdf">>}]}],
@@ -75,16 +75,16 @@ validate(Context, Id, ?ATTACHMENT) ->
     validate_onbill(Context, Id, ?ATTACHMENT, cb_context:req_verb(Context)).
 
 -spec validate_generate(cb_context:context(), ne_binary(), http_method()) -> cb_context:context().
-validate_generate(Context, DocsAccountId, ?HTTP_PUT) ->
+validate_generate(Context, AccountId, ?HTTP_PUT) ->
     Year = kz_json:get_float_value(<<"year">>, cb_context:req_data(Context)),
     Month = kz_json:get_float_value(<<"month">>, cb_context:req_data(Context)),
-    validate_generate(Context, DocsAccountId, Year, Month).
+    validate_generate(Context, AccountId, Year, Month).
 
-validate_generate(Context, DocsAccountId, Year, Month) when is_number(Year) andalso is_number(Month) ->
+validate_generate(Context, AccountId, Year, Month) when is_number(Year) andalso is_number(Month) ->
     case kz_json:get_value(<<"doc_type">>, cb_context:req_data(Context)) of
-        "calls_reports" -> generate_per_minute_reports(Context, DocsAccountId, Year, Month);
-     %  "calls_reports" -> generate_billing_docs(Context, DocsAccountId, Year, Month, 'per_minute_reports');
-        _ -> maybe_generate_billing_docs(Context, DocsAccountId, Year, Month, 'generate_docs')
+        "calls_reports" -> generate_per_minute_reports(Context, AccountId, Year, Month);
+     %  "calls_reports" -> generate_billing_docs(Context, AccountId, Year, Month, 'per_minute_reports');
+        _ -> maybe_generate_billing_docs(Context, AccountId, Year, Month, 'generate_docs')
     end;
 
 validate_generate(Context, _, _, _) ->
@@ -96,13 +96,13 @@ validate_generate(Context, _, _, _) ->
       ,Context
      ).
 
-maybe_generate_billing_docs(Context, DocsAccountId, Year, Month, FunName) ->
+maybe_generate_billing_docs(Context, AccountId, Year, Month, FunName) ->
     case cb_context:is_superduper_admin(Context) of
         'true' ->
-            generate_billing_docs(Context, DocsAccountId, Year, Month, FunName);
+            generate_billing_docs(Context, AccountId, Year, Month, FunName);
         'false' ->
             case kz_services:is_reseller(cb_context:auth_account_id(Context)) of
-                'true' -> generate_billing_docs(Context, DocsAccountId, Year, Month, FunName);
+                'true' -> generate_billing_docs(Context, AccountId, Year, Month, FunName);
                 'false' -> cb_context:add_system_error('forbidden', Context)
             end
     end.
@@ -127,18 +127,18 @@ generate_billing_docs(Context, ?ALL_CHILDREN, Year, Month, FunName) ->
         {'error', _Reason} ->
             cb_context:add_system_error('error', Context)
     end;
-generate_billing_docs(Context, DocsAccountId, Year, Month, FunName) ->
+generate_billing_docs(Context, AccountId, Year, Month, FunName) ->
     ResellerId = cb_context:account_id(Context),
-    case onbill_util:validate_relationship(DocsAccountId, ResellerId) of
+    case onbill_util:validate_relationship(AccountId, ResellerId) of
         'true' ->
-            _ = docs:FunName(DocsAccountId, kz_term:to_integer(Year), kz_term:to_integer(Month)),
+            _ = docs:FunName(AccountId, kz_term:to_integer(Year), kz_term:to_integer(Month)),
             cb_context:set_resp_status(Context, 'success');
         'false' ->
             cb_context:add_system_error('forbidden', Context)
     end.
 
-generate_per_minute_reports(Context, DocsAccountId, Year, Month) ->
-    docs:per_minute_reports(DocsAccountId, kz_term:to_integer(Year), kz_term:to_integer(Month)),
+generate_per_minute_reports(Context, AccountId, Year, Month) ->
+    docs:per_minute_reports(AccountId, kz_term:to_integer(Year), kz_term:to_integer(Month)),
     cb_context:set_resp_status(Context, 'success').
 
 -spec validate_onbill(cb_context:context(), http_method()) -> cb_context:context().
