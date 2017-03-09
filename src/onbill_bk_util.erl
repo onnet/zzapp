@@ -253,7 +253,7 @@ process_new_billing_period_mrc(AccountId, Timestamp) ->
         'false' ->
             lager:debug("amount of funds enough for charging monthly_recurring services"),
             Items = current_items(AccountId),
-            ItemsJObj = select_non_zero_items_list(Items, AccountId),
+            ItemsJObj = select_non_zero_items_json(Items),
             charge_new_billing_period_mrc(ItemsJObj, AccountId, Timestamp),
             DataBag = onbill_notifications:customer_update_databag(AccountId),
             onbill_notifications:send_account_update(AccountId, ?MRC_TEMPLATE, DataBag),
