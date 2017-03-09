@@ -267,16 +267,13 @@ maybe_cancel_trunk_subscriptions(AccountId) ->
             lager:debug("unable (~p) to get current limits for: ~p, assuming no limits set", [_R, AccountId]),
             {'not_enough_funds', 'no_trunks_set'};
         {'ok', LimitsDoc} ->
-            case kz_json:get_integer_value(<<"twoway_trunks">>, LimitsDoc) =/= 0
-                orelse kz_json:get_integer_value(<<"inbound_trunks">>, LimitsDoc) =/= 0
-                orelse kz_json:get_integer_value(<<"outbound_trunks">>, LimitsDoc) =/= 0
+            case kz_json:get_integer_value(<<"twoway_trunks">>, LimitsDoc, 0) =/= 0
+                orelse kz_json:get_integer_value(<<"inbound_trunks">>, LimitsDoc, 0) =/= 0
+                orelse kz_json:get_integer_value(<<"outbound_trunks">>, LimitsDoc, 0) =/= 0
             of
                 'true' ->
-                    Values =
-                        [{<<"twoway_trunks">>, 0}
-                        ,{<<"inbound_trunks">>, 0}
-                        ,{<<"inbound_trunks">>, 0}],
-                    NewLimitsDoc = kz_json:set_values(Values, LimitsDoc),
+                    Keys = [<<"twoway_trunks">>, <<"inbound_trunks">>, <<"outbound_trunks">>],
+                    NewLimitsDoc = kz_json:delete_keys(Keys, LimitsDoc),
                     kz_datamgr:ensure_saved(AccountDb, NewLimitsDoc),
                     kzs_cache:flush_cache_doc(AccountDb, NewLimitsDoc),
                     j5_limits:fetch(AccountId),
