@@ -65,7 +65,7 @@ content_types_provided(Context, Id, ?BIN_DATA) ->
     content_types_provided_for_attachment(Context, kz_http_util:urlencode(Id), ?BIN_DATA, cb_context:req_verb(Context)).
 
 content_types_provided_for_attachment(Context, Id, ?BIN_DATA, ?HTTP_GET) ->
-    Context1 = crossbar_doc:load(Id, Context, [{'expected_type', <<"e911_address">>}]),
+    Context1 = crossbar_doc:load(Id, Context, ?TYPE_CHECK_OPTION(<<"e911_address">>)),
     case cb_context:resp_status(Context1) of
         'success' ->
             JObj = cb_context:doc(Context1),
@@ -106,7 +106,6 @@ validate(Context, Id) ->
 validate(Context, Id, ?CONFIRM_ADDRESS) ->
     confirm_address(Context, Id, cb_context:req_verb(Context));
 validate(Context, Id, ?BIN_DATA) ->
-    lager:debug("uploading binary data to '~s'", [Id]),
     validate_attachment_binary(Context, kz_http_util:urlencode(Id), cb_context:req_verb(Context), cb_context:req_files(Context)).
 
 -spec validate_e911(cb_context:context(), http_method()) -> cb_context:context().
@@ -117,7 +116,7 @@ validate_e911(Context, ?HTTP_PUT) ->
 
 -spec validate_e911_doc(cb_context:context(), ne_binary(), path_token()) -> cb_context:context().
 validate_e911_doc(Context, Id, ?HTTP_GET) ->
-    crossbar_doc:load(Id, Context, [{'expected_type', <<"e911_address">>}]);
+    crossbar_doc:load(Id, Context, ?TYPE_CHECK_OPTION(<<"e911_address">>));
 validate_e911_doc(Context, Id, ?HTTP_POST) ->
     save_e911_doc(Context, Id);
 validate_e911_doc(Context, Id, ?HTTP_DELETE) ->
@@ -152,20 +151,26 @@ save_e911_doc(Context, Id) ->
     crossbar_doc:save(cb_context:set_doc(Context, NewDoc)).
 
 -spec validate_attachment_binary(cb_context:context(), ne_binary(), http_method(), kz_proplist()) -> cb_context:context().
-validate_attachment_binary(Context, Id, ?HTTP_GET, _Files) ->
+validate_attachment_binary(Context0, Id, ?HTTP_GET, _Files) ->
     lager:debug("fetch contents for '~s'", [Id]),
-    load_attachment_binary(Context, Id);
+    Context = crossbar_doc:load(Id, Context0, ?TYPE_CHECK_OPTION(<<"e911_address">>)),
+    case kz_doc:attachment_names(cb_context:doc(Context)) of
+        [] ->
+            cb_context:add_system_error('no_attachment_found', Context);
+        [AttachmentId|_] ->
+            cb_context:add_resp_headers(
+                crossbar_doc:load_attachment(Id, AttachmentId, ?TYPE_CHECK_OPTION(<<"e911_address">>), Context)
+               ,[{<<"Content-Disposition">>, <<"attachment; filename=", AttachmentId/binary>>}]
+               )
+    end;
 validate_attachment_binary(Context, _Id, ?HTTP_POST, []) ->
-    cb_context:add_validation_error(
-      <<"file">>
+    cb_context:add_validation_error(<<"file">>
                                    ,<<"required">>
-                                   ,kz_json:from_list([
-                                                       {<<"message">>, <<"Please provide a file">>}
-                                                      ])
+                                   ,kz_json:from_list([{<<"message">>, <<"Please provide a file">>}])
                                    ,Context
      );
 validate_attachment_binary(Context, Id, ?HTTP_POST, [{_, _}]) ->
-    Context1 = crossbar_doc:load(Id, Context, [{'expected_type', <<"e911_address">>}]),
+    Context1 = crossbar_doc:load(Id, Context, ?TYPE_CHECK_OPTION(<<"e911_address">>)),
     lager:debug("loaded meta for '~s'", [Id]),
     case cb_context:resp_status(Context1) of
         'success' ->
@@ -173,38 +178,11 @@ validate_attachment_binary(Context, Id, ?HTTP_POST, [{_, _}]) ->
         _Status -> Context1
     end;
 validate_attachment_binary(Context, _Id, ?HTTP_POST, _Files) ->
-    cb_context:add_validation_error(
-      <<"file">>
+    cb_context:add_validation_error(<<"file">>
                                    ,<<"maxItems">>
-                                   ,kz_json:from_list([
-                                                       {<<"message">>, <<"Please provide a single file">>}
-                                                      ])
+                                   ,kz_json:from_list([{<<"message">>, <<"Please provide a single file">>}])
                                    ,Context
      ).
-
--spec load_attachment_binary(cb_context:context(), path_token()) -> cb_context:context().
-load_attachment_binary(Context, Id) ->
-    Context1 = crossbar_doc:load(Id, Context, [{'expected_type', <<"e911_address">>}]),
-    case cb_context:resp_status(Context1) of
-        'success' ->
-            case kz_doc:attachment_names(cb_context:doc(Context1)) of
-                [] -> crossbar_util:response_bad_identifier(Id, Context);
-                [Attachment|_] ->
-                    cb_context:add_resp_headers(
-                      crossbar_doc:load_attachment(cb_context:doc(Context1)
-                                                  ,Attachment
-                                                  ,?TYPE_CHECK_OPTION_ANY
-                                                  ,Context1
-                                                  )
-                                               ,[{<<"Content-Disposition">>, <<"attachment; filename=", Attachment/binary>>}
-                                                ,{<<"Content-Type">>, kz_doc:attachment_content_type(cb_context:doc(Context1), Attachment)}
-                                                ,{<<"Content-Length">>, kz_doc:attachment_length(cb_context:doc(Context1), Attachment)}
-                                                ])
-            end;
-        _Status ->
-            lager:debug("load_attachment_binary error _Status: ~p",[_Status]),
-            Context1
-    end.
 
 -spec update_attachment_binary(cb_context:context(), path_token()) ->
                                  cb_context:context().
@@ -212,27 +190,23 @@ load_attachment_binary(Context, Id) ->
                                  cb_context:context().
 update_attachment_binary(Context, Id) ->
     update_attachment_binary(crossbar_util:maybe_remove_attachments(Context)
-                       ,Id
-                       ,cb_context:req_files(Context)
-                       ).
+                            ,Id
+                            ,cb_context:req_files(Context)
+                            ).
 
 update_attachment_binary(Context, _Id, []) -> Context;
 update_attachment_binary(Context, Id, [{Filename, FileObj}|Files]) ->
-    Contents = kz_json:get_value(<<"contents">>, FileObj),
     CT = kz_json:get_value([<<"headers">>, <<"content_type">>], FileObj),
     lager:debug("file content type: ~s", [CT]),
-    Opts = [{'content_type', CT} | ?TYPE_CHECK_OPTION_ANY],
-
-    update_attachment_binary(
-      crossbar_doc:save_attachment(Id
-                                  ,cb_modules_util:attachment_name(Filename, CT)
-                                  ,Contents
-                                  ,Context
-                                  ,Opts
-                                  )
-                       ,Id
-                       ,Files
-     ).
+    update_attachment_binary(crossbar_doc:save_attachment(Id
+                                                         ,cb_modules_util:attachment_name(Filename, CT)
+                                                         ,kz_json:get_value(<<"contents">>, FileObj)
+                                                         ,Context
+                                                         ,[{'content_type', CT} | ?TYPE_CHECK_OPTION_ANY]
+                                                         )
+                            ,Id
+                            ,Files
+                            ).
 
 -spec maybe_valid_relationship(cb_context:context()) -> boolean().
 maybe_valid_relationship(Context) ->
@@ -241,23 +215,21 @@ maybe_valid_relationship(Context) ->
     onbill_util:validate_relationship(AccountId, AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId).
 
 -spec delete_e911_doc(cb_context:context(), ne_binary()) -> cb_context:context().
-delete_e911_doc(Context, Id) ->
-    AccountId = cb_context:account_id(Context),
-    DbName = kz_util:format_account_id(AccountId,'encoded'),
-    case kz_datamgr:open_doc(DbName, Id) of
-        {ok, Doc} ->
-            kz_datamgr:ensure_saved(DbName, kz_json:set_value(<<"deleted_by_user">>, 'true', Doc)),
-            cb_context:set_resp_status(Context, 'success');
-        {'error', 'not_found'} ->
+delete_e911_doc(Context0, Id) ->
+    Context = crossbar_doc:load(Id, Context0, ?TYPE_CHECK_OPTION(<<"e911_address">>)),
+    case cb_context:resp_status(Context) of
+        'success' ->
+            NewDoc = kz_json:set_value(<<"deleted_by_user">>, 'true', cb_context:doc(Context)),
+            crossbar_doc:save(cb_context:set_doc(Context, NewDoc), ?TYPE_CHECK_OPTION(<<"e911_address">>));
+        _Status ->
             Context
-    end.
+   end.
 
-confirm_address(Context, Id, ?HTTP_POST) ->
-    AccountId = cb_context:account_id(Context),
-    ReqData = cb_context:req_data(Context),
-    Db = kz_util:format_account_id(AccountId, 'encoded'),
-    {'ok', Doc} = kz_datamgr:open_doc(Db, Id),
+confirm_address(Context0, Id, ?HTTP_POST) ->
+    ReqData = cb_context:req_data(Context0),
+    Context = crossbar_doc:load(Id, Context0, ?TYPE_CHECK_OPTION(<<"e911_address">>)),
+    Doc = cb_context:doc(Context),
     NewDoc = kz_json:set_value(<<"pvt_address_confirmed">>, kz_json:get_value(<<"address_confirmed">>, ReqData), Doc),
-    crossbar_doc:save(cb_context:set_doc(Context, NewDoc));
+    crossbar_doc:save(cb_context:set_doc(Context, NewDoc), ?TYPE_CHECK_OPTION(<<"e911_address">>));
 confirm_address(Context, _Id, _) ->
     Context.

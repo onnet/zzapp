@@ -52,8 +52,18 @@ validate_onbill_poforma(Context, ?HTTP_PUT) ->
 
 validate_onbill_poforma(Context, <<Year:4/binary, Month:2/binary, _/binary>> = Id, ?HTTP_GET) ->
     crossbar_doc:load(Id, cb_context:set_account_modb(Context, kz_term:to_integer(Year), kz_term:to_integer(Month)));
-validate_onbill_poforma(Context, <<_Year:4/binary, _Month:2/binary, _/binary>> = Id, ?HTTP_DELETE) ->
-    mark_proforma_doc_deleted(Context, Id).
+validate_onbill_poforma(Context0, <<Year:4/binary, Month:2/binary, _/binary>> = Id, ?HTTP_DELETE) ->
+    Context = crossbar_doc:load(Id
+                               ,cb_context:set_account_modb(Context0, kz_term:to_integer(Year), kz_term:to_integer(Month))
+                               ,?TYPE_CHECK_OPTION(<<"onbill">>)
+                               ),
+    case cb_context:resp_status(Context) of
+        'success' ->
+            NewDoc = kz_json:set_value(<<"deleted_by_user">>, 'true', cb_context:doc(Context)),
+            crossbar_doc:save(cb_context:set_doc(Context, NewDoc), ?TYPE_CHECK_OPTION(<<"onbill">>));
+        _Status ->
+            Context
+   end.
 
 -spec summary(cb_context:context()) -> cb_context:context().
 summary(Context) ->
@@ -84,16 +94,4 @@ create(Context) ->
                                        ,'success');
         _ ->
             cb_context:add_system_error('error', Context)
-    end.
-
--spec mark_proforma_doc_deleted(cb_context:context(), ne_binary()) -> cb_context:context().
-mark_proforma_doc_deleted(Context, Id) ->
-    AccountId = cb_context:account_id(Context),
-    DbName = kz_util:format_account_id(AccountId,'encoded'),
-    case kz_datamgr:open_doc(DbName, Id) of
-        {ok, Doc} ->
-            kz_datamgr:ensure_saved(DbName, kz_json:set_value(<<"deleted_by_user">>, 'true', Doc)),
-            cb_context:set_resp_status(Context, 'success');
-        {'error', 'not_found'} ->
-            Context
     end.

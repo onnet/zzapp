@@ -25,20 +25,21 @@ refresh() ->
     refresh(Databases, length(Databases) + 1).
 
 refresh(<<"onbill-", _/binary>> = DbName, DbLeft, Total) ->
-    kz_datamgr:db_create(DbName),
     io:format("(~p/~p) refreshing database '~s'~n",[DbLeft, Total, DbName]),
     _ = kz_datamgr:revise_doc_from_file(DbName, 'onbill', <<"views/docs_numbering.json">>),
     timer:sleep(?PAUSE);
 refresh(DbName, DbLeft, Total) when is_binary(DbName) ->
     case kz_datamgr:db_classification(DbName) of
         'account' ->
-            io:format("(~p/~p) refreshing database '~s'~n",[DbLeft, Total, DbName]),
-            _ = kz_datamgr:revise_doc_from_file(DbName, 'onbill', <<"views/onbill_e911.json">>),
-            _ = kz_datamgr:revise_doc_from_file(DbName, 'onbill', <<"views/periodic_fees.json">>),
+            AccountDb = kz_util:format_account_id(DbName, 'encoded'),
+            io:format("(~p/~p) refreshing database '~s'~n",[DbLeft, Total, AccountDb]),
+            _ = kz_datamgr:revise_doc_from_file(AccountDb, 'onbill', <<"views/onbill_e911.json">>),
+            _ = kz_datamgr:revise_doc_from_file(AccountDb, 'onbill', <<"views/periodic_fees.json">>),
             timer:sleep(?PAUSE);
         'modb' ->
-            io:format("(~p/~p) refreshing database '~s'~n",[DbLeft, Total, DbName]),
-            _ = kz_datamgr:revise_doc_from_file(DbName, 'onbill', <<"views/onbills.json">>),
+            Modb = kz_util:format_account_modb(DbName, 'encoded'),
+            io:format("(~p/~p) refreshing database '~s'~n",[DbLeft, Total, Modb]),
+            _ = kz_datamgr:revise_doc_from_file(Modb, 'onbill', <<"views/onbills.json">>),
             timer:sleep(?PAUSE);
         _Else ->
             io:format("(~p/~p) skipping database '~s'~n",[DbLeft, Total, DbName]),
