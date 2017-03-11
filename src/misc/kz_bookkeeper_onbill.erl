@@ -33,7 +33,7 @@ maybe_sync(Items, AccountId) ->
     case onbill_util:is_trial_account(AccountId) of
         'true' ->
             CurrentUsage = onbill_bk_util:current_usage_amount_in_units(AccountId),
-            CurrentBalance = wht_util:current_balance(AccountId),
+            CurrentBalance = onbill_util:current_balance(AccountId),
             lager:info("IAM Trial AccountId: ~p, CurrentBalance:~p, CurrentUsage: ~p",[AccountId, CurrentBalance, CurrentUsage]), 
             case CurrentBalance > CurrentUsage of
                 'true' ->
@@ -108,8 +108,8 @@ sync(Timestamp, ServiceItems, AccountId, NewMax, Items) ->
 
 -spec is_good_standing(ne_binary()) -> boolean().
 is_good_standing(AccountId) ->
-    lager:info("IAM is_good_standing/1: ~p",[wht_util:current_balance(AccountId) > 0]),
-    wht_util:current_balance(AccountId) > 0.
+    lager:info("IAM is_good_standing/1: ~p",[onbill_util:current_balance(AccountId) > 0]),
+    onbill_util:current_balance(AccountId) > 0.
 
 -spec is_good_standing(ne_binary(), ne_binary()) -> boolean().
 is_good_standing(_AccountId, Status) ->

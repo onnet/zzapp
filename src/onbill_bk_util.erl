@@ -245,7 +245,7 @@ discount_newly_added(Qty, ItemJObj) ->
 -spec process_new_billing_period_mrc(ne_binary(), gregorian_seconds()) -> 'ok'|proplist(). 
 process_new_billing_period_mrc(AccountId, Timestamp) ->
     case onbill_bk_util:current_usage_amount_in_units(AccountId)
-        > (wht_util:current_balance(AccountId) + abs(j5_limits:max_postpay(j5_limits:get(AccountId))))
+        > (onbill_util:current_balance(AccountId) + abs(j5_limits:max_postpay(j5_limits:get(AccountId))))
     of
         'true' ->
             lager:debug("not sufficient amount of funds for charging monthly_recurring services"),

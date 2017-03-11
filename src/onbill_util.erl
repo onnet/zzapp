@@ -42,6 +42,8 @@
         ,replicate_account_doc/1
         ,transit_to_full_suscription_state/1
         ,reconcile_and_maybe_sync/1
+        ,current_balance/1
+        ,current_account_dollars/1
         ]).
 
 -include("onbill.hrl").
@@ -346,7 +348,7 @@ is_trial_account(AccountId) ->
 
 -spec maybe_convicted(ne_binary()) -> 'ok'|'delinquent'.
 maybe_convicted(AccountId) ->
-    Balance = wht_util:current_balance(AccountId),
+    Balance = current_balance(AccountId),
     case maybe_allow_postpay(AccountId) of
         'false' when Balance < 0 -> 'true';
         'false' -> 'false';
@@ -444,3 +446,16 @@ reconcile_and_sync(AccountId) ->
     _ = kz_services:reconcile(AccountId),
     kz_service_sync:sync(AccountId).
 
+-spec current_balance(ne_binary()) -> number().
+current_balance(AccountId) ->
+    case wht_util:current_balance(AccountId) of
+        {'ok', Balance} -> Balance;
+        _ -> 0
+    end.
+
+-spec current_account_dollars(ne_binary()) -> number().
+current_account_dollars(AccountId) ->
+    case wht_util:current_account_dollars(AccountId) of
+        {'ok', Balance} -> Balance;
+        _ -> 0
+    end.

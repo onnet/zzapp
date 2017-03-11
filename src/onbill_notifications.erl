@@ -170,7 +170,7 @@ maybe_new_billing_period_approaching(AccountId, AccountJObj) ->
     case onbill_util:days_left_in_period(StartYear, StartMonth, StartDay, Timestamp) of
         DaysLeft when DaysLeft < Days_Before_MRC_Update ->
             case onbill_bk_util:current_usage_amount_in_units(AccountId)
-                > wht_util:current_balance(AccountId)
+                > onbill_util:current_balance(AccountId)
             of
                 'true' ->
                     maybe_send_new_billing_period_approaching_update(AccountId
@@ -248,7 +248,7 @@ services_info_databag(AccountId) ->
                       ,{<<"account_id">>, AccountId}
                       ,{<<"days_left">>, DaysLeft}
                       ,{<<"current_balance">>, currency_sign:add_currency_sign(CurrencySign
-                                                                              ,wht_util:current_account_dollars(AccountId))}
+                                                                              ,onbill_util:current_account_dollars(AccountId))}
                       ,{<<"next_period_date">>, kz_json:from_list(onbill_util:period_tuple(NextPeriodYear
                                                                                           ,NextPeriodMonth
                                                                                           ,NextPeriodDay))}
