@@ -366,6 +366,8 @@ item_cost(ItemJObj, AccountId) ->
 -spec calc_item(kz_json:object(), ne_binary()) -> number().
 calc_item(ItemJObj, AccountId) ->
     try
+        ResellerVars = onbill_util:reseller_vars(AccountId),
+        CurrencySign = kz_json:get_value(<<"currency_sign">>, ResellerVars, <<"£"/utf8>>),
         Quantity = kz_json:get_value(<<"quantity">>, ItemJObj),
         Rate = kz_json:get_value(<<"rate">>, ItemJObj),
         SingleDiscountAmount =
@@ -387,6 +389,10 @@ calc_item(ItemJObj, AccountId) ->
         ,{<<"total_discount">>, TotalDiscount}
         ,{<<"discounted_item_cost">>, DiscountedItemCost}
         ,{<<"item_cost">>, ItemCost}
+        ,{<<"pp_rate">>, currency_sign:add_currency_sign(CurrencySign , Rate)}
+        ,{<<"pp_total_discount">>, currency_sign:add_currency_sign(CurrencySign , TotalDiscount)}
+        ,{<<"pp_item_cost">>, currency_sign:add_currency_sign(CurrencySign , ItemCost)}
+        ,{<<"pp_discounted_item_cost">>, currency_sign:add_currency_sign(CurrencySign , DiscountedItemCost)}
         ]}
     catch
         E:R ->
