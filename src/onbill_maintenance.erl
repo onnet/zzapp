@@ -7,7 +7,7 @@
 
 -include("onbill.hrl").
 
--define(PAUSE, 0.5 * ?MILLISECONDS_IN_SECOND).
+-define(PAUSE, 300).
 
 -spec populate_modb_with_fees(ne_binary(), integer(), integer()) -> ok.
 populate_modb_with_fees(AccountId, Year, Month) ->
