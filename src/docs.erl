@@ -333,6 +333,8 @@ create_proforma_invoice(Amount, AccountId) ->
            ,{<<"total_brutto_rem">>, TotalBruttoRem}
            ,{<<"onbill_doc_type">>, DocType}
            ,{<<"doc_number">>, DocNumber}
+           ,{<<"currency_short">>, kz_json:get_value(<<"currency_short">>, OnbillResellerVars)}
+           ,{<<"currency_sign">>, kz_json:get_value(<<"currency_sign">>, OnbillResellerVars)}
            ,{<<"carrier_vars">>, kz_json:set_values([{Key, kz_json:get_value(Key, MainCarrierDoc)}
                                                      || Key <- kz_json:get_keys(MainCarrierDoc), filter_vars(Key)
                                                     ]
