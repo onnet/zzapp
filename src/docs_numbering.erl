@@ -51,9 +51,8 @@ number_lookup(AccountId, Carrier, DocType, Year, Month) ->
            ],
     case kz_datamgr:get_results(DbName, ?NUMBER_LOOKUP_VIEW, Opts) of
         {'ok', []} -> {'error', 'not_found'};
-        {'ok', Result} ->
-            {_,Numbers} = kz_json:get_values(Result),
-            {'ok', lists:max(Numbers)};
+        {'ok', ResultList} ->
+            {'ok', lists:max([kz_json:get_value(<<"value">>, R) || R <- ResultList])};
         E -> E
     end.
 
