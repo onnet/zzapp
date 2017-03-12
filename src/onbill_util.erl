@@ -36,14 +36,17 @@
         ,maybe_allow_postpay/1
         ,is_trial_account/1
         ,maybe_administratively_convicted/1
+        ,current_service_status/1
         ,maybe_convicted/1
         ,is_service_plan_assigned/1
         ,ensure_service_plan/1
         ,replicate_account_doc/1
         ,transit_to_full_suscription_state/1
         ,reconcile_and_maybe_sync/1
+        ,maybe_save_as_dirty/1
         ,current_balance/1
         ,current_account_dollars/1
+        ,maybe_process_new_billing_period/1
         ]).
 
 -include("onbill.hrl").
@@ -368,6 +371,11 @@ maybe_administratively_convicted(AccountId) ->
             end
     end.
 
+-spec current_service_status(ne_binary()) -> ne_binary().
+current_service_status(AccountId) ->
+    {'ok', ServicesJObj} = kz_services:fetch_services_doc(AccountId,'false'),
+    kzd_services:status(ServicesJObj).
+
 -spec is_service_plan_assigned(ne_binary()) -> boolean().
 is_service_plan_assigned(AccountId) ->
     Services = kz_services:fetch(AccountId),
@@ -446,6 +454,14 @@ reconcile_and_sync(AccountId) ->
     _ = kz_services:reconcile(AccountId),
     kz_service_sync:sync(AccountId).
 
+-spec maybe_save_as_dirty(ne_binary()) -> any().
+maybe_save_as_dirty(AccountId) ->
+    case kz_services:is_dirty(kz_services:fetch(AccountId)) of
+        'true' -> 'ok';
+        'false' ->
+            kz_services:save_as_dirty(AccountId)
+    end.
+
 -spec current_balance(ne_binary()) -> number().
 current_balance(AccountId) ->
     case wht_util:current_balance(AccountId) of
@@ -458,4 +474,12 @@ current_account_dollars(AccountId) ->
     case wht_util:current_account_dollars(AccountId) of
         {'ok', Balance} -> Balance;
         _ -> 0
+    end.
+
+-spec maybe_process_new_billing_period(ne_binary()) -> boolean().
+maybe_process_new_billing_period(AccountId) ->
+    {Year, Month, _} = period_start_date(AccountId, kz_time:current_tstamp()),
+    case kazoo_modb:open_doc(AccountId, ?MRC_DOC, Year, Month) of
+        {'ok', _} -> 'false';
+        {'error', 'not_found'} -> 'true'
     end.

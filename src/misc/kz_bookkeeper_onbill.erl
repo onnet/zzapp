@@ -108,12 +108,13 @@ sync(Timestamp, ServiceItems, AccountId, NewMax, Items) ->
 
 -spec is_good_standing(ne_binary()) -> boolean().
 is_good_standing(AccountId) ->
-    lager:info("IAM is_good_standing/1: ~p",[onbill_util:current_balance(AccountId) > 0]),
-    onbill_util:current_balance(AccountId) > 0.
+    lager:debug("is_good_standing/1 ~p: ~p",[AccountId, not onbill_util:maybe_convicted(AccountId)]),
+    not onbill_util:maybe_convicted(AccountId).
 
 -spec is_good_standing(ne_binary(), ne_binary()) -> boolean().
 is_good_standing(_AccountId, Status) ->
-    lager:info("IAM is_good_standing/2: ~p, Status Arg: ~p",[Status =:= kzd_services:status_good(), Status]),
+    lager:debug("is_good_standing/2 _AccountId ~p: ~p, Status Arg: ~p"
+               ,[_AccountId, Status =:= kzd_services:status_good(), Status]),
     Status =:= kzd_services:status_good().
 
 -spec transactions(ne_binary(), gregorian_seconds(), gregorian_seconds()) ->

@@ -117,10 +117,22 @@ process_account(AccountId, AccountJObj) ->
     of
         'true' ->
             lager:debug("crawler - saving account ~p (~p) as dirty", [AccountId, kz_account:name(AccountJObj)]),
-            kz_services:save_as_dirty(AccountId),
-            onbill_notifications:maybe_send_account_updates(AccountId, AccountJObj),
+            case onbill_util:current_service_status(AccountId) of
+                <<"delinquent">> ->
+                    ProcessNewPeriod = onbill_util:aybe_process_new_billing_period(AccountId),
+                    maybe_remove_subscriptions(AccountId, ProcessNewPeriod);
+                _ ->
+                    onbill_util:maybe_save_as_dirty(AccountId),
+                    onbill_notifications:maybe_send_account_updates(AccountId, AccountJObj)
+            end,
             {'ok', 'account_processed'};
         'false' ->
             lager:debug("crawler - no need to process account ~p (~p)", [AccountId, kz_account:name(AccountJObj)]),
             {'ok', 'no_need_to_process'}
     end.
+
+-spec maybe_remove_subscriptions(ne_binary(), boolean()) -> any().
+maybe_remove_subscriptions(AccountId, 'true') ->
+    onbill_bk_util:maybe_cancel_trunk_subscriptions(AccountId);
+maybe_remove_subscriptions(_, 'false') ->
+    'ok'.

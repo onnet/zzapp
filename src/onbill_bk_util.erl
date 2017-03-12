@@ -9,6 +9,7 @@
         ,save_dailyfee_doc/5
         ,charge_newly_added/4
         ,process_new_billing_period_mrc/2
+        ,maybe_cancel_trunk_subscriptions/1
         ,items_amount/3
         ,calc_item/2
         ,current_usage_amount/1
@@ -260,6 +261,8 @@ process_new_billing_period_mrc(AccountId, Timestamp) ->
             {'ok', 'mrc_processed'}
     end.
 
+-spec maybe_cancel_trunk_subscriptions(ne_binary()) -> {'not_enough_funds', 'no_trunks_set'}
+                                                       |{'not_enough_funds', 'trunks_canceled'}. 
 maybe_cancel_trunk_subscriptions(AccountId) ->
     AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
     case kz_datamgr:open_doc(AccountDb, <<"limits">>) of
