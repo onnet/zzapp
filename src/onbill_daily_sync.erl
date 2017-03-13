@@ -117,7 +117,7 @@ process_account(AccountId, AccountJObj) ->
             lager:debug("crawler - saving account ~p (~p) as dirty", [AccountId, kz_account:name(AccountJObj)]),
             case onbill_util:current_service_status(AccountId) of
                 <<"delinquent">> ->
-                    ProcessNewPeriod = onbill_util:aybe_process_new_billing_period(AccountId),
+                    ProcessNewPeriod = onbill_util:maybe_process_new_billing_period(AccountId),
                     maybe_remove_subscriptions(AccountId, ProcessNewPeriod);
                 _ ->
                     onbill_util:maybe_save_as_dirty(AccountId),
