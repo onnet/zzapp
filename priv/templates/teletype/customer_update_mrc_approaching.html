@@ -2,11 +2,8 @@
   <body>
     <h2>Dear {{ user.first_name }} {{ user.last_name }} at "{{databag.account.name}}"</h2>
     <p></p>
-    <p>Please be informed that new billing period starts in {{ databag.services.days_left }} {% if databag.services.days_left == 1 %}day{% else %}days{% endif %} ({{ databag.services.next_period_date.day }} {{ databag.services.next_period_date.month_short }} {{ databag.services.next_period_date.year }}).</p>
-    <p>In order services to be continued without interruption,
-       <br />
-       your account should contain enough funds for monthly recurring fees charges.
-    </p>
+    <p>Please be informed that your new billing period starts in {{ databag.services.days_left }} {% if databag.services.days_left == 1 %}day{% else %}days{% endif %} ({{ databag.services.next_period_date.day }} {{ databag.services.next_period_date.month_short }} {{ databag.services.next_period_date.year }}).</p>
+    <p>To ensure continuation of services without interruption, your account should contain enough funds to cover monthly recurring charges.</p>
     <p></p>
     <p>Current services list:</p>
     <table border="1" cellspacing="0" cellpadding="10">
@@ -36,7 +33,7 @@
       </tbody>
     </table>
     <br />
-    <p>Current account balance: <strong>{{ databag.services.current_balance }}</strong></p>
+    <p>Currently, your account balance is: <strong>{{ databag.services.current_balance }}</strong></p>
     <p>Kind regards,</p>
     <p>{{ databag.reseller.name }}</p>
   </body>

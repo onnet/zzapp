@@ -2,8 +2,8 @@
   <body>
     <h2>Dear {{ user.first_name }} {{ user.last_name }} at "{{databag.account.name}}"</h2>
     <p></p>
-    <p>Please be informed that service was suspended due to insufficient funds.</p>
-    <p>You should top up your account to reactivate service.</p>
+    <p>Please be informed that your service has been suspended due to insufficient funds.</p>
+    <p>You should top up your account to reactivate the service.</p>
     <p></p>
     <p>Current services list:</p>
     <table border="1" cellspacing="0" cellpadding="10">
@@ -33,7 +33,7 @@
       </tbody>
     </table>
     <br />
-    <p>Current account balance: <strong>{{ databag.services.current_balance }}</strong></p>
+    <p>Currently, your account balance is: <strong>{{ databag.services.current_balance }}</strong></p>
     <p>Kind regards,</p>
     <p>{{ databag.reseller.name }}</p>
   </body>

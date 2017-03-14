@@ -2,7 +2,7 @@
   <body>
     <h2>Dear {{ user.first_name }} {{ user.last_name }} at "{{databag.account.name}}"</h2>
     <p></p>
-    <p>Please be informed that some services were canceled due to insufficient funds.</p>
+    <p>Please be informed that some services have been cancelled due to insufficient funds.</p>
     {% if databag.limits.twoway_trunks and databag.limits.twoway_trunks > 0 %}
       <p>Twoway_trunks: {{databag.limits.twoway_trunks}}</p>
     {% endif %}
@@ -12,7 +12,7 @@
     {% if databag.limits.outbound_trunks and databag.limits.outbound_trunks > 0 %}
       <p>Outbound_trunks: {{databag.limits.outbound_trunks}}</p>
     {% endif %}
-    <p>You should top up your account and purchase services again in case needed.</p>
+    <p>You should top up your account and purchase the services again, if they are needed.</p>
     <p></p>
     <p>Current services list:</p>
     <table border="1" cellspacing="0" cellpadding="10">
@@ -42,7 +42,7 @@
       </tbody>
     </table>
     <br />
-    <p>Current account balance: <strong>{{ databag.services.current_balance }}</strong></p>
+    <p>Currently, your account balance is: <strong>{{ databag.services.current_balance }}</strong></p>
     <p>Kind regards,</p>
     <p>{{ databag.reseller.name }}</p>
   </body>

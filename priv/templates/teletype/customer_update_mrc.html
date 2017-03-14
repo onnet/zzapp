@@ -2,8 +2,8 @@
   <body>
     <h2>Dear {{ user.first_name }} {{ user.last_name }} at "{{databag.account.name}}"</h2>
     <p></p>
-    <p>Please be informed that new billing period started.</p>
-    <p>Monthly recurring fees were successfully charged.</p>
+    <p>Please be informed that your new billing period has started.</p>
+    <p>Monthly recurring fees have been successfully charged.</p>
     <p></p>
     <p>Current services list:</p>
     <table border="1" cellspacing="0" cellpadding="10">
@@ -33,7 +33,7 @@
       </tbody>
     </table>
     <br />
-    <p>Current account balance: <strong>{{ databag.services.current_balance }}</strong></p>
+    <p>Currently, your account balance is: <strong>{{ databag.services.current_balance }}</strong></p>
     <p>Kind regards,</p>
     <p>{{ databag.reseller.name }}</p>
   </body>
