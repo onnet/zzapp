@@ -1,8 +1,17 @@
 Dear {{ user.first_name }} {{ user.last_name }} at "{{databag.account.name}}"
 
-Please be informed that service was suspended due to insufficient funds.
-You should top up your account to reactivate service.
+Please be informed that your service has been suspended due to insufficient funds.
+You should top up your account to reactivate the service.
 
-Current account balance: <strong>{{ databag.services.current_balance }}
+Services list:
+{% for service in databag.services.services_list %}
+   <p>{{ service.name }} - {{ service.quantity }}</p>
+{% endfor %}
+
+Total services: {{ databag.services.total_amount }}
+
+Currently, your account balance is: <strong>{{ databag.services.current_balance }}
+
+
 Kind regards,
 {{ databag.reseller.name }}

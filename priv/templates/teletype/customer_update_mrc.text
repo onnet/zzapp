@@ -1,15 +1,17 @@
 Dear {{ user.first_name }} {{ user.last_name }} at "{{account.name}}"
 
-Please be informed that new billing period started.
-
-Monthly recurring fees were successfully charged.<
-
-Total services: {{ databag.services.total_amount }}
+Please be informed that your new billing period has started.
+Monthly recurring fees have been successfully charged.
 
 Services list:
 {% for service in databag.services.services_list %}
    <p>{{ service.name }} - {{ service.quantity }}</p>
 {% endfor %}
+
+Total services: {{ databag.services.total_amount }}
+
+Currently, your account balance is: {{ databag.services.current_balance }}
+
 
 Kind regards.
 {{ databag.reseller.name }}

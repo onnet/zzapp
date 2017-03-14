@@ -1,13 +1,17 @@
 Dear {{ user.first_name }} {{ user.last_name }} at "{{account.name}}"
 
-Account name: {{databag.account.name}}.
-
-Total services: {{ databag.services.total_amount }}
+Please be informed that your new billing period starts in {{ databag.services.days_left }} {% if databag.services.days_left == 1 %}day{% else %}days{% endif %} ({{ databag.services.next_period_date.day }} {{ databag.services.next_period_date.month_short }} {{ databag.services.next_period_date.year }}
+To ensure continuation of services without interruption, your account should contain enough funds to cover monthly recurring charges.
 
 Services list:
 {% for service in databag.services.services_list %}
    <p>{{ service.name }} - {{ service.quantity }}</p>
 {% endfor %}
+
+Total services: {{ databag.services.total_amount }}
+
+Currently, your account balance is: {{ databag.services.current_balance }}
+
 
 Kind regards.
 {{ databag.reseller.name }}
