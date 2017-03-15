@@ -10,7 +10,7 @@ Services list:
 
 Total services: {{ databag.services.total_amount }}
 
-Currently, your account balance is: <strong>{{ databag.services.current_balance }}
+Currently, your account balance is: {{ databag.services.current_balance }}
 
 
 Kind regards,
