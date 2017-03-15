@@ -44,9 +44,13 @@ maybe_sync(Items, AccountId) ->
                             'retry'
                     end;
                 'false' ->
-                  %  initial charge affected if dily usage applied to trial, check needed
-                  %  onbill_bk_util:max_daily_usage_exceeded(Items, AccountId, kz_time:current_tstamp()),
-                    'ok'
+                    case onbill_util:trial_has_expired(AccountId) of
+                        'true'->
+                            onbill_bk_util:maybe_cancel_trunk_subscriptions(AccountId),
+                            'delinquent';
+                        'false' ->
+                            'ok'
+                    end
             end;
         'false' ->
             maybe_billing_period_starts(Items, AccountId)

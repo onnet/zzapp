@@ -34,6 +34,7 @@
         ,next_period_start_date/3
         ,get_account_created_date/1
         ,maybe_allow_postpay/1
+        ,trial_has_expired/1
         ,is_trial_account/1
         ,maybe_administratively_convicted/1
         ,current_service_status/1
@@ -340,6 +341,13 @@ maybe_allow_postpay(AccountId) ->
         'false' -> 'false';
         'true' -> {'true', j5_limits:max_postpay(Limits)}
     end.
+
+-spec trial_has_expired(ne_binary() | kz_account:doc()) -> boolean().
+trial_has_expired(AccountId) when is_binary(AccountId) ->
+    {'ok', AccountJObj} = kz_account:fetch(AccountId),
+    trial_has_expired(AccountJObj);
+trial_has_expired(AccountJObj) ->
+    kz_account:trial_has_expired(AccountJObj).
 
 -spec is_trial_account(ne_binary() | kz_account:doc()) -> boolean().
 is_trial_account(AccountId) when is_binary(AccountId) ->
