@@ -156,10 +156,15 @@ build_customer_update_payload(AccountId, TemplateId, DataBag) ->
 
 -spec maybe_send_account_updates(ne_binary(), kz_account:doc()) -> 'ok'.
 maybe_send_account_updates(AccountId, AccountJObj) ->
-    case onbill_util:maybe_allow_postpay(AccountId) of
+    case onbill_util:is_trial_account(AccountJObj) of
+        'true' ->
+            'ok';
         'false' ->
-            maybe_new_billing_period_approaching(AccountId, AccountJObj);
-        _ -> 'ok'
+            case onbill_util:maybe_allow_postpay(AccountId) of
+                'false' ->
+                    maybe_new_billing_period_approaching(AccountId, AccountJObj);
+                _ -> 'ok'
+            end
     end.
 
 -spec maybe_new_billing_period_approaching(ne_binary(), kz_account:doc()) -> 'ok'.

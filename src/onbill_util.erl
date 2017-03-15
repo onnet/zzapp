@@ -341,10 +341,12 @@ maybe_allow_postpay(AccountId) ->
         'true' -> {'true', j5_limits:max_postpay(Limits)}
     end.
 
--spec is_trial_account(ne_binary()) -> boolean().
-is_trial_account(AccountId) ->
-    {'ok', JObj} = kz_account:fetch(AccountId),
-    case kz_account:trial_expiration(JObj) of
+-spec is_trial_account(ne_binary() | kz_account:doc()) -> boolean().
+is_trial_account(AccountId) when is_binary(AccountId) ->
+    {'ok', AccountJObj} = kz_account:fetch(AccountId),
+    is_trial_account(AccountJObj);
+is_trial_account(AccountJObj) ->
+    case kz_account:trial_expiration(AccountJObj) of
         'undefined' -> 'false';
         _ -> 'true'
     end.
