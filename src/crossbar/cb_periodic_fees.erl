@@ -21,7 +21,7 @@ init() ->
 allowed_methods() ->
     [?HTTP_GET, ?HTTP_PUT].
 allowed_methods(_) ->
-    [?HTTP_GET, ?HTTP_POST].
+    [?HTTP_GET, ?HTTP_POST, ?HTTP_DELETE].
 
 -spec resource_exists() -> 'true'.
 -spec resource_exists(path_token()) -> 'true'.
@@ -60,7 +60,9 @@ validate_periodic_fees(Context, ?HTTP_PUT) ->
 validate_periodic_fees(Context, Id, ?HTTP_GET) ->
     crossbar_doc:load(Id, Context, [{'expected_type', <<"periodic_fee">>}]);
 validate_periodic_fees(Context, Id, ?HTTP_POST) ->
-    save_periodic_fees(Context, Id).
+    save_periodic_fees(Context, Id);
+validate_periodic_fees(Context, Id, ?HTTP_DELETE) ->
+    mark_periodic_service_deleted(Context, Id).
 
 -spec save_periodic_fees(cb_context:context()) -> cb_context:context().
 -spec save_periodic_fees(cb_context:context(), ne_binary()) -> cb_context:context().
@@ -91,3 +93,15 @@ maybe_valid_relationship(Context) ->
     AccountId = cb_context:account_id(Context),
     AuthAccountId = cb_context:auth_account_id(Context),
     onbill_util:validate_relationship(AccountId, AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId).
+
+-spec mark_periodic_service_deleted(cb_context:context(), ne_binary()) -> cb_context:context().
+mark_periodic_service_deleted(Context0, Id) ->
+    Context = crossbar_doc:load(Id, Context0, ?TYPE_CHECK_OPTION(<<"periodic_fee">>)),
+    case cb_context:resp_status(Context) of
+        'success' ->
+            NewDoc = kz_json:set_value(<<"deleted_by_user">>, 'true', cb_context:doc(Context)),
+            crossbar_doc:save(cb_context:set_doc(Context, NewDoc), ?TYPE_CHECK_OPTION(<<"periodic_fee">>));
+        _Status ->
+            Context
+   end.
+
