@@ -195,11 +195,13 @@ charge_transactions(BillingId, [Transaction|Transactions], FailedTransactionsAcc
     charge_transactions(BillingId, Transactions, Result ++ FailedTransactionsAcc).
 
 handle_charged_transaction(AccountId, Transaction) ->
+    {Year, Month, _} = erlang:date(),
+    DocId = ?MATCH_MODB_PREFIX(kz_term:to_binary(Year), kz_time:pad_month(Month), kz_binary:rand_hex(16)),
   lager:info("IAM handle_charged_transaction/2 AccountId: ~p, Transaction: ~p",[AccountId, Transaction]),
     %%
     %% already_charged should be enhanced to check not only braintree transactions existance but transactions saved in Couch also
     %%
-    case kazoo_modb:save_doc(AccountId, Transaction) of
+    case kazoo_modb:save_doc(AccountId, kz_json:set_value(<<"_id">>, DocId, Transaction)) of
         {'ok', _} -> [];
         _ -> [Transaction]
     end.
