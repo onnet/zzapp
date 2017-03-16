@@ -1,0 +1,7 @@
+Dear {{ user.first_name }} {{ user.last_name }} at "{{databag.account.name}}"
+
+Please be informed that your trial account has been expired.
+Please contact us should you need to reactivate your account.
+
+Kind regards,
+{{ databag.reseller.name }}
