@@ -55,6 +55,7 @@
 -define(MRC_APPROACHING_TEMPLATE, <<"customer_update_mrc_approaching">>).
 -define(LIMITS_SET_TO_ZERO_TEMPLATE, <<"customer_update_limits_set_to_zero">>).
 -define(SERVICE_SUSPENDED_TEMPLATE, <<"customer_update_service_suspended">>).
+-define(TRIAL_HAS_EXPIRED_TEMPLATE, <<"customer_update_trial_has_expired">>).
 
 -define(ONBILL_HRL, 'true').
 -endif.

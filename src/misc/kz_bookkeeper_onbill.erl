@@ -46,6 +46,7 @@ maybe_sync(Items, AccountId) ->
                 'false' ->
                     case onbill_util:trial_has_expired(AccountId) of
                         'true'->
+                            onbill_notifications:maybe_send_trial_has_expired_update(AccountId),
                             onbill_bk_util:maybe_cancel_trunk_subscriptions(AccountId),
                             'delinquent';
                         'false' ->

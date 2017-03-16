@@ -5,12 +5,14 @@
         ,maybe_send_account_updates/2
         ,customer_update_databag/1
         ,maybe_send_service_suspend_update/1
+        ,maybe_send_trial_has_expired_update/1
         ]).
 
 -include("onbill.hrl").
 
 -define(MRC_APPROACHING_KEY, <<"mrc_approaching">>).
 -define(SERVICE_SUSPEND_KEY, <<"service_suspend">>).
+-define(TRIAL_HAS_EXPIRED_KEY, <<"trial_has_expired">>).
 -define(ONBILL_NOTIFICATION_ENABLED, <<"onbill_notification_enabled">>).
 -define(KEY_SENT(Key), [<<"notifications">>, Key, <<"sent_mrc_approaching">>]).
 -define(KEY_ENABLED(Key), [<<"notifications">>, Key, <<"enabled">>]).
@@ -71,7 +73,8 @@ init() ->
     mrc_init(),
     mrc_approaching_init(),
     service_suspended_init(),
-    limits_set_to_zero_init().
+    limits_set_to_zero_init(),
+    trial_has_expired_init().
 
 -spec mrc_init() -> 'ok'.
 mrc_init() ->
@@ -118,6 +121,19 @@ service_suspended_init() ->
                                                        ,{'subject', <<"Service suspended for {{databag.account.name}}">> }
                                                        ,{'category', ?TEMPLATE_CATEGORY}
                                                        ,{'friendly_name', <<"Service suspended">>}
+                                                       ,{'to', ?TEMPLATE_TO}
+                                                       ,{'from', ?TEMPLATE_FROM}
+                                                       ,{'cc', ?TEMPLATE_CC}
+                                                       ,{'bcc', ?TEMPLATE_BCC}
+                                                       ,{'reply_to', ?TEMPLATE_REPLY_TO}
+                                                       ]).
+
+-spec trial_has_expired_init() -> 'ok'.
+trial_has_expired_init() ->
+    teletype_templates:init(?TRIAL_HAS_EXPIRED_TEMPLATE, [{'macros', ?TEMPLATE_MACROS}
+                                                       ,{'subject', <<"Trial period has expired for {{databag.account.name}}">> }
+                                                       ,{'category', ?TEMPLATE_CATEGORY}
+                                                       ,{'friendly_name', <<"Trial has expired">>}
                                                        ,{'to', ?TEMPLATE_TO}
                                                        ,{'from', ?TEMPLATE_FROM}
                                                        ,{'cc', ?TEMPLATE_CC}
@@ -314,4 +330,15 @@ maybe_send_service_suspend_update(AccountId) ->
         _Else ->
             'ok' = send_account_update(AccountId, ?SERVICE_SUSPENDED_TEMPLATE, customer_update_databag(AccountId)),
             update_account_key_sent(?SERVICE_SUSPEND_KEY, AccountJObj)
+    end.
+
+-spec maybe_send_trial_has_expired_update(ne_binary()) -> any().
+maybe_send_trial_has_expired_update(AccountId) ->
+    {'ok', AccountJObj} = kz_account:fetch(AccountId),
+    case key_tstamp(?TRIAL_HAS_EXPIRED_KEY, AccountJObj) of
+        ServiceSuspendSent when is_number(ServiceSuspendSent) ->
+            lager:debug("trial has expired update already sent for expired trial account: ~p", [AccountId]);
+        _Else ->
+            'ok' = send_account_update(AccountId, ?TRIAL_HAS_EXPIRED_TEMPLATE, customer_update_databag(AccountId)),
+            update_account_key_sent(?TRIAL_HAS_EXPIRED_KEY, AccountJObj)
     end.
