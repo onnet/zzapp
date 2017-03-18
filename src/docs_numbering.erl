@@ -18,7 +18,7 @@
 get_binary_number(AccountId, Carrier, DocType, Year, Month) ->
     case get_number(AccountId, Carrier, DocType, Year, Month) of
         {'ok', Number} -> ?TO_BIN(Number);
-        _E -> <<"ERROR WRONG NUMBER">>
+        {_E1, E2} -> <<"INVALID_", (kz_term:to_binary(DocType))/binary,":_", (kz_term:to_binary(E2))/binary>>
     end.
 
 -spec get_new_binary_number(ne_binary(), ne_binary(), ne_binary()) -> ne_binary().
@@ -26,7 +26,7 @@ get_new_binary_number(AccountId, Carrier, DocType) ->
     {Year, Month, _} = erlang:date(),
     case get_new_number(AccountId, Carrier, DocType, Year, Month) of
         {'ok', Number} -> ?TO_BIN(Number);
-        _E -> <<"ERROR WRONG NUMBER">>
+        {_E1, E2} -> <<"INVALID_", (kz_term:to_binary(DocType))/binary,":_", (kz_term:to_binary(E2))/binary>>
     end.
 
 get_number(AccountId, Carrier, DocType, Year, Month) ->
