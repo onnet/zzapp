@@ -9,12 +9,11 @@
 -include("onbill.hrl").
 
 -spec generate_docs(ne_binary(), kz_year(), kz_month()) -> ok.
-generate_docs(AccountId, PeriodYear, PeriodMonth) ->
-    generate_docs(AccountId, PeriodYear, PeriodMonth, 1).
+generate_docs(AccountId, Year, Month) ->
+    generate_docs(AccountId, Year, Month, 1).
 
 -spec generate_docs(ne_binary(), kz_year(), kz_month(), kz_day()) -> ok.
-generate_docs(AccountId, PeriodStartYear, PeriodStartMonth, PeriodStartDay) ->
-    {Year, Month, Day} = onbill_util:adjust_period_first_day(PeriodStartYear, PeriodStartMonth, PeriodStartDay),
+generate_docs(AccountId, Year, Month, Day) ->
     Carriers = onbill_util:account_carriers_list(AccountId),
     _ = [generate_docs(AccountId, Year, Month, Day, Carrier) || Carrier <- Carriers],
     maybe_aggregate_invoice(AccountId, Year, Month, Day, Carriers).
@@ -39,6 +38,8 @@ generate_docs(_, _, _, _, Carrier, _, {TotalNetto, TotalVAT, TotalBrutto})
     lager:debug("Skipping generate_docs for ~p because of zero usage: TotalNetto: ~p, TotalVAT: ~p, TotalBrutto: ~p"
                ,[Carrier, TotalNetto, TotalVAT, TotalBrutto]);
 generate_docs(AccountId, Year, Month, Day, Carrier, VatUpdatedFeesList, {TotalNetto, TotalVAT, TotalBrutto}) ->
+    {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
+    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
     CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(TotalBrutto),
@@ -58,11 +59,11 @@ generate_docs(AccountId, Year, Month, Day, Carrier, VatUpdatedFeesList, {TotalNe
            ,{<<"currency_sign">>, kz_json:get_value(<<"currency_sign">>, OnbillResellerVars)}
            ,{<<"agrm_num">>, kz_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccountOnbillDoc)}
            ,{<<"agrm_date">>, kz_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccountOnbillDoc)}
-           ,{<<"doc_date">>, ?END_DATE(Month, Year)}
-           ,{<<"start_date">>, ?START_DATE(Month, Year)}
-           ,{<<"end_date">>, ?END_DATE(Month, Year)}
-           ,{<<"period_start">>, onbill_util:period_start_tuple(Year, Month, Day)}
-           ,{<<"period_end">>, onbill_util:period_end_tuple_by_start(Year, Month, Day)}
+           ,{<<"start_date">>, ?DATE_STRING(SYear, SMonth, SDay)}
+           ,{<<"end_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
+           ,{<<"doc_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
+           ,{<<"period_start">>, onbill_util:period_tuple(SYear, SMonth, SDay)}
+           ,{<<"period_end">>, onbill_util:period_tuple(EYear, EMonth, EDay)}
            ,{<<"carrier_vars">>, kz_json:set_values([{Key, kz_json:get_value(Key, CarrierDoc)}
                                                      || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)
                                                     ]
@@ -236,6 +237,8 @@ maybe_aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
 
 aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
     DocType = <<"aggregated_invoice">>,
+    {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
+    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
     MainCarrierDoc = onbill_util:carrier_doc(MainCarrier, AccountId),
@@ -248,9 +251,11 @@ aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(TotalBrutto),
     {TotalVatDiv, TotalVatRem} = total_to_words(TotalVAT),
     Vars = [{<<"aggregated_vars">>, AggregatedVars}
-           ,{<<"doc_date">>, ?END_DATE(Month, Year)}
-           ,{<<"start_date">>, ?START_DATE(Month, Year)}
-           ,{<<"end_date">>, ?END_DATE(Month, Year)}
+           ,{<<"start_date">>, ?DATE_STRING(SYear, SMonth, SDay)}
+           ,{<<"end_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
+           ,{<<"doc_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
+           ,{<<"period_start">>, onbill_util:period_tuple(SYear, SMonth, SDay)}
+           ,{<<"period_end">>, onbill_util:period_tuple(EYear, EMonth, EDay)}
            ,{<<"total_netto">>, onbill_util:price_round(TotalNetto)}
            ,{<<"total_vat">>, onbill_util:price_round(TotalVAT)}
            ,{<<"total_brutto">>, onbill_util:price_round(TotalBrutto)}
@@ -280,27 +285,32 @@ aggregate_data(AccountId, Year, Month, Day, Carrier, {AggrVars, TotalNetto, Tota
     end.
     
 -spec per_minute_reports(ne_binary(), integer(), integer()) -> 'ok'.
+-spec per_minute_reports(ne_binary(), integer(), integer(), integer()) -> 'ok'.
 per_minute_reports(AccountId, Year, Month) ->
+    per_minute_reports(AccountId, Year, Month, 1).
+
+per_minute_reports(AccountId, Year, Month, Day) ->
     Carriers = onbill_util:account_carriers_list(AccountId),
-    _ = [maybe_per_minute_report(AccountId, Year, Month, Carrier) || Carrier <- Carriers].
+    _ = [maybe_per_minute_report(AccountId, Year, Month, Day, Carrier) || Carrier <- Carriers].
 
-maybe_per_minute_report(AccountId, Year, Month, Carrier) ->
+maybe_per_minute_report(AccountId, Year, Month, Day, Carrier) ->
+    {CallsJObjs, CallsTotalSec, CallsTotalSumm} = fees:per_minute_calls(AccountId, Year, Month, Day, Carrier),
+    per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSec, CallsTotalSumm).
 
-%% Needed day to introduce period instead of calendar month
-
-    {CallsJObjs, CallsTotalSec, CallsTotalSumm} = fees:per_minute_calls(AccountId, Year, Month, 1, Carrier),
-    per_minute_report(AccountId, Year, Month, Carrier, CallsJObjs, CallsTotalSec, CallsTotalSumm).
-
-per_minute_report(AccountId, Year, Month, Carrier, CallsJObjs, CallsTotalSec, CallsTotalSumm) when CallsTotalSumm > 0.0 ->
+per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSec, CallsTotalSumm) when CallsTotalSumm > 0.0 ->
     DocType = <<"calls_report">>,
+    {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
+    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
     {CallsJObjs, CallsTotalSec, CallsTotalSumm} = fees:per_minute_calls(AccountId, Year, Month, 1, Carrier),
     Vars = [{<<"per_minute_calls">>, CallsJObjs}
-           ,{<<"doc_date">>, ?END_DATE(Month, Year)}
-           ,{<<"start_date">>, ?START_DATE(Month, Year)}
-           ,{<<"end_date">>, ?END_DATE(Month, Year)}
+           ,{<<"start_date">>, ?DATE_STRING(SYear, SMonth, SDay)}
+           ,{<<"end_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
+           ,{<<"doc_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
+           ,{<<"period_start">>, onbill_util:period_tuple(SYear, SMonth, SDay)}
+           ,{<<"period_end">>, onbill_util:period_tuple(EYear, EMonth, EDay)}
            ,{<<"agrm_num">>, kz_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccountOnbillDoc)}
            ,{<<"agrm_date">>, kz_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccountOnbillDoc)}
            ,{<<"onbill_doc_type">>, DocType}
@@ -309,7 +319,7 @@ per_minute_report(AccountId, Year, Month, Carrier, CallsJObjs, CallsTotalSec, Ca
            ++ [{Key, kz_json:get_value(Key, CarrierDoc)} || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
     save_pdf(Vars, DocType, Carrier, AccountId, Year, Month);
-per_minute_report(_, _, _, _, _, _, _) ->
+per_minute_report(_, _, _, _, _, _, _, _) ->
     'ok'.
 
 -spec create_proforma_invoice(number(), ne_binary()) -> any().

@@ -43,13 +43,8 @@
          ,TemplateId/binary>>).
 -define(HTML_TO_PDF, <<"/usr/local/bin/wkhtmltopdf --quiet">>).
 -define(DEFAULT_REGEX, <<"^\\d*$">>).
--define(START_DATE(Month, Year), <<"01.",(kz_time:pad_month(Month))/binary,".",(?TO_BIN(Year))/binary>>).
--define(END_DATE(Month, Year)
-       ,<<(?TO_BIN(calendar:last_day_of_the_month(Year, Month)))/binary
-         ,"."
-         ,(kz_time:pad_month(Month))/binary
-         ,"."
-         ,(?TO_BIN(Year))/binary>>).
+-define(DATE_STRING(Year, Month, Day)
+       ,<<(kz_time:pad_day(Day))/binary, ".",(kz_time:pad_month(Month))/binary,".",(?TO_BIN(Year))/binary>>).
 -define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
 -define(MRC_TEMPLATE, <<"customer_update_mrc">>).
 -define(MRC_APPROACHING_TEMPLATE, <<"customer_update_mrc_approaching">>).
