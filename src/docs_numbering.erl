@@ -16,6 +16,30 @@
 
 -spec get_binary_number(ne_binary(), ne_binary(), ne_binary(), integer(), integer()) -> ne_binary().
 get_binary_number(AccountId, Carrier, DocType, Year, Month) ->
+    {YNow, MNow, _} = erlang:date(),
+    TReq = ?TO_INT(Year) * 100 + ?TO_INT(Month),
+    TNow = ?TO_INT(YNow) * 100 + ?TO_INT(MNow),
+    get_binary_number(AccountId, Carrier, DocType, Year, Month, TReq, TNow).
+
+-spec get_binary_number(ne_binary(), ne_binary(), ne_binary(), integer(), integer(), integer(), integer()) -> ne_binary().
+get_binary_number(AccountId, Carrier, DocType, Year, Month, TReq, TNow) when TReq > TNow ->
+    Reason = <<"INVALID_", (kz_term:to_binary(DocType))/binary,":_FUTURE_PERIOD">>,
+    alert_doc_numbering_problem(AccountId, Carrier, DocType, Year, Month, Reason),
+    Reason;
+get_binary_number(AccountId, Carrier, DocType, Year, Month, TReq, TReq) ->
+    {_, _, DNow} = erlang:date(),
+    case DNow > onbill_util:billing_day(AccountId) of
+        'true' ->
+            binary_number(AccountId, Carrier, DocType, Year, Month);
+        'false' ->
+            Reason = <<"INVALID_", (kz_term:to_binary(DocType))/binary,":_PERIOD_NOT_CLOSED_YET">>,
+            alert_doc_numbering_problem(AccountId, Carrier, DocType, Year, Month, Reason),
+            Reason
+    end;
+get_binary_number(AccountId, Carrier, DocType, Year, Month, _, _) ->
+    binary_number(AccountId, Carrier, DocType, Year, Month).
+
+binary_number(AccountId, Carrier, DocType, Year, Month) ->
     case get_number(AccountId, Carrier, DocType, Year, Month) of
         {'ok', Number} -> ?TO_BIN(Number);
         {_E1, E2} -> <<"INVALID_", (kz_term:to_binary(DocType))/binary,":_", (kz_term:to_binary(E2))/binary>>
@@ -149,3 +173,20 @@ maybe_continious_numbering(AccountId, Carrier, DocType, Year) ->
         'false' ->
             {'ok', 0}
     end.
+
+alert_doc_numbering_problem(AccountId, Carrier, DocType, Year, Month, Reason) ->
+    {'ok', AccountJObj} = kz_account:fetch(AccountId),
+    Subj = io_lib:format("Doc numbering problem! Account: ~s", [kz_account:name(AccountJObj)]),
+    Msg = io_lib:format("Reason: ~s
+                         <br />
+                         <br />
+                         AccountId: ~s
+                         <br />
+                         Carrier: ~s
+                         <br />
+                         DocType: ~s
+                         <br />
+                         Year: ~p
+                         Month: ~p"
+                       ,[Reason, AccountId, Carrier, DocType, Year, Month]),
+    kz_notify:system_alert(Subj, Msg, []).

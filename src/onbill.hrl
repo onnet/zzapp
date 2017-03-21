@@ -56,6 +56,10 @@
 -define(LIMITS_SET_TO_ZERO_TEMPLATE, <<"customer_update_limits_set_to_zero">>).
 -define(SERVICE_SUSPENDED_TEMPLATE, <<"customer_update_service_suspended">>).
 -define(TRIAL_HAS_EXPIRED_TEMPLATE, <<"customer_update_trial_has_expired">>).
+-define(DAILY_FEE_DOC_NAME(Month, Year, Day)
+       ,<<(?TO_BIN(Year))/binary, (kz_time:pad_month(Month))/binary, (kz_time:pad_day(Day))/binary,  "-dailyfee">>).
+-define(BEGIN_DAY_TS(Month, Year, Day), calendar:datetime_to_gregorian_seconds({{Year, Month, Day},{0,0,0}})).
+-define(END_DAY_TS(Month, Year, Day), calendar:datetime_to_gregorian_seconds({{Year, Month, Day},{23,59,590}})).
 
 -define(ONBILL_HRL, 'true').
 -endif.

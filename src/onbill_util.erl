@@ -32,7 +32,9 @@
         ,period_start_date/2
         ,period_start_date/4
         ,next_period_start_date/3
+        ,period_end_date/4
         ,get_account_created_date/1
+        ,billing_day/1
         ,maybe_allow_postpay/1
         ,trial_has_expired/1
         ,is_trial_account/1
@@ -98,7 +100,7 @@ carrier_doc(Carrier, AccountId) ->
     {'ok', CarrierDoc} =  kz_datamgr:open_doc(DbName, ?CARRIER_DOC(Carrier)),
     CarrierDoc.
 
--spec account_vars(ne_binary()) -> list().
+-spec account_vars(ne_binary()) -> kz_json:object().
 account_vars(AccountId) ->
     DbName = kz_util:format_account_id(AccountId,'encoded'),
     case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
@@ -109,7 +111,7 @@ account_vars(AccountId) ->
             kz_json:new()
     end.
 
--spec reseller_vars(ne_binary()) -> proplist().
+-spec reseller_vars(ne_binary()) -> kz_json:object().
 reseller_vars(AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     account_vars(ResellerId).
@@ -210,6 +212,9 @@ adjust_period_first_day(Year, Month, Day) ->
     end.
 
 -spec adjust_period_last_day(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+adjust_period_last_day(Year, Month, 0) ->
+    {PYear, PMonth} = prev_month(Year, Month),
+    {PYear, PMonth, calendar:last_day_of_the_month(PYear, PMonth)};
 adjust_period_last_day(Year, Month, Day) ->
     LastDayOfMonth = calendar:last_day_of_the_month(Year, Month),
     case (Day > LastDayOfMonth) of
@@ -283,25 +288,36 @@ period_start_date(AccountId, Timestamp) ->
 
 -spec period_start_date(ne_binary(), kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
 period_start_date(AccountId, Year, Month, Day) ->
-    case kz_json:get_value(<<"pvt_billing_day">>, account_vars(AccountId)) of
-        'undefined' ->
-            _ = set_billing_day(AccountId),
-            period_start_date(AccountId, Year, Month, Day);
-        BillingDay ->
-            BDay = kz_term:to_integer(BillingDay),
-            case Day >= BDay of
-                'true' ->
-                     {Year, Month, BDay};
-                'false' ->
-                     {PrevYear, PrevMonth} = prev_month(Year, Month),
-                     {PrevYear, PrevMonth, BDay}
-            end
+    BDay = kz_term:to_integer(billing_day(AccountId)),
+    case Day >= BDay of
+        'true' ->
+             {Year, Month, BDay};
+        'false' ->
+             {PrevYear, PrevMonth} = prev_month(Year, Month),
+             {PrevYear, PrevMonth, BDay}
     end.
+
+-spec period_end_date(ne_binary(), kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+period_end_date(AccountId, Year, Month, Day) ->
+    {SYear, SMonth, SDay} = period_start_date(AccountId, Year, Month, Day),
+    period_last_day_by_first_one(SYear, SMonth, SDay).
 
 -spec next_period_start_date(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
 next_period_start_date(Year, Month, Day) ->
     {NextMonthYear, NextMonth} = next_month(Year, Month),
     adjust_period_first_day(NextMonthYear, NextMonth, Day).
+
+-spec billing_day(ne_binary() | kz_json:object()) -> integer() | 'undefined'.
+billing_day(AccountId) when is_binary(AccountId) ->
+    billing_day(account_vars(AccountId));
+billing_day(AccountVarsJObj) ->
+    case kz_json:get_value(<<"pvt_billing_day">>, AccountVarsJObj) of
+        'undefined' ->
+            AccountId = kz_json:get_value(<<"pvt_account_id">>, AccountVarsJObj),
+            JObj = set_billing_day(AccountId),
+            kz_json:get_value(<<"pvt_billing_day">>, JObj);
+        BDay -> BDay
+    end.
 
 set_billing_day(AccountId) ->
     BillingDay =
@@ -321,6 +337,7 @@ set_billing_day(BillingDay, AccountId) ->
         {'error', 'not_found'} ->
             kz_json:set_values([{<<"_id">>, ?ONBILL_DOC}
                                ,{<<"pvt_type">>, ?ONBILL_DOC}
+                               ,{<<"pvt_account_id">>, AccountId}
                                ,{<<"pvt_billing_day">>, BillingDay}
                                ]
                               ,kz_json:new())

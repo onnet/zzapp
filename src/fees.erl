@@ -113,63 +113,94 @@ maybe_monthly_fees(AccountId, CarrierDoc, Year, Month, Day) ->
         _ -> process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc)
     end.
 
-monthly_fees(AccountId, Year, Month, _Day) ->
-  %% Should lookup in both modbs period belongs to
-    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-    _ = onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
+monthly_fees(AccountId, Year, Month, Day) ->
     RawTableId = ets:new(erlang:binary_to_atom(<<AccountId/binary, "-raw">>, 'latin1'), [duplicate_bag]),
     ResultTableId = ets:new(erlang:binary_to_atom(<<AccountId/binary, "-result">>, 'latin1'), [bag]),
-    case kz_datamgr:get_results(Modb, <<"onbills/daily_fees">>, []) of
-        {'error', 'not_found'} -> lager:warning("unable to process monthly fee calculaton for Modb: ~s", [Modb]);
-        {'ok', JObjs } -> [process_daily_fee(JObj, Modb, RawTableId) || JObj <- JObjs] 
+    {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
+    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
+    case SMonth == EMonth of
+        'true' ->
+            Modb = kazoo_modb:get_modb(AccountId, Year, Month),
+            _ = onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
+            case kz_datamgr:get_results(Modb, <<"onbills/daily_fees">>, []) of
+                {'error', 'not_found'} -> lager:warning("unable to process monthly fee calculaton for Modb: ~s", [Modb]);
+                {'ok', JObjs } -> [process_daily_fee(JObj, Modb, RawTableId) || JObj <- JObjs] 
+            end,
+            OneTimeFees = process_one_time_fees(Modb, []);
+        'false' ->
+            SModb = kazoo_modb:get_modb(AccountId, SYear, SMonth),
+            _ = onbill_util:maybe_add_design_doc(SModb, <<"onbills">>),
+            case kz_datamgr:get_results(SModb, <<"onbills/daily_fees">>, [{'startkey', ?DAILY_FEE_DOC_NAME(SMonth, SYear, SDay)}]) of
+                {'error', 'not_found'} -> lager:warning("unable to process monthly fee calculaton for Modb: ~s", [SModb]);
+                {'ok', SJObjs } -> [process_daily_fee(JObj, SModb, RawTableId) || JObj <- SJObjs] 
+            end,
+            EModb = kazoo_modb:get_modb(AccountId, EYear, EMonth),
+            _ = onbill_util:maybe_add_design_doc(EModb, <<"onbills">>),
+            case kz_datamgr:get_results(EModb, <<"onbills/daily_fees">>, [{'endkey', ?DAILY_FEE_DOC_NAME(EMonth, EYear, EDay)}]) of
+                {'error', 'not_found'} -> lager:warning("unable to process monthly fee calculaton for Modb: ~s", [EModb]);
+                {'ok', EJObjs } -> [process_daily_fee(JObj, EModb, RawTableId) || JObj <- EJObjs] 
+            end,
+            OneTimeFees = process_one_time_fees(SModb, [{'startkey', ?BEGIN_DAY_TS(SMonth, SYear, SDay)}])
+                           ++ process_one_time_fees(EModb, [{'endkey', ?END_DAY_TS(EMonth, EYear, EDay)}])
     end,
     _ = process_ets(RawTableId, ResultTableId),
-    ServicesList = ets:tab2list(ResultTableId) ++ process_one_time_fees(Modb),
+    ServicesList = ets:tab2list(ResultTableId) ++ OneTimeFees,
     [lager:info("Result Table Line: ~p",[Service]) || Service <- ServicesList],
     ets:delete(RawTableId),
     ets:delete(ResultTableId),
-    services_to_proplist(ServicesList, Year, Month).
+    services_to_proplist(ServicesList, EYear, EMonth).
 
 process_per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Carrier) ->
     process_per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
-process_per_minute_calls(AccountId, Year, Month, _Day, CarrierDoc) ->
-  %% Should lookup in both modbs period belongs to
-    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-    case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, []) of
-        {'error', 'not_found'} ->
-             lager:warning("no per_minute_calls found in Modb: ~s", [Modb]),
-             [];
-        {'ok', JObjs } ->
-            Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
-            {_, CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc) end, {[], 0,0}, JObjs),
-            aggregated_service_to_line({<<"per-minute-voip">>
-                                       ,<<"description">>
-                                       ,CallsTotalSumm
-                                       ,kz_term:to_integer(CallsTotalSec / 60)
-                                       ,<<"">>
-                                       ,calendar:last_day_of_the_month(Year, Month)
-                                       ,kz_json:get_value(<<"per_minute_item_name">>, CarrierDoc, <<"Per minute calls">>)
-                                       ,<<"per-minute-voip">>
-                                       ,0.0
-                                       }
-                                      ,Year
-                                      ,Month
-                                      )
-    end.
+process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
+    JObjs = get_period_per_minute_jobjs(AccountId, Year, Month, Day),
+    Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
+    {_, CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc) end, {[], 0,0}, JObjs),
+    aggregated_service_to_line({<<"per-minute-voip">>
+                               ,<<"description">>
+                               ,CallsTotalSumm
+                               ,kz_term:to_integer(CallsTotalSec / 60)
+                               ,<<"">>
+                               ,calendar:last_day_of_the_month(Year, Month)
+                               ,kz_json:get_value(<<"per_minute_item_name">>, CarrierDoc, <<"Per minute calls">>)
+                               ,<<"per-minute-voip">>
+                               ,0.0
+                               }
+                              ,Year
+                              ,Month
+                              ).
 
 -spec per_minute_calls(ne_binary(), kz_year(), kz_month(), kz_day(), ne_binary()) -> ok.
 per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Carrier) ->
     per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
-per_minute_calls(AccountId, Year, Month, _Day, CarrierDoc) ->
-  %% Should lookup in both modbs period belongs to
-    Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-    case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, ['descending']) of
+per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
+    JObjs = get_period_per_minute_jobjs(AccountId, Year, Month, Day),
+    Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
+    lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc) end, {[], 0,0}, JObjs).
+
+get_period_per_minute_jobjs(AccountId, Year, Month, Day) ->
+    {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
+    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
+    case SMonth == EMonth of
+        'true' ->
+            Modb = kazoo_modb:get_modb(AccountId, Year, Month),
+            _ = onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
+            get_per_minute_jobjs(Modb, []);
+        'false' ->
+            SModb = kazoo_modb:get_modb(AccountId, SYear, SMonth),
+            _ = onbill_util:maybe_add_design_doc(SModb, <<"onbills">>),
+            EModb = kazoo_modb:get_modb(AccountId, EYear, EMonth),
+            _ = onbill_util:maybe_add_design_doc(EModb, <<"onbills">>),
+            get_per_minute_jobjs(SModb, [{'startkey', ?BEGIN_DAY_TS(SMonth, SYear, SDay)}])
+            ++ get_per_minute_jobjs(EModb, [{'endkey', ?END_DAY_TS(EMonth, EYear, EDay)}])
+    end.
+
+get_per_minute_jobjs(Modb, Opts) ->
+    case kz_datamgr:get_results(Modb, <<"onbills/per_minute_call">>, Opts ++ ['descending']) of
         {'error', 'not_found'} ->
              lager:warning("no per_minute_calls found in Modb: ~s", [Modb]),
              [];
-        {'ok', JObjs } ->
-            Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
-            lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc) end, {[], 0,0}, JObjs)
+        {'ok', JObjs} -> JObjs
     end.
 
 get_per_minute_regexes(AccountId, CarrierDoc) ->
@@ -218,8 +249,8 @@ maybe_interesting_call({RegexFrom, RegexTo}, JObj) ->
         _ -> 'false'
     end.
 
-process_one_time_fees(Modb) ->
-    case kz_datamgr:get_results(Modb, <<"onbills/one_time_fees">>, []) of
+process_one_time_fees(Modb, Opts) ->
+    case kz_datamgr:get_results(Modb, <<"onbills/one_time_fees">>, Opts) of
         {'error', 'not_found'} ->
              lager:warning("no one time charges found in Modb: ~s", [Modb]),
              [];
