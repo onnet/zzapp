@@ -148,7 +148,7 @@ monthly_fees(AccountId, Year, Month, Day) ->
     [lager:info("Result Table Line: ~p",[Service]) || Service <- ServicesList],
     ets:delete(RawTableId),
     ets:delete(ResultTableId),
-    services_to_proplist(ServicesList, EYear, EMonth).
+    services_to_proplist(AccountId, ServicesList, EYear, EMonth, EDay).
 
 process_per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Carrier) ->
     process_per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
@@ -156,18 +156,18 @@ process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
     JObjs = get_period_per_minute_jobjs(AccountId, Year, Month, Day),
     Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
     {_, CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc) end, {[], 0,0}, JObjs),
+    DaysInPeriod = onbill_util:days_in_period(AccountId, Year, Month, Day),
     aggregated_service_to_line({<<"per-minute-voip">>
                                ,<<"description">>
                                ,CallsTotalSumm
                                ,kz_term:to_integer(CallsTotalSec / 60)
                                ,<<"">>
-                               ,calendar:last_day_of_the_month(Year, Month)
+                               ,DaysInPeriod
                                ,kz_json:get_value(<<"per_minute_item_name">>, CarrierDoc, <<"Per minute calls">>)
                                ,<<"per-minute-voip">>
                                ,0.0
                                }
-                              ,Year
-                              ,Month
+                              ,DaysInPeriod
                               ).
 
 -spec per_minute_calls(ne_binary(), kz_year(), kz_month(), kz_day(), ne_binary()) -> ok.
@@ -381,11 +381,11 @@ days_sequence_reduce(Prev, [First,Next|T], Acc) ->
 days_glue(L) ->
     lists:foldl(fun(X,Acc) -> case Acc of <<>> -> X; _ -> <<Acc/binary, ",", X/binary>> end end, <<>>, L).
 
-services_to_proplist(ServicesList, Year, Month) ->
-    lists:foldl(fun(ServiceLine, Acc) -> service_to_line(ServiceLine, Year, Month, Acc) end, [], ServicesList).
+services_to_proplist(AccountId, ServicesList, Year, Month, Day) ->
+    DaysInPeriod = onbill_util:days_in_period(AccountId, Year, Month, Day),
+    lists:foldl(fun(ServiceLine, Acc) -> service_to_line(ServiceLine, DaysInPeriod, Acc) end, [], ServicesList).
 
-service_to_line({ServiceType, Item, Rate, Quantity, Period, DaysQty, Name, Type, Discount}, Year, Month, Acc) ->
-    DaysInPeriod = calendar:last_day_of_the_month(Year, Month),
+service_to_line({ServiceType, Item, Rate, Quantity, Period, DaysQty, Name, Type, Discount}, DaysInPeriod, Acc) ->
     [[{<<"category">>, ServiceType}
     ,{<<"item">>, Item}
     ,{<<"name">>, Name}
@@ -399,7 +399,7 @@ service_to_line({ServiceType, Item, Rate, Quantity, Period, DaysQty, Name, Type,
     ,{<<"discount">>, Discount}
     ]] ++ Acc.
 
-aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, Name, Type, Discount}, Year, Month) when Cost > 0.0, Quantity > 0.0 ->
+aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, Name, Type, Discount}, DaysInPeriod) when Cost > 0.0, Quantity > 0.0 ->
     [[{<<"category">>, ServiceType}
     ,{<<"item">>, Item}
     ,{<<"name">>, Name}
@@ -407,12 +407,12 @@ aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, 
     ,{<<"rate">>, Cost / Quantity}
     ,{<<"quantity">>, Quantity}
     ,{<<"days_quantity">>, DaysQty}
-    ,{<<"days_in_period">>, calendar:last_day_of_the_month(Year, Month)}
+    ,{<<"days_in_period">>, DaysInPeriod}
     ,{<<"period">>, Period}
     ,{<<"type">>, Type}
     ,{<<"discount">>, Discount}
     ]];
-aggregated_service_to_line(_, _, _) ->
+aggregated_service_to_line(_, _) ->
     [].
 
 -spec vatify_amount(ne_binary(), number(), kz_json:object()) -> 'ok'.

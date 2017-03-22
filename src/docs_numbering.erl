@@ -28,7 +28,7 @@ get_binary_number(AccountId, Carrier, DocType, Year, Month, TReq, TNow) when TRe
     Reason;
 get_binary_number(AccountId, Carrier, DocType, Year, Month, TReq, TReq) ->
     {_, _, DNow} = erlang:date(),
-    case DNow > onbill_util:billing_day(AccountId) of
+    case DNow >= onbill_util:billing_day(AccountId) of
         'true' ->
             binary_number(AccountId, Carrier, DocType, Year, Month);
         'false' ->

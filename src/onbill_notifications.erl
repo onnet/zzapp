@@ -187,8 +187,7 @@ maybe_send_account_updates(AccountId, AccountJObj) ->
 maybe_new_billing_period_approaching(AccountId, AccountJObj) ->
     Timestamp = kz_time:current_tstamp(),
     Days_Before_MRC_Update = ?KEY_PERIOD(?MRC_APPROACHING_KEY),
-    {StartYear, StartMonth, StartDay} = onbill_util:period_start_date(AccountId, Timestamp),
-    case onbill_util:days_left_in_period(StartYear, StartMonth, StartDay, Timestamp) of
+    case onbill_util:days_left_in_period(AccountId, Timestamp) of
         DaysLeft when DaysLeft < Days_Before_MRC_Update ->
             case onbill_bk_util:current_usage_amount_in_units(AccountId)
                 > onbill_util:current_balance(AccountId)
@@ -256,9 +255,8 @@ services_info_databag(AccountId) ->
     ItemsCalculatedList = [onbill_bk_util:calc_item(ItemJObj, AccountId) || ItemJObj <- ItemsList],
 
     Timestamp = kz_time:current_tstamp(),
-    {StartYear, StartMonth, StartDay} = onbill_util:period_start_date(AccountId, Timestamp),
-    DaysLeft =  onbill_util:days_left_in_period(StartYear, StartMonth, StartDay, Timestamp),
-    {NextPeriodYear, NextPeriodMonth, NextPeriodDay} = onbill_util:next_period_start_date(StartYear, StartMonth, StartDay),
+    DaysLeft =  onbill_util:days_left_in_period(AccountId, Timestamp),
+    {NextPeriodYear, NextPeriodMonth, NextPeriodDay} = onbill_util:next_period_start_date(AccountId, Timestamp),
 
     ResellerVars = onbill_util:reseller_vars(AccountId),
     CurrencySign = kz_json:get_value(<<"currency_sign">>, ResellerVars, <<"£"/utf8>>),

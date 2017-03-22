@@ -158,7 +158,7 @@ create_dailyfee_doc(Timestamp, AccountId, Amount, MaxUsage, Items) ->
                ,{<<"pvt_type">>, <<"debit">>}
                ,{<<"description">>,<<(?TO_BIN(Day))/binary," ",MonthStrBin/binary," ",(?TO_BIN(Year))/binary," daily fee">>}
                ,{<<"pvt_reason">>, <<"daily_fee">>}
-               ,{[<<"pvt_metadata">>,<<"days_in_period">>], calendar:last_day_of_the_month(Year, Month)}
+               ,{[<<"pvt_metadata">>,<<"days_in_period">>], onbill_util:days_in_period(AccountId, Year, Month, Day)}
                ,{<<"pvt_created">>, Timestamp}
                ,{<<"pvt_modified">>, Timestamp}
                ,{<<"pvt_account_id">>, AccountId}
@@ -194,9 +194,8 @@ charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], T
     case lists:member(Category, DailyCountCategoriesList) of
         'true' -> 'ok';
         'false' ->
-            {StartYear, StartMonth, StartDay} = onbill_util:period_start_date(AccountId, Timestamp),
-            DaysInPeriod = onbill_util:days_in_period(StartYear, StartMonth, StartDay),
-            DaysLeft = onbill_util:days_left_in_period(StartYear, StartMonth, StartDay, Timestamp),
+            DaysInPeriod = onbill_util:days_in_period(AccountId, Timestamp),
+            DaysLeft = onbill_util:days_left_in_period(AccountId, Timestamp),
             ItemJObj = kz_json:get_value(Path, NewMax),
             Ratio = DaysLeft / DaysInPeriod,
 	    Reason =
