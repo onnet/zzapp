@@ -14,6 +14,7 @@
 -define(GENERATE, <<"generate">>).
 -define(CURRENT_SERVICES, <<"current_services">>).
 -define(CURRENT_BILLING_PERIOD, <<"current_billing_period">>).
+-define(BILLING_PERIODS, <<"billing_periods">>).
 -define(CURRENCY_SIGN, <<"currency_sign">>).
 -define(ALL_CHILDREN, <<"all_children">>).
 -define(ACC_CHILDREN_LIST, <<"accounts/listing_by_children">>).
@@ -67,6 +68,8 @@ validate(Context, ?CURRENT_SERVICES) ->
     validate_current_services(Context, cb_context:req_verb(Context));
 validate(Context, ?CURRENT_BILLING_PERIOD) ->
     validate_current_billing_period(Context, cb_context:req_verb(Context));
+validate(Context, ?BILLING_PERIODS) ->
+    validate_billing_periods(Context, cb_context:req_verb(Context));
 validate(Context, ?CURRENCY_SIGN) ->
     validate_currency_sign(Context, cb_context:req_verb(Context)).
 validate(Context, ?GENERATE, Id) ->
@@ -216,14 +219,26 @@ validate_currency_sign(Context, _) ->
 validate_current_billing_period(Context, ?HTTP_GET) ->
     AccountId = cb_context:account_id(Context),
     {Year, Month, Day} = onbill_util:period_start_date(AccountId),
+    {EYear, EMonth, EDay} = onbill_util:period_last_day_by_first_one(Year, Month, Day),
     JObj =
         kz_json:from_list([{<<"account_id">>, AccountId}
-                          ,{<<"period_start">>, kz_json:from_list(onbill_util:period_start_tuple(Year, Month, Day))}
-                          ,{<<"period_end">>, kz_json:from_list(onbill_util:period_end_tuple_by_start(Year, Month, Day))}
+                          ,{<<"period_start">>, onbill_util:date_json(Year, Month, Day)}
+                          ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
                           ]),
     cb_context:setters(Context
                       ,[{fun cb_context:set_resp_status/2, 'success'}
                        ,{fun cb_context:set_resp_data/2, JObj}
                        ]);
 validate_current_billing_period(Context, _) ->
+    Context.
+
+-spec validate_billing_periods(cb_context:context(), http_method()) -> cb_context:context().
+validate_billing_periods(Context, ?HTTP_GET) ->
+    AccountId = cb_context:account_id(Context),
+    JObjs = onbill_util:list_account_periods(AccountId),
+    cb_context:setters(Context
+                      ,[{fun cb_context:set_resp_status/2, 'success'}
+                       ,{fun cb_context:set_resp_data/2, JObjs}
+                       ]);
+validate_billing_periods(Context, _) ->
     Context.

@@ -268,9 +268,9 @@ services_info_databag(AccountId) ->
                       ,{<<"days_left">>, DaysLeft}
                       ,{<<"current_balance">>, currency_sign:add_currency_sign(CurrencySign
                                                                               ,onbill_util:current_account_dollars(AccountId))}
-                      ,{<<"next_period_date">>, kz_json:from_list(onbill_util:period_tuple(NextPeriodYear
-                                                                                          ,NextPeriodMonth
-                                                                                          ,NextPeriodDay))}
+                      ,{<<"next_period_date">>, onbill_util:date_json(NextPeriodYear
+                                                                     ,NextPeriodMonth
+                                                                     ,NextPeriodDay)}
                       ,{<<"currency_short">>, kz_json:get_value(<<"currency_short">>, ResellerVars, <<"GBP">>)}
                       ,{<<"currency_sign">>, CurrencySign}
                       ]).

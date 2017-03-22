@@ -267,7 +267,7 @@ process_one_time_fee(JObj, Modb) ->
     ,kz_json:get_value([<<"metadata">>, <<"description">>], DFDoc)
     ,kz_json:get_value([<<"metadata">>, <<"rate">>], DFDoc, Amount) * kz_json:get_value([<<"metadata">>, <<"ratio">>], DFDoc, 1.0)
     ,kz_json:get_value([<<"metadata">>, <<"quantity">>], DFDoc, 1)
-    ,[onbill_util:period_tuple(Year, Month, Day)]
+    ,[onbill_util:date_json(Year, Month, Day)]
     ,DaysInMonth
     ,one_time_fee_name(Reason, DFDoc)
     ,<<"non_daily_calculated">>
@@ -345,7 +345,7 @@ dates_sequence_reduce(DatesList) ->
 
 format_days_of_month(Year, Month, DatesList) ->
     Days = [?TO_INT(D) || {Y,M,D} <- DatesList, Year == Y  andalso Month == M],
-    onbill_util:period_tuple(Year, Month, days_sequence_reduce(Days)).
+    onbill_util:date_json(Year, Month, days_sequence_reduce(Days)).
 
 -spec days_sequence_reduce(proplist()) -> proplist().
 days_sequence_reduce([Digit]) ->

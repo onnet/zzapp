@@ -62,8 +62,8 @@ generate_docs(AccountId, Year, Month, Day, Carrier, VatUpdatedFeesList, {TotalNe
            ,{<<"start_date">>, ?DATE_STRING(SYear, SMonth, SDay)}
            ,{<<"end_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
            ,{<<"doc_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
-           ,{<<"period_start">>, onbill_util:period_tuple(SYear, SMonth, SDay)}
-           ,{<<"period_end">>, onbill_util:period_tuple(EYear, EMonth, EDay)}
+           ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
+           ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
            ,{<<"carrier_vars">>, kz_json:set_values([{Key, kz_json:get_value(Key, CarrierDoc)}
                                                      || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)
                                                     ]
@@ -254,8 +254,8 @@ aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
            ,{<<"start_date">>, ?DATE_STRING(SYear, SMonth, SDay)}
            ,{<<"end_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
            ,{<<"doc_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
-           ,{<<"period_start">>, onbill_util:period_tuple(SYear, SMonth, SDay)}
-           ,{<<"period_end">>, onbill_util:period_tuple(EYear, EMonth, EDay)}
+           ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
+           ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
            ,{<<"total_netto">>, onbill_util:price_round(TotalNetto)}
            ,{<<"total_vat">>, onbill_util:price_round(TotalVAT)}
            ,{<<"total_brutto">>, onbill_util:price_round(TotalBrutto)}
@@ -309,8 +309,8 @@ per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSe
            ,{<<"start_date">>, ?DATE_STRING(SYear, SMonth, SDay)}
            ,{<<"end_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
            ,{<<"doc_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
-           ,{<<"period_start">>, onbill_util:period_tuple(SYear, SMonth, SDay)}
-           ,{<<"period_end">>, onbill_util:period_tuple(EYear, EMonth, EDay)}
+           ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
+           ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
            ,{<<"agrm_num">>, kz_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccountOnbillDoc)}
            ,{<<"agrm_date">>, kz_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccountOnbillDoc)}
            ,{<<"onbill_doc_type">>, DocType}
@@ -335,7 +335,7 @@ create_proforma_invoice(Amount, AccountId) ->
     VatifiedAmount = fees:vatify_amount(<<"total">>, kz_term:to_float(Amount), OnbillResellerVars),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(props:get_value(<<"total_brutto">>, VatifiedAmount)),
     {TotalVatDiv, TotalVatRem} = total_to_words(props:get_value(<<"total_vat">>, VatifiedAmount)),
-    Vars = [{<<"doc_date_tuple">>, kz_json:from_list(onbill_util:period_tuple(Year, Month, Day))}
+    Vars = [{<<"doc_date_json">>, onbill_util:date_json(Year, Month, Day)}
            ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillResellerVars, 0.0)}
            ,{<<"total_vat_div">>, TotalVatDiv}
            ,{<<"total_vat_rem">>, TotalVatRem}

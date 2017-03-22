@@ -26,9 +26,7 @@
         ,days_left_in_period/2
         ,period_last_day_by_first_one/3
         ,period_end_modb_by_start/4
-        ,period_start_tuple/3
-        ,period_end_tuple_by_start/3
-        ,period_tuple/3
+        ,date_json/3
         ,period_start_date/1
         ,period_start_date/2
         ,period_start_date/4
@@ -36,7 +34,8 @@
         ,next_period_start_date/4
         ,period_end_date/2
         ,period_end_date/4
-        ,get_account_created_date/1
+        ,account_creation_date/1
+        ,account_creation_ts/1
         ,billing_day/1
         ,maybe_allow_postpay/1
         ,trial_has_expired/1
@@ -53,6 +52,7 @@
         ,current_balance/1
         ,current_account_dollars/1
         ,maybe_process_new_billing_period/1
+        ,list_account_periods/1
         ]).
 
 -include("onbill.hrl").
@@ -251,32 +251,21 @@ days_left_in_period(AccountId, Timestamp) ->
     -
     calendar:date_to_gregorian_days(Year, Month, Day) + 1.
 
--spec period_start_tuple(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
-period_start_tuple(Year, Month, Day) ->
-    {Y, M, D} = adjust_period_first_day(Year, Month, Day),
-    period_tuple(Y, M, D).
-
 -spec period_end_modb_by_start(ne_binary(), kz_year(), kz_month(), kz_day()) -> ne_binary().
 period_end_modb_by_start(AccountId, Year, Month, Day) ->
     {SY, SM, SD} = adjust_period_first_day(Year, Month, Day),
     {Y, M, _} = period_last_day_by_first_one(SY, SM, SD),
     kazoo_modb:get_modb(AccountId, Y, M).
 
--spec period_end_tuple_by_start(kz_year(), kz_month(), kz_day()) -> proplist().
-period_end_tuple_by_start(Year, Month, Day) ->
-    {SY, SM, SD} = adjust_period_first_day(Year, Month, Day),
-    {Y, M, D} = period_last_day_by_first_one(SY, SM, SD),
-    period_tuple(Y, M, D).
-
--spec period_tuple(kz_year(), kz_month(), kz_day()) -> proplist().
-period_tuple(Year, Month, Day) when is_integer(Day) ->
-    period_tuple(Year, Month, ?TO_BIN(Day));
-period_tuple(Year, Month, Day) ->
-    [{<<"year">>, ?TO_BIN(Year)}
-    ,{<<"month_short">>, ?TO_BIN(httpd_util:month(?TO_INT(Month)))}
-    ,{<<"month_pad">>, ?TO_BIN(kz_time:pad_month(Month))}
-    ,{<<"day">>, Day}
-    ].
+-spec date_json(kz_year(), kz_month(), kz_day()) -> proplist().
+date_json(Year, Month, Day) when is_integer(Day) ->
+    date_json(Year, Month, ?TO_BIN(Day));
+date_json(Year, Month, Day) ->
+    kz_json:from_list([{<<"year">>, ?TO_BIN(Year)}
+                      ,{<<"month_short">>, ?TO_BIN(httpd_util:month(?TO_INT(Month)))}
+                      ,{<<"month_pad">>, ?TO_BIN(kz_time:pad_month(Month))}
+                      ,{<<"day">>, Day}
+                      ]).
 
 -spec period_start_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
 period_start_date(AccountId) ->
@@ -357,12 +346,17 @@ set_billing_day(BillingDay, AccountId) ->
     end,
     kz_datamgr:ensure_saved(DbName, NewDoc).
 
--spec get_account_created_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
-get_account_created_date(AccountId) ->
+-spec account_creation_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
+account_creation_date(AccountId) ->
     {'ok', AccountDoc} = kz_account:fetch(AccountId),
     Timestamp = kz_json:get_value(<<"pvt_created">>, AccountDoc),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     {Year, Month, Day}.
+
+-spec account_creation_ts(ne_binary()) -> integer().
+account_creation_ts(AccountId) ->
+    {'ok', AccountDoc} = kz_account:fetch(AccountId),
+    kz_json:get_value(<<"pvt_created">>, AccountDoc).
 
 -spec maybe_allow_postpay(ne_binary()) -> boolean().
 maybe_allow_postpay(AccountId) ->
@@ -523,3 +517,26 @@ maybe_process_new_billing_period(AccountId) ->
         {'ok', _} -> 'false';
         {'error', 'not_found'} -> 'true'
     end.
+
+-spec list_account_periods(ne_binary()) -> kz_json:objects().
+list_account_periods(AccountId) ->
+    {Year, Month, _Day} = account_creation_date(AccountId),
+    BillingDay = kz_term:to_integer(billing_day(AccountId)),
+    Timestamp = calendar:datetime_to_gregorian_seconds({{Year, Month, BillingDay}, {0,0,0}}),
+    TS_Now =  kz_time:current_tstamp(),
+    list_account_periods(AccountId, Year, Month, BillingDay, Timestamp, TS_Now, []).
+
+list_account_periods(_, _, _, _, Timestamp, TS_Now, Acc) when Timestamp > TS_Now ->
+    Acc;
+list_account_periods(AccountId, Year, Month, BillingDay, _Timestamp, TS_Now, Acc) ->
+    {SYear, SMonth, SDay} = adjust_period_first_day(Year, Month, BillingDay),
+    STimestamp = calendar:datetime_to_gregorian_seconds({{SYear, SMonth, SDay}, {0,0,0}}),
+    {EYear, EMonth, EDay} = period_last_day_by_first_one(SYear, SMonth, SDay),
+    ThisPeriod = {[{<<"period_start">>, date_json(SYear, SMonth, SDay)}
+                  ,{<<"period_start_timestamp">>, STimestamp}
+                  ,{<<"period_end">>, date_json(EYear, EMonth, EDay)}]},
+    {NextMonthYear, NextMonth} = next_month(SYear, SMonth),
+    {NYear, NMonth, NDay} = adjust_period_first_day(NextMonthYear, NextMonth, BillingDay),
+    NTimestamp = calendar:datetime_to_gregorian_seconds({{NYear, NMonth, NDay}, {0,0,0}}),
+    list_account_periods(AccountId, NYear, NMonth, NDay, NTimestamp, TS_Now, [ThisPeriod] ++ Acc).
+
