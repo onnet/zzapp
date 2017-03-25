@@ -100,12 +100,12 @@ run_sync(Items, AccountId, Timestamp) ->
     end.
 
 sync(_Timestamp, [], _AccountId, _NewMax, _Items) ->
-    lager:debug("no daily count items found, daily fee synv not needed.");
+    lager:debug("no daily count items found, daily fee sync not needed.");
 
 sync(Timestamp, ServiceItems, AccountId, NewMax, Items) ->
     case onbill_bk_util:items_amount(ServiceItems, AccountId, 0.0) of
         0.0 ->
-            lager:debug("daily fee items have zero cosc, no changes needed.");
+            lager:debug("daily fee items have zero cost, no changes needed.");
         ItemsCost ->
             onbill_bk_util:save_dailyfee_doc(Timestamp, AccountId, ItemsCost, NewMax, Items),
             lager:debug("sync Daily fee calculation finished for ~p. Total: ~p",[AccountId, ItemsCost])

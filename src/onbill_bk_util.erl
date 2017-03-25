@@ -305,6 +305,7 @@ create_monthly_recurring_doc(AccountId, NewMax, Timestamp) ->
     Routines = [{<<"_id">>, <<"monthly_recurring">>}
                ,{<<"description">>,<<"MRC info for period start: ",(?TO_BIN(Day))/binary," ",MonthStrBin/binary," ",(?TO_BIN(Year))/binary>>}
                ,{[<<"pvt_metadata">>,<<"items">>], NewMax}
+               ,{<<"pvt_period_openning_balance">>, onbill_util:day_start_balance(AccountId, Year, Month, Day)}
                ,{<<"pvt_created">>, Timestamp}
                ,{<<"pvt_modified">>, Timestamp}
                ,{<<"pvt_account_id">>, AccountId}
