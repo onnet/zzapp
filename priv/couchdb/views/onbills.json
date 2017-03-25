@@ -8,6 +8,10 @@
         "daily_fees": {
             "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason != 'daily_fee' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"
         },
+        "debit_credit_timestamp": {
+            "map": "function(doc) { if ( (doc.pvt_type != 'credit' && doc.pvt_type != 'debit') || doc.pvt_reason == 'database_rollup' || doc.pvt_deleted) return; var modifier = (doc.pvt_type == 'credit' ? 1 : -1), amount = doc.pvt_amount || doc.amount || 0; emit(doc.pvt_created, amount * modifier); }",
+            "reduce": "_sum"
+        },
         "monthly_recurring": {
             "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason != 'monthly_recurring' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"
         },

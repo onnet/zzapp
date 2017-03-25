@@ -53,6 +53,8 @@
         ,current_account_dollars/1
         ,maybe_process_new_billing_period/1
         ,list_account_periods/1
+        ,period_openning_balance/4
+        ,day_start_balance/4
         ]).
 
 -include("onbill.hrl").
@@ -241,7 +243,7 @@ days_in_period(AccountId, Timestamp) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     days_in_period(AccountId, Year, Month, Day).
 days_in_period(AccountId, Year, Month, Day) ->
-    {SYear, SMonth, _} = onbill_util:period_start_date(AccountId, Year, Month, Day),
+    {SYear, SMonth, _} = period_start_date(AccountId, Year, Month, Day),
     calendar:last_day_of_the_month(SYear, SMonth).
 
 -spec days_left_in_period(ne_binary(), gregorian_seconds()) -> integer().
@@ -265,6 +267,8 @@ date_json(Year, Month, Day) ->
                       ,{<<"month_short">>, ?TO_BIN(httpd_util:month(?TO_INT(Month)))}
                       ,{<<"month_pad">>, ?TO_BIN(kz_time:pad_month(Month))}
                       ,{<<"day">>, Day}
+                      ,{<<"day_begins_ts">>, calendar:datetime_to_gregorian_seconds({{?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)}, {0,0,0}})}
+                      ,{<<"day_ends_ts">>, calendar:datetime_to_gregorian_seconds({{?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)}, {23,59,59}})}
                       ]).
 
 -spec period_start_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
@@ -530,13 +534,57 @@ list_account_periods(_, _, _, _, Timestamp, TS_Now, Acc) when Timestamp > TS_Now
     Acc;
 list_account_periods(AccountId, Year, Month, BillingDay, _Timestamp, TS_Now, Acc) ->
     {SYear, SMonth, SDay} = adjust_period_first_day(Year, Month, BillingDay),
-    STimestamp = calendar:datetime_to_gregorian_seconds({{SYear, SMonth, SDay}, {0,0,0}}),
     {EYear, EMonth, EDay} = period_last_day_by_first_one(SYear, SMonth, SDay),
     ThisPeriod = {[{<<"period_start">>, date_json(SYear, SMonth, SDay)}
-                  ,{<<"period_start_timestamp">>, STimestamp}
                   ,{<<"period_end">>, date_json(EYear, EMonth, EDay)}]},
     {NextMonthYear, NextMonth} = next_month(SYear, SMonth),
     {NYear, NMonth, NDay} = adjust_period_first_day(NextMonthYear, NextMonth, BillingDay),
     NTimestamp = calendar:datetime_to_gregorian_seconds({{NYear, NMonth, NDay}, {0,0,0}}),
     list_account_periods(AccountId, NYear, NMonth, NDay, NTimestamp, TS_Now, [ThisPeriod] ++ Acc).
+
+-spec period_openning_balance(ne_binary(), kz_year(), kz_month(), kz_day()) -> number() | {'error', any()}.
+period_openning_balance(AccountId, Year, Month, Day) ->
+    {SYear, SMonth, SDay} = period_start_date(AccountId, Year, Month, Day),
+    day_start_balance(AccountId, SYear, SMonth, SDay).
+
+-spec day_start_balance(ne_binary(), kz_year(), kz_month(), kz_day()) -> number() | {'error', any()}.
+day_start_balance(AccountId, Year, Month, 1) ->
+    case kazoo_modb:open_doc(AccountId, <<"monthly_rollup">>, Year, Month) of
+        {'ok', JObj} -> get_amount(JObj);
+        {'error', 'not_found'} -> 
+            {PrevYear, PrevMonth} = kazoo_modb_util:prev_year_month(Year, Month),
+            case wht_util:previous_balance(AccountId, PrevYear, PrevMonth) of
+                {'ok', Balance} ->
+                    Balance;
+                {'error', _E} = Error ->
+                    lager:warning("unable to get period_start_balance for ~s: ~p", [AccountId, _E]),
+                    Error
+            end
+    end;
+day_start_balance(AccountId, Year, Month, Day) ->
+    View = <<"onbills/debit_credit_timestamp">>,
+    Timestamp = calendar:datetime_to_gregorian_seconds({{Year, Month, Day}, {0,0,0}}),
+    ViewOptions = [{'year', kz_term:to_binary(Year)}
+                  ,{'month', kz_time:pad_month(Month)}
+                  ,{'endkey', Timestamp}
+                  ],
+    case kazoo_modb:get_results(AccountId, View, ViewOptions) of
+        {'ok', []} ->
+            day_start_balance(AccountId, Year, Month, 1);
+        {'ok', [ViewRes|_]} ->
+            kz_json:get_integer_value(<<"value">>, ViewRes, 0)
+            + day_start_balance(AccountId, Year, Month, 1);
+        {'error', _E} = Error ->
+            lager:warning("unable to get period_start_balance for ~s: ~p", [AccountId, _E]),
+            Error
+    end.
+
+-spec get_amount(kz_json:object()) -> number().
+get_amount(JObj) ->
+    Amount = kz_json:get_first_defined([<<"pvt_amount">>,<<"amount">>], JObj, 0),
+    Type = kz_json:get_first_defined([<<"pvt_type">>,<<"type">>], JObj),
+    case Type of
+        <<"debit">> -> Amount*-1;
+        _ -> Amount
+    end.
 
