@@ -58,6 +58,7 @@
         ,period_openning_balance_dollars/4
         ,day_start_balance/4
         ,day_start_balance_dollars/4
+        ,get_range/3
         ]).
 
 -include("onbill.hrl").
@@ -612,4 +613,16 @@ get_amount(JObj) ->
         <<"debit">> -> Amount*-1;
         _ -> Amount
     end.
+
+-spec get_range(ne_binary(), gregorian_seconds(), gregorian_seconds()) -> kz_proplists().
+get_range(AccountId, From, To) ->
+    [ begin
+          {AccountId, Year, Month} = kazoo_modb_util:split_account_mod(MODb),
+          [{'startkey', From}
+          ,{'endkey', To}
+          ,{'year', Year}
+          ,{'month', Month}
+          ]
+      end || MODb <- kazoo_modb:get_range(AccountId, From, To)
+    ].
 

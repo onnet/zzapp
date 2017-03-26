@@ -126,12 +126,14 @@ is_good_standing(_AccountId, Status) ->
                           {'ok', kz_transaction:transactions()} |
                           {'error', 'not_found'} |
                           {'error', 'unknown_error'}.
-transactions(AccountId, From, To) ->
-    lager:info("IAM transactions AccountId: ~p, From: ~p, To: ~p",[AccountId, From, To]),
-    case kz_transactions:fetch_local(AccountId, From, To) of
-        {'error', _Reason}=Error -> Error;
-        {'ok', _Transactions}=Res -> Res
-    end.
+%transactions(AccountId, From, To) ->
+%    lager:info("IAM transactions AccountId: ~p, From: ~p, To: ~p",[AccountId, From, To]),
+%    case kz_transactions:fetch_local(AccountId, From, To) of
+%        {'error', _Reason}=Error -> Error;
+%        {'ok', _Transactions}=Res -> Res
+%    end.
+transactions(_AccountId, _From, _To) ->
+    {'ok', []}.
 
 -spec subscriptions(ne_binary()) -> atom() | kz_json:objects().
 subscriptions(AccountId) ->
