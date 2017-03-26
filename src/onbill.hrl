@@ -5,8 +5,8 @@
 -include_lib("kazoo_documents/include/kazoo_documents.hrl").
 
 -define(APP, 'onbill').
--define(APP_NAME, <<"onbill">>).
--define(APP_VERSION, <<"4.0.0">> ).
+-define(OB_APP_NAME, <<"onbill">>).
+-define(OB_APP_VERSION, <<"4.0.0">> ).
 
 -define(SERVICES_DB, <<"services">>).
 -define(ONBILL_DB, <<"onbill">>).
@@ -16,9 +16,9 @@
 -define(TO_INT(Var), kz_term:to_integer(Var)).
 -define(TO_FLT(Var), kz_term:to_float(Var)).
 -define(CARRIER_DOC(CarrierName), <<"onbill_carrier.", CarrierName/binary>>).
--define(MOD_CONFIG_CRAWLER, <<(?APP_NAME)/binary, ".account_crawler">>).
+-define(MOD_CONFIG_CRAWLER, <<(?OB_APP_NAME)/binary, ".account_crawler">>).
 -define(DOCS_NUMBER_DB(ResellerId, Year)
-       ,<<(?APP_NAME)/binary
+       ,<<(?OB_APP_NAME)/binary
          ,"-"
          ,ResellerId/binary
          ,"-"

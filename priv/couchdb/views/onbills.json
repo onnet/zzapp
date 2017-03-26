@@ -12,6 +12,9 @@
             "map": "function(doc) { if ( (doc.pvt_type != 'credit' && doc.pvt_type != 'debit') || doc.pvt_reason == 'database_rollup' || doc.pvt_deleted) return; var modifier = (doc.pvt_type == 'credit' ? 1 : -1), amount = doc.pvt_amount || doc.amount || 0; emit(doc.pvt_created, amount * modifier); }",
             "reduce": "_sum"
         },
+        "docs_by_period_ts": {
+            "map": "function(doc) { if (doc.pvt_type != 'onbill' || doc.onbill_doc_type == 'proforma_invoice' || doc.pvt_deleted) return; emit(doc.period_end.day_ends_ts, {id: doc._id, doc_number: doc.doc_number, name: doc.name, oper_name_short: doc.oper_name_short, total_netto: doc.total_netto, total_vat: doc.total_vat, total_brutto: doc.total_brutto, doc_date:doc.doc_date, type: doc.onbill_doc_type}); }"
+        },
         "monthly_recurring": {
             "map": "function(doc) { if (doc.pvt_type != 'debit' || doc.pvt_reason != 'monthly_recurring' || doc.pvt_deleted) return; emit(doc._id, {id: doc._id, name: doc.name}); }"
         },

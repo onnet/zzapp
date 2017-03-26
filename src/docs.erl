@@ -1,12 +1,19 @@
 -module(docs).
 
--export([generate_docs/3
+-export([generate_docs/2
+        ,generate_docs/3
         ,generate_docs/4
+        ,per_minute_reports/2
         ,per_minute_reports/3
         ,create_proforma_invoice/2
         ]).
 
 -include("onbill.hrl").
+
+-spec generate_docs(ne_binary(), integer()) -> ok.
+generate_docs(AccountId, Timestamp) ->
+    {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
+    generate_docs(AccountId, Year, Month, Day).
 
 -spec generate_docs(ne_binary(), kz_year(), kz_month()) -> ok.
 generate_docs(AccountId, Year, Month) ->
@@ -284,8 +291,13 @@ aggregate_data(AccountId, Year, Month, Day, Carrier, {AggrVars, TotalNetto, Tota
         _ -> {AggrVars, TotalNetto, TotalVAT, TotalBrutto} 
     end.
     
+-spec per_minute_reports(ne_binary(), integer()) -> 'ok'.
 -spec per_minute_reports(ne_binary(), integer(), integer()) -> 'ok'.
 -spec per_minute_reports(ne_binary(), integer(), integer(), integer()) -> 'ok'.
+per_minute_reports(AccountId, Timestamp) ->
+    {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
+    per_minute_reports(AccountId, Year, Month, Day).
+
 per_minute_reports(AccountId, Year, Month) ->
     per_minute_reports(AccountId, Year, Month, 1).
 

@@ -26,6 +26,7 @@
         ,days_left_in_period/2
         ,period_last_day_by_first_one/3
         ,period_end_modb_by_start/4
+        ,date_json/1
         ,date_json/3
         ,period_start_date/1
         ,period_start_date/2
@@ -54,7 +55,9 @@
         ,maybe_process_new_billing_period/1
         ,list_account_periods/1
         ,period_openning_balance/4
+        ,period_openning_balance_dollars/4
         ,day_start_balance/4
+        ,day_start_balance_dollars/4
         ]).
 
 -include("onbill.hrl").
@@ -259,7 +262,11 @@ period_end_modb_by_start(AccountId, Year, Month, Day) ->
     {Y, M, _} = period_last_day_by_first_one(SY, SM, SD),
     kazoo_modb:get_modb(AccountId, Y, M).
 
+-spec date_json({kz_year(), kz_month(), kz_day()}) -> proplist().
 -spec date_json(kz_year(), kz_month(), kz_day()) -> proplist().
+date_json({Year, Month, Day}) ->
+    date_json(Year, Month, Day).
+
 date_json(Year, Month, Day) when is_integer(Day) ->
     date_json(Year, Month, ?TO_BIN(Day));
 date_json(Year, Month, Day) ->
@@ -547,6 +554,15 @@ period_openning_balance(AccountId, Year, Month, Day) ->
     {SYear, SMonth, SDay} = period_start_date(AccountId, Year, Month, Day),
     day_start_balance(AccountId, SYear, SMonth, SDay).
 
+-spec period_openning_balance_dollars(ne_binary(), kz_year(), kz_month(), kz_day()) -> number() | {'error', any()}.
+period_openning_balance_dollars(AccountId, Year, Month, Day) ->
+    case period_openning_balance(AccountId, Year, Month, Day) of
+        Balance when is_number(Balance) ->
+            wht_util:units_to_dollars(Balance);
+        Balance ->
+            Balance
+    end.
+
 -spec day_start_balance(ne_binary(), kz_year(), kz_month(), kz_day()) -> number() | {'error', any()}.
 day_start_balance(AccountId, Year, Month, 1) ->
     case kazoo_modb:open_doc(AccountId, <<"monthly_rollup">>, Year, Month) of
@@ -577,6 +593,15 @@ day_start_balance(AccountId, Year, Month, Day) ->
         {'error', _E} = Error ->
             lager:warning("unable to get period_start_balance for ~s: ~p", [AccountId, _E]),
             Error
+    end.
+
+-spec day_start_balance_dollars(ne_binary(), kz_year(), kz_month(), kz_day()) -> number() | {'error', any()}.
+day_start_balance_dollars(AccountId, Year, Month, Day) ->
+    case day_start_balance(AccountId, Year, Month, Day) of
+        Balance when is_number(Balance) ->
+            wht_util:units_to_dollars(Balance);
+        Balance ->
+            Balance
     end.
 
 -spec get_amount(kz_json:object()) -> number().

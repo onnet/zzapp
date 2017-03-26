@@ -167,7 +167,7 @@ build_customer_update_payload(AccountId, TemplateId, DataBag) ->
       ,{<<"Recipient-ID">>, RecipientId}
       ,{<<"Template-ID">>, TemplateId}
       ,{<<"DataBag">>, DataBag}
-       | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
+       | kz_api:default_headers(?OB_APP_NAME, ?OB_APP_VERSION)
       ]).
 
 -spec maybe_send_account_updates(ne_binary(), kz_account:doc()) -> 'ok'.

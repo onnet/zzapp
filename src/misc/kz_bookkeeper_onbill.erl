@@ -235,7 +235,7 @@ send_topup_notification(Success, BillingId, BtTransaction) ->
              ,{<<"Amount">>, Amount}
              ,{<<"Success">>, Success}
              ,{<<"Response">>, kz_json:get_value(<<"processor_response_text">>, Transaction)}
-             | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
+             | kz_api:default_headers(?OB_APP_NAME, ?OB_APP_VERSION)
             ],
     _ = case
             kapps_util:amqp_pool_send(
