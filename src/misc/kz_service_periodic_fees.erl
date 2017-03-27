@@ -47,14 +47,16 @@ reconcile_fee(JObj, Services) ->
     lager:debug("reconciling fee ~s to ~p", [Item, Quantity]),
     kz_services:update(?CATEGORY, Item, Quantity, Services).
 
+-spec count_active_fees(gregorian_seconds(), kz_json:object()) -> kz_json:objects().
 count_active_fees(LookupTstamp, FeeDocs) ->
     ActiveFees = [kz_json:get_value(<<"value">>, JObj)
                   || JObj <- FeeDocs
                     ,onbill_util:maybe_fee_active(LookupTstamp, JObj)
                  ],
     ServicesList = [kz_json:get_value(<<"service_id">>, Fee) || Fee <- ActiveFees],
-    [{[{<<"key">>, Service}, {<<"value">>,count(Service, ServicesList)}]} || Service <- lists:usort(ServicesList)].
+    ServicesQtyList = [{kz_json:get_value(<<"service_id">>, Fee), kz_json:get_integer_value(<<"quantity">>, Fee, 1)} || Fee <- ActiveFees],
+    [{[{<<"key">>, Service}, {<<"value">>,count(Service, ServicesQtyList)}]} || Service <- lists:usort(ServicesList)].
 
 count(_, []) -> 0;
-count(X, [X|XS]) -> 1 + count(X, XS);
+count(X, [{X,Qty}|XS]) -> Qty + count(X, XS);
 count(X, [_|XS]) -> count(X, XS).
