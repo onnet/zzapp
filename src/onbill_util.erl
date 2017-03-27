@@ -581,6 +581,7 @@ day_start_balance(AccountId, Year, Month, 1) ->
 day_start_balance(AccountId, Year, Month, Day) ->
     View = <<"onbills/debit_credit_timestamp">>,
     Timestamp = calendar:datetime_to_gregorian_seconds({{Year, Month, Day}, {0,0,0}}),
+    maybe_add_design_doc(kazoo_modb:get_modb(AccountId, Year, Month), <<"onbills">>),
     ViewOptions = [{'year', kz_term:to_binary(Year)}
                   ,{'month', kz_time:pad_month(Month)}
                   ,{'endkey', Timestamp}
@@ -592,7 +593,7 @@ day_start_balance(AccountId, Year, Month, Day) ->
             kz_json:get_integer_value(<<"value">>, ViewRes, 0)
             + day_start_balance(AccountId, Year, Month, 1);
         {'error', _E} = Error ->
-            lager:warning("unable to get period_start_balance for ~s: ~p", [AccountId, _E]),
+            lager:warning("unable to get period_start_balance for ~s (~p-~p-~p): ~p", [AccountId, Year, Month, Day, _E]),
             Error
     end.
 
