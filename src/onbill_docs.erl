@@ -89,7 +89,7 @@ generate_docs(AccountId, Year, Month, Day, Carrier, VatUpdatedFeesList, {TotalNe
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
     _ = [save_pdf(Vars
                     ++ [{<<"onbill_doc_type">>, DocType}]
-                    ++ [{<<"doc_number">>, docs_numbering:get_binary_number(AccountId, Carrier, DocType, Year, Month)}]
+                    ++ [{<<"doc_number">>, onbill_docs_numbering:get_binary_number(AccountId, Carrier, DocType, Year, Month)}]
                  ,DocType
                  ,Carrier
                  ,AccountId
@@ -272,7 +272,7 @@ aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
            ,{<<"total_brutto_div">>, TotalBruttoDiv}
            ,{<<"total_brutto_rem">>, TotalBruttoRem}
            ,{<<"onbill_doc_type">>, DocType}
-           ,{<<"doc_number">>, docs_numbering:get_binary_number(AccountId, MainCarrier, DocType, Year, Month)}
+           ,{<<"doc_number">>, onbill_docs_numbering:get_binary_number(AccountId, MainCarrier, DocType, Year, Month)}
            ]
            ++ [{Key, kz_json:get_value(Key, MainCarrierDoc)} || Key <- kz_json:get_keys(MainCarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
@@ -343,7 +343,7 @@ create_proforma_invoice(Amount, AccountId) ->
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
     MainCarrierDoc = onbill_util:carrier_doc(MainCarrier, AccountId),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
-    DocNumber = docs_numbering:get_new_binary_number(AccountId, MainCarrier, DocType),
+    DocNumber = onbill_docs_numbering:get_new_binary_number(AccountId, MainCarrier, DocType),
     VatifiedAmount = onbill_fees:vatify_amount(<<"total">>, kz_term:to_float(Amount), OnbillResellerVars),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(props:get_value(<<"total_brutto">>, VatifiedAmount)),
     {TotalVatDiv, TotalVatRem} = total_to_words(props:get_value(<<"total_vat">>, VatifiedAmount)),

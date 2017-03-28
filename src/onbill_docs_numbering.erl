@@ -1,4 +1,4 @@
--module(docs_numbering).
+-module(onbill_docs_numbering).
 
 -export([get_binary_number/5
         ,get_new_binary_number/3
