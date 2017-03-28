@@ -118,7 +118,7 @@ maybe_spawn_generate_billing_docs(AccountId, PeriodTimestamp, FunName, N) ->
         'true' ->
             spawn(fun() ->
                       timer:sleep(N * 2000),
-                      docs:FunName(AccountId, kz_term:to_integer(PeriodTimestamp))
+                      onbill_docs:FunName(AccountId, kz_term:to_integer(PeriodTimestamp))
                   end),
             N+1;
         'false' -> N
@@ -141,14 +141,14 @@ generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName) ->
     ResellerId = cb_context:account_id(Context),
     case onbill_util:validate_relationship(AccountId, ResellerId) of
         'true' ->
-            _ = docs:FunName(AccountId, kz_term:to_integer(PeriodTimestamp)),
+            _ = onbill_docs:FunName(AccountId, kz_term:to_integer(PeriodTimestamp)),
             cb_context:set_resp_status(Context, 'success');
         'false' ->
             cb_context:add_system_error('forbidden', Context)
     end.
 
 generate_per_minute_reports(Context, AccountId, PeriodTimestamp) ->
-    docs:per_minute_reports(AccountId, kz_term:to_integer(PeriodTimestamp)),
+    onbill_docs:per_minute_reports(AccountId, kz_term:to_integer(PeriodTimestamp)),
     cb_context:set_resp_status(Context, 'success').
 
 -spec validate_onbill(cb_context:context(), http_method()) -> cb_context:context().

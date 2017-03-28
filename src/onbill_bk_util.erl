@@ -15,6 +15,7 @@
         ,current_usage_amount/1
         ,current_usage_amount_in_units/1
         ,today_dailyfee_absent/1
+        ,maybe_issue_previous_billing_period_docs/4
         ]).
 
 -include("onbill.hrl").
@@ -449,6 +450,6 @@ today_dailyfee_absent(AccountId) ->
     end.
 
 -spec maybe_issue_previous_billing_period_docs(ne_binary(), kz_year(), kz_month(), kz_day()) -> any().
-maybe_issue_previous_billing_period_docs(AccountId, Year, Month, Day)
+maybe_issue_previous_billing_period_docs(AccountId, Year, Month, Day) ->
     {PYear, PMonth, PDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
-    docs:generate_docs(AccountId, PYear, PMonth, PDay).
+    _ = kz_util:spawn(fun onbill_docs:generate_docs/4, [AccountId, PYear, PMonth, PDay]).

@@ -1,4 +1,4 @@
--module(docs).
+-module(onbill_docs).
 
 -export([generate_docs/2
         ,generate_docs/3
@@ -26,7 +26,7 @@ generate_docs(AccountId, Year, Month, Day) ->
     maybe_aggregate_invoice(AccountId, Year, Month, Day, Carriers).
 
 generate_docs(AccountId, Year, Month, Day, Carrier) ->
-    VatUpdatedFeesList = fees:shape_fees(AccountId, Year, Month, Day, Carrier),
+    VatUpdatedFeesList = onbill_fees:shape_fees(AccountId, Year, Month, Day, Carrier),
     Totals = lists:foldl(fun(X, {TN_Acc, VAT_Acc, TB_Acc}) ->
                                                         {TN_Acc + props:get_value(<<"discounted_cost_netto">>, X)
                                                          ,VAT_Acc + props:get_value(<<"vat_line_discounted_total">>, X)
@@ -306,7 +306,7 @@ per_minute_reports(AccountId, Year, Month, Day) ->
     _ = [maybe_per_minute_report(AccountId, Year, Month, Day, Carrier) || Carrier <- Carriers].
 
 maybe_per_minute_report(AccountId, Year, Month, Day, Carrier) ->
-    {CallsJObjs, CallsTotalSec, CallsTotalSumm} = fees:per_minute_calls(AccountId, Year, Month, Day, Carrier),
+    {CallsJObjs, CallsTotalSec, CallsTotalSumm} = onbill_fees:per_minute_calls(AccountId, Year, Month, Day, Carrier),
     per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSec, CallsTotalSumm).
 
 per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSec, CallsTotalSumm) when CallsTotalSumm > 0.0 ->
@@ -316,7 +316,7 @@ per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSe
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
-    {CallsJObjs, CallsTotalSec, CallsTotalSumm} = fees:per_minute_calls(AccountId, Year, Month, 1, Carrier),
+    {CallsJObjs, CallsTotalSec, CallsTotalSumm} = onbill_fees:per_minute_calls(AccountId, Year, Month, 1, Carrier),
     Vars = [{<<"per_minute_calls">>, CallsJObjs}
            ,{<<"start_date">>, ?DATE_STRING(SYear, SMonth, SDay)}
            ,{<<"end_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
@@ -327,7 +327,7 @@ per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSe
            ,{<<"agrm_date">>, kz_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccountOnbillDoc)}
            ,{<<"onbill_doc_type">>, DocType}
            ]
-           ++ fees:vatify_amount(<<"total">>, CallsTotalSumm, OnbillResellerVars)
+           ++ onbill_fees:vatify_amount(<<"total">>, CallsTotalSumm, OnbillResellerVars)
            ++ [{Key, kz_json:get_value(Key, CarrierDoc)} || Key <- kz_json:get_keys(CarrierDoc), filter_vars(Key)]
            ++ [{Key, kz_json:get_value(Key, AccountOnbillDoc)} || Key <- kz_json:get_keys(AccountOnbillDoc), filter_vars(Key)],
     save_pdf(Vars, DocType, Carrier, AccountId, Year, Month);
@@ -344,7 +344,7 @@ create_proforma_invoice(Amount, AccountId) ->
     MainCarrierDoc = onbill_util:carrier_doc(MainCarrier, AccountId),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
     DocNumber = docs_numbering:get_new_binary_number(AccountId, MainCarrier, DocType),
-    VatifiedAmount = fees:vatify_amount(<<"total">>, kz_term:to_float(Amount), OnbillResellerVars),
+    VatifiedAmount = onbill_fees:vatify_amount(<<"total">>, kz_term:to_float(Amount), OnbillResellerVars),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(props:get_value(<<"total_brutto">>, VatifiedAmount)),
     {TotalVatDiv, TotalVatRem} = total_to_words(props:get_value(<<"total_vat">>, VatifiedAmount)),
     Vars = [{<<"doc_date_json">>, onbill_util:date_json(Year, Month, Day)}

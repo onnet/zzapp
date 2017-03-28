@@ -1,4 +1,4 @@
--module(fees).
+-module(onbill_fees).
 
 -export([shape_fees/4
         ,shape_fees/5

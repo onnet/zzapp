@@ -82,7 +82,7 @@ create(Context) ->
     lager:info("IAM proforma ReqData: ~p",[ReqData]),
     AccountId = cb_context:account_id(Context),
     Amount = kz_json:get_number_value(<<"amount">>, ReqData),
-    case docs:create_proforma_invoice(Amount, AccountId) of
+    case onbill_docs:create_proforma_invoice(Amount, AccountId) of
         {'ok', JObj} ->
             cb_context:set_resp_status(crossbar_doc:load(kz_doc:id(JObj)
                                                         ,cb_context:set_account_modb(Context
