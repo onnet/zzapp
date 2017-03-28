@@ -59,11 +59,12 @@ maybe_sync(Items, AccountId) ->
 
 maybe_billing_period_starts(Items, AccountId) ->
     Timestamp = kz_time:current_tstamp(),
-    {Year, Month, _Day} = onbill_util:period_start_date(AccountId, Timestamp),
+    {Year, Month, Day} = onbill_util:period_start_date(AccountId, Timestamp),
     case kazoo_modb:open_doc(AccountId, ?MRC_DOC, Year, Month) of
         {'ok', _} ->
             run_sync(Items, AccountId, Timestamp);
         {'error', 'not_found'} ->
+            onbill_bk_util:maybe_issue_previous_billing_period_docs(AccountId, Year, Month, Day),
             lager:debug("monthly_recurring doc not found, trying to create"),
             case onbill_bk_util:process_new_billing_period_mrc(AccountId, Timestamp) of
                 {'ok', 'mrc_processed'} -> 

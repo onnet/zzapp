@@ -33,6 +33,8 @@
         ,period_start_date/4
         ,next_period_start_date/2
         ,next_period_start_date/4
+        ,previous_period_start_date/2
+        ,previous_period_start_date/4
         ,period_end_date/2
         ,period_end_date/4
         ,account_creation_date/1
@@ -320,6 +322,17 @@ next_period_start_date(AccountId, Year, Month, Day) ->
     {SYear, SMonth, SDay} = period_start_date(AccountId, Year, Month, Day),
     {NextMonthYear, NextMonth} = next_month(SYear, SMonth),
     adjust_period_first_day(NextMonthYear, NextMonth, SDay).
+
+-spec previous_period_start_date(ne_binary(), gregorian_seconds()) -> {kz_year(), kz_month(), kz_day()}.
+-spec previous_period_start_date(ne_binary(), kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+previous_period_start_date(AccountId, Timestamp) ->
+    {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
+    previous_period_start_date(AccountId, Year, Month, Day).
+
+previous_period_start_date(AccountId, Year, Month, Day) ->
+    {SYear, SMonth, SDay} = period_start_date(AccountId, Year, Month, Day),
+    {PrevMonthYear, PrevMonth} = prev_month(SYear, SMonth),
+    adjust_period_first_day(PrevMonthYear, PrevMonth, SDay).
 
 -spec billing_day(ne_binary() | kz_json:object()) -> integer() | 'undefined'.
 billing_day(AccountId) when is_binary(AccountId) ->

@@ -448,3 +448,7 @@ today_dailyfee_absent(AccountId) ->
         _ -> 'false'
     end.
 
+-spec maybe_issue_previous_billing_period_docs(ne_binary(), kz_year(), kz_month(), kz_day()) -> any().
+maybe_issue_previous_billing_period_docs(AccountId, Year, Month, Day)
+    {PYear, PMonth, PDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
+    docs:generate_docs(AccountId, PYear, PMonth, PDay).
