@@ -1,0 +1,1 @@
+/opt/kazoo/core/kazoo_number_manager/include/knm_phone_number.hrl
