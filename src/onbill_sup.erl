@@ -51,6 +51,7 @@ start_link() ->
 init([]) ->
   %  onbill_util:check_db(?ONBILL_DB),
     onbill_notifications:init(),
+    kt_onbill:init(),
     kz_util:set_startup(),
     _ = code:ensure_loaded(kz_service_periodic_fees),
     RestartStrategy = 'one_for_one',
