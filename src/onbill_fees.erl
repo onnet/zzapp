@@ -12,7 +12,7 @@
 
 -spec shape_fees(ne_binary(), integer(), integer(), ne_binary()) -> 'ok'. 
 -spec shape_fees(ne_binary(), integer(), integer(), integer(), ne_binary()) -> 'ok'. 
--spec shape_fees(ne_binary(), integer(), integer(), integer(), kz_json:object(), proplist()) -> 'ok'. 
+-spec shape_fees(ne_binary(), integer(), integer(), integer(), kz_json:object(), kz_proplist()) -> 'ok'. 
 shape_fees(AccountId, Year, Month, Carrier) ->
     shape_fees(AccountId, Year, Month, 1, Carrier).
 shape_fees(AccountId, Year, Month, Day, Carrier) ->
@@ -338,7 +338,7 @@ handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Qu
               ),
     ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, dates_sequence_reduce(Dates), length(Dates), Name, <<"daily_calculated">>, 0.0}).
 
--spec dates_sequence_reduce(proplist()) -> proplist().
+-spec dates_sequence_reduce(kz_proplist()) -> kz_proplist().
 dates_sequence_reduce(DatesList) ->
     Pairs = lists:usort([{Year,Month} || {Year,Month,_} <- DatesList]),
     [format_days_of_month(Year, Month, DatesList) || {Year,Month} <- Pairs].
@@ -347,7 +347,7 @@ format_days_of_month(Year, Month, DatesList) ->
     Days = [?TO_INT(D) || {Y,M,D} <- DatesList, Year == Y  andalso Month == M],
     onbill_util:date_json(Year, Month, days_sequence_reduce(Days)).
 
--spec days_sequence_reduce(proplist()) -> proplist().
+-spec days_sequence_reduce(kz_proplist()) -> kz_proplist().
 days_sequence_reduce([Digit]) ->
     days_sequence_reduce([Digit], []);
 days_sequence_reduce([First,Last]) ->

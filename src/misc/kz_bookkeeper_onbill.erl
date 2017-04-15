@@ -209,7 +209,7 @@ handle_charged_transaction(AccountId, Transaction) ->
         _ -> [Transaction]
     end.
 
--spec handle_topup(ne_binary(), kz_json:object()) -> proplist().
+-spec handle_topup(ne_binary(), kz_json:object()) -> kz_proplist().
 handle_topup(BillingId, Transaction) ->
     case already_charged(BillingId, ?CODE_TOPUP) of
         'true' ->
@@ -260,7 +260,7 @@ handle_quick_sale_response(BtTransaction) ->
     %% https://www.braintreepayments.com/docs/ruby/reference/processor_responses
     kz_term:to_integer(RespCode) < 2000.
 
--spec populate_modb_with_fees(ne_binary(), integer(), integer()) -> proplist().
+-spec populate_modb_with_fees(ne_binary(), integer(), integer()) -> kz_proplist().
 populate_modb_with_fees(AccountId, Year, Month) ->
     LastMonthDay = calendar:last_day_of_the_month(Year, Month),
     [populate_modb_day_with_fee(AccountId, Year, Month, Day) || Day <- lists:seq(1, LastMonthDay)].

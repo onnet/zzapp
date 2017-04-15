@@ -56,7 +56,7 @@ prepare_dailyfee_doc_name(Y, M, D) ->
     Day = kz_time:pad_month(D),
     <<Year/binary, Month/binary, Day/binary, "-dailyfee">>.
 
--spec select_daily_count_items_list(kz_service_item:items(), ne_binary()) -> proplist().
+-spec select_daily_count_items_list(kz_service_item:items(), ne_binary()) -> kz_proplist().
 select_daily_count_items_list(Items, AccountId) ->
     case kz_json:is_json_object(Items) of
         'false' ->
@@ -92,7 +92,7 @@ select_non_zero_items_json(Items) ->
     ],
     kz_json:set_values(Upd, kz_json:new()).
 
--spec select_non_zero_items_list(kz_service_item:items()|kz_json:object(), ne_binary()) -> proplist().
+-spec select_non_zero_items_list(kz_service_item:items()|kz_json:object(), ne_binary()) -> kz_proplist().
 select_non_zero_items_list(Items, AccountId) ->
     case kz_json:is_json_object(Items) of
         'false' ->
@@ -187,7 +187,7 @@ dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items) ->
      ,{<<"pvt_modified">>, Timestamp}
     ].
 
--spec charge_newly_added(ne_binary(), kz_json:object(), proplist(), integer()) -> 'ok'|proplist(). 
+-spec charge_newly_added(ne_binary(), kz_json:object(), kz_proplist(), integer()) -> 'ok'|kz_proplist(). 
 charge_newly_added(_AccountId, _NewMax, [], _Timestamp) -> 'ok';
 charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], Timestamp) -> 
     ResellerVars = onbill_util:reseller_vars(AccountId),
@@ -243,7 +243,7 @@ discount_newly_added(Qty, ItemJObj) ->
     ,{<<"cumulative_discount">>, CumulativeDiscount}
     ].
 
--spec process_new_billing_period_mrc(ne_binary(), gregorian_seconds()) -> 'ok'|proplist(). 
+-spec process_new_billing_period_mrc(ne_binary(), gregorian_seconds()) -> 'ok'|kz_proplist(). 
 process_new_billing_period_mrc(AccountId, Timestamp) ->
     case onbill_bk_util:current_usage_amount_in_units(AccountId)
         > (onbill_util:current_balance(AccountId) + abs(j5_limits:max_postpay(j5_limits:get(AccountId))))
@@ -322,11 +322,11 @@ charge_mrc_category(AccountId, Category, NewMax, Timestamp) ->
      || Item <- ItemsList
     ].
 
--spec charge_mrc_item(ne_binary(), kz_json:object(), gregorian_seconds()) -> 'ok'|proplist(). 
+-spec charge_mrc_item(ne_binary(), kz_json:object(), gregorian_seconds()) -> 'ok'|kz_proplist(). 
 charge_mrc_item(AccountId, ItemJObj, Timestamp) ->
     create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"monthly_recurring">>, 1.0).
 
--spec create_debit_tansaction(ne_binary(), kz_json:object(), gregorian_seconds(), ne_binary(), float()) -> 'ok'|proplist(). 
+-spec create_debit_tansaction(ne_binary(), kz_json:object(), gregorian_seconds(), ne_binary(), float()) -> 'ok'|kz_proplist(). 
 create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Ratio) ->
     CItem = calc_item(ItemJObj, AccountId),
     DiscountedItemCost = kz_json:get_float_value(<<"discounted_item_cost">>, CItem),

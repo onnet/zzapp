@@ -127,7 +127,7 @@ reseller_vars(AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     account_vars(ResellerId).
 
--spec reseller_country_of_residence(ne_binary()) -> proplist().
+-spec reseller_country_of_residence(ne_binary()) -> kz_proplist().
 reseller_country_of_residence(AccountId) ->
     kz_term:to_lower_binary(kz_json:get_value(<<"iso_code_country_of_residence">>, reseller_vars(AccountId), <<"uk">>)).
 
@@ -173,7 +173,7 @@ validate_relationship(ChildId, ResellerId) ->
             'false'
     end.
 
--spec get_children_list(ne_binary()) -> {'ok', proplist()} | {'error', any()}.
+-spec get_children_list(ne_binary()) -> {'ok', kz_proplist()} | {'error', any()}.
 get_children_list(ResellerId) ->
     ViewOpts = [{'startkey', [ResellerId]}
                ,{'endkey', [ResellerId, kz_json:new()]}
@@ -265,8 +265,8 @@ period_end_modb_by_start(AccountId, Year, Month, Day) ->
     {Y, M, _} = period_last_day_by_first_one(SY, SM, SD),
     kazoo_modb:get_modb(AccountId, Y, M).
 
--spec date_json({kz_year(), kz_month(), kz_day()}) -> proplist().
--spec date_json(kz_year(), kz_month(), kz_day()) -> proplist().
+-spec date_json({kz_year(), kz_month(), kz_day()}) -> kz_proplist().
+-spec date_json(kz_year(), kz_month(), kz_day()) -> kz_proplist().
 date_json({Year, Month, Day}) ->
     date_json(Year, Month, Day).
 
