@@ -61,9 +61,9 @@ help(JObj, <<?CATEGORY>>=Category, Action) ->
 
 -spec action(ne_binary()) -> kz_proplist().
 action(<<"current_state">>) ->
-    [{<<"description">>, <<"List per-month descendant accounts quantities">>}
-    ,{<<"doc">>, <<"Line1.\n"
-                   "Line 2.\n"
+    [{<<"description">>, <<"List current descendant accounts state">>}
+    ,{<<"doc">>, <<"Just an experimentsl feature.\n"
+                   "No additional parametres needed.\n"
                  >>}
     ].
 
@@ -88,7 +88,7 @@ current_state(_, [SubAccountId | DescendantsIds]) ->
      ,descendants_count(SubAccountId)
      ,onbill_util:current_service_status(SubAccountId)
      ,onbill_util:current_account_dollars(SubAccountId)
-     ,onbill_bk_util:current_usage_amount(SubAccountId)
+     ,estimated_monthly_total(SubAccountId)
      ,kz_services:category_quantity(<<"users">>, Services)
      ,count_registrations(Realm)
      ,kz_services:category_quantity(<<"devices">>, Services)
@@ -137,3 +137,9 @@ count_registrations(Realm) ->
         {'ok', JObj} -> kz_json:get_integer_value(<<"Count">>, JObj, 0);
         {'timeout', _} -> lager:debug("timed out query for counting regs"), 0
   end.
+
+estimated_monthly_total(AccountId) ->
+    case onbill_util:is_service_plan_assigned(AccountId) of
+        'true' -> onbill_bk_util:current_usage_amount(AccountId);
+        'false' -> 'no_service_plan_assigned'
+    end.

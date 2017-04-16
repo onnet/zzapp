@@ -426,8 +426,10 @@ calc_item(ItemJObj, AccountId) ->
 current_items(AccountId) -> 
     Services = kz_services:fetch(AccountId),
     ServicesJObj = kz_services:services_json(Services),
-    {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
-    Items.
+    case kz_service_plans:create_items(ServicesJObj) of
+        {'ok', Items} -> Items;
+        E -> E
+    end.
 
 -spec current_usage_amount_in_units(ne_binary()) -> float().
 current_usage_amount_in_units(AccountId) ->
@@ -435,9 +437,12 @@ current_usage_amount_in_units(AccountId) ->
 
 -spec current_usage_amount(ne_binary()) -> float().
 current_usage_amount(AccountId) ->
-    Items = current_items(AccountId),
-    ItemsJObj = select_non_zero_items_list(Items,AccountId),
-    items_amount(ItemsJObj, AccountId, 0.0).
+    case current_items(AccountId) of
+        {_,E} -> E;
+        Items ->
+            ItemsJObj = select_non_zero_items_list(Items,AccountId),
+            items_amount(ItemsJObj, AccountId, 0.0)
+    end.
 
 -spec today_dailyfee_absent(ne_binary()) -> boolean().
 today_dailyfee_absent(AccountId) ->
