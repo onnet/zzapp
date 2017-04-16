@@ -57,7 +57,7 @@ handle_info('crawl_accounts', _) ->
             {'noreply', []}
     end;
 handle_info('next_account', []) ->
-    kz_couch_compactor:compact_db(<<"services">>),
+ %   kz_couch_compactor:compact_db(<<"services">>),
     erlang:send_after(?MILLISECONDS_IN_HOUR, self(), 'crawl_accounts'),
     {'noreply', [], 'hibernate'};
 handle_info('next_account', [Account|Accounts]) ->
