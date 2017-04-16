@@ -34,7 +34,7 @@ start_link() ->
 -spec init(list()) -> {'ok', state()}.
 init([]) ->
     self() ! 'crawl_accounts',
-    kz_couch_compactor:compact_db(<<"services">>),
+    kt_compactor:compact_db(<<"services">>),
     {'ok', #state{}}.
 
 -spec handle_call(any(), pid_ref(), state()) -> handle_call_ret_state(state()).
