@@ -1,11 +1,3 @@
-%%%-------------------------------------------------------------------
-%%% @copyright (C) 2016-2017, 2600Hz
-%%% @doc
-%%%
-%%% @end
-%%% @contributors
-%%%   Pierre Fenoll
-%%%-------------------------------------------------------------------
 -module(kt_onbill).
 %% behaviour: tasks_provider
 
@@ -43,12 +35,17 @@ init() ->
 -spec output_header(ne_binary()) -> kz_csv:row().
 output_header(<<"current_state">>) ->
     [<<"account_id">>
-    ,<<"year">>
-    ,<<"month">>
-    ,<<"category">>
-    ,<<"item">>
-    ,<<"quantity_bom">>
-    ,<<"quantity_eom">>
+    ,<<"account_name">>
+    ,<<"realm">>
+    ,<<"is_enabled">>
+    ,<<"is_reseller">>
+    ,<<"descendants_count">>
+    ,<<"current_service_status">>
+    ,<<"current_balance">>
+    ,<<"estimated_monthly_total">>
+    ,<<"users">>
+    ,<<"registered_devices">>
+    ,<<"devices">>
     ].
 
 -spec help(kz_json:object()) -> kz_json:object().
@@ -77,52 +74,30 @@ action(<<"current_state">>) ->
 
 -spec current_state(kz_tasks:extra_args(), kz_tasks:iterator()) -> kz_tasks:iterator().
 current_state(#{account_id := AccountId}, init) ->
-    Descendants = get_descendants(AccountId),
-    DescendantsMoDBs = lists:flatmap(fun kapps_util:get_account_mods/1, Descendants),
-    lager:debug("found ~p descendants & ~p MoDBs in total"
-               ,[length(Descendants), length(DescendantsMoDBs)]),
-    {ok, DescendantsMoDBs};
+    {'ok', get_descendants(AccountId)};
 current_state(_, []) -> stop;
-current_state(_, [SubAccountMoDB | DescendantsMoDBs]) ->
-    ?MATCH_MODB_SUFFIX_ENCODED(A, B, Rest, YYYY, MM) = SubAccountMoDB,
-    AccountId = ?MATCH_ACCOUNT_RAW(A, B, Rest),
-    BoM = modb_service_quantities(SubAccountMoDB, ?SERVICES_BOM),
-    EoM = modb_service_quantities(SubAccountMoDB, ?SERVICES_EOM),
-    case rows_for_quantities(AccountId, YYYY, MM, BoM, EoM) of
-        [] ->
-            %% No rows generated: ask worker to skip writing for this step.
-            {ok, DescendantsMoDBs};
-        Rows -> {Rows, DescendantsMoDBs}
-    end.
+current_state(_, [SubAccountId | DescendantsIds]) ->
+    {'ok', JObj} = kz_account:fetch(SubAccountId),
+    Realm = kz_account:realm(JObj),
+    Services = kz_services:fetch(SubAccountId),
+    {[SubAccountId
+     ,kz_account:name(JObj)
+     ,Realm
+     ,kz_account:is_enabled(JObj)
+     ,kz_account:is_reseller(JObj)
+     ,descendants_count(SubAccountId)
+     ,onbill_util:current_service_status(SubAccountId)
+     ,onbill_util:current_account_dollars(SubAccountId)
+     ,onbill_bk_util:current_usage_amount(SubAccountId)
+     ,kz_services:category_quantity(<<"users">>, Services)
+     ,count_registrations(Realm)
+     ,kz_services:category_quantity(<<"devices">>, Services)
+     ], DescendantsIds}.
 
 
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-
--spec rows_for_quantities(ne_binary(), ne_binary(), ne_binary(), kz_json:object(), kz_json:object()) ->
-                                 [kz_csv:row()].
-rows_for_quantities(AccountId, YYYY, MM, BoM, EoM) ->
-    lists:append(
-      [quantities_for_items(AccountId, YYYY, MM, Category, BoMItem, EoMItem)
-       || Category <- fields(BoM, EoM),
-          BoMItem <- [kz_json:get_value(Category, BoM)],
-          EoMItem <- [kz_json:get_value(Category, EoM)]
-      ]).
-
--spec quantities_for_items(ne_binary(), ne_binary(), ne_binary(), ne_binary(), api_object(), api_object()) ->
-                                  [kz_csv:row()].
-quantities_for_items(AccountId, YYYY, MM, Category, BoMItem, EoMItem) ->
-    [ [AccountId
-      ,YYYY
-      ,MM
-      ,Category
-      ,Item
-      ,maybe_integer_to_binary(Item, BoMItem)
-      ,maybe_integer_to_binary(Item, EoMItem)
-      ]
-      || Item <- fields(BoMItem, EoMItem)
-    ].
 
 -spec get_descendants(ne_binary()) -> ne_binaries().
 get_descendants(AccountId) ->
@@ -136,28 +111,29 @@ get_descendants(AccountId) ->
             []
     end.
 
--spec modb_service_quantities(ne_binary(), ne_binary()) -> kz_json:object().
-modb_service_quantities(MoDB, Id) ->
-    case kz_datamgr:open_doc(MoDB, Id) of
-        {'ok', JObj} -> kz_json:get_value(<<"quantities">>, JObj);
-        {'error', _R} ->
-            lager:debug("could not fetch ~s in modb ~s: ~p", [Id, MoDB, _R]),
-            kz_json:new()
+-spec descendants_count(ne_binary()) -> integer().
+descendants_count(AccountId) ->
+    ViewOptions = [{'group_level', 1}
+                   | props:delete('group_level', [{'key', AccountId}])
+                  ],
+    case kz_datamgr:get_results(?KZ_ACCOUNTS_DB, <<"accounts/listing_by_descendants_count">>, ViewOptions) of
+        {'ok', [JObj|_]} -> kz_json:get_value(<<"value">>, JObj);
+        {'ok', []} -> 0;
+        {'error', _} -> 0
     end.
 
--spec fields(api_object(), api_object()) -> ne_binaries().
-fields('undefined', JObjB) ->
-    fields(kz_json:new(), JObjB);
-fields(JObjA, 'undefined') ->
-    fields(JObjA, kz_json:new());
-fields(JObjA, JObjB) ->
-    lists:usort(kz_json:get_keys(JObjA) ++ kz_json:get_keys(JObjB)).
-
--spec maybe_integer_to_binary(ne_binary(), api_object()) -> api_non_neg_integer().
-maybe_integer_to_binary(_, 'undefined') -> 'undefined';
-maybe_integer_to_binary(Item, JObj) ->
-    case kz_json:get_integer_value(Item, JObj) of
-        'undefined' -> 'undefined';
-        Quantity -> integer_to_binary(Quantity)
-    end.
-
+count_registrations(Realm) ->
+    Req = [{<<"Realm">>, Realm}
+          ,{<<"Fields">>, []}
+          ,{<<"Count-Only">>, 'true'}
+           | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
+          ],
+    ReqResp = kapps_util:amqp_pool_request(Req
+                                          ,fun kapi_registration:publish_query_req/1
+                                          ,fun kapi_registration:query_resp_v/1
+                                          ),
+    case ReqResp of
+        {'error', _E} -> lager:debug("no resps found: ~p", [_E]), 0;
+        {'ok', JObj} -> kz_json:get_integer_value(<<"Count">>, JObj, 0);
+        {'timeout', _} -> lager:debug("timed out query for counting regs"), 0
+  end.
