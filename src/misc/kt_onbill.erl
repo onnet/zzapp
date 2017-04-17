@@ -41,6 +41,8 @@ output_header(<<"current_state">>) ->
     ,<<"is_reseller">>
     ,<<"descendants_count">>
     ,<<"current_service_status">>
+    ,<<"allow_postpay">>
+    ,<<"max_postpay">>
     ,<<"current_balance">>
     ,<<"estimated_monthly_total">>
     ,<<"users">>
@@ -80,6 +82,11 @@ current_state(_, [SubAccountId | DescendantsIds]) ->
     {'ok', JObj} = kz_account:fetch(SubAccountId),
     Realm = kz_account:realm(JObj),
     Services = kz_services:fetch(SubAccountId),
+    {AllowPostpay, MaxPostpay} =
+        case onbill_util:maybe_allow_postpay(SubAccountId) of
+            'false' -> {'false', 0};
+            {'true', Max} -> {'true', Max}
+        end,
     {[SubAccountId
      ,kz_account:name(JObj)
      ,Realm
@@ -87,6 +94,8 @@ current_state(_, [SubAccountId | DescendantsIds]) ->
      ,kz_account:is_reseller(JObj)
      ,descendants_count(SubAccountId)
      ,onbill_util:current_service_status(SubAccountId)
+     ,AllowPostpay
+     ,wht_util:units_to_dollars(MaxPostpay)
      ,onbill_util:current_account_dollars(SubAccountId)
      ,estimated_monthly_total(SubAccountId)
      ,kz_services:category_quantity(<<"users">>, Services)
