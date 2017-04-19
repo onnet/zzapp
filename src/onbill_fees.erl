@@ -123,22 +123,34 @@ monthly_fees(AccountId, Year, Month, Day) ->
             Modb = kazoo_modb:get_modb(AccountId, Year, Month),
             _ = onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
             case kz_datamgr:get_results(Modb, <<"onbills/daily_fees">>, []) of
-                {'error', 'not_found'} -> lager:warning("unable to process monthly fee calculaton for Modb: ~s", [Modb]);
-                {'ok', JObjs } -> [process_daily_fee(JObj, Modb, RawTableId) || JObj <- JObjs] 
+                {'error', 'not_found'} ->
+                    lager:warning("unable to process monthly fee calculaton for Modb: ~s, skipping", [Modb]);
+                {'ok', JObjs } ->
+                    [process_daily_fee(JObj, Modb, RawTableId) || JObj <- JObjs] 
             end,
             OneTimeFees = process_one_time_fees(Modb, []);
         'false' ->
             SModb = kazoo_modb:get_modb(AccountId, SYear, SMonth),
             _ = onbill_util:maybe_add_design_doc(SModb, <<"onbills">>),
-            case kz_datamgr:get_results(SModb, <<"onbills/daily_fees">>, [{'startkey', ?DAILY_FEE_DOC_NAME(SMonth, SYear, SDay)}]) of
-                {'error', 'not_found'} -> lager:warning("unable to process monthly fee calculaton for Modb: ~s", [SModb]);
-                {'ok', SJObjs } -> [process_daily_fee(JObj, SModb, RawTableId) || JObj <- SJObjs] 
+            case kz_datamgr:get_results(SModb
+                                       ,<<"onbills/daily_fees">>
+                                       ,[{'startkey', ?DAILY_FEE_DOC_NAME(SMonth, SYear, SDay)}])
+            of
+                {'error', 'not_found'} ->
+                    lager:warning("unable to process monthly fee calculaton for Modb: ~s, skipping", [SModb]);
+                {'ok', SJObjs } ->
+                    [process_daily_fee(JObj, SModb, RawTableId) || JObj <- SJObjs] 
             end,
             EModb = kazoo_modb:get_modb(AccountId, EYear, EMonth),
             _ = onbill_util:maybe_add_design_doc(EModb, <<"onbills">>),
-            case kz_datamgr:get_results(EModb, <<"onbills/daily_fees">>, [{'endkey', ?DAILY_FEE_DOC_NAME(EMonth, EYear, EDay)}]) of
-                {'error', 'not_found'} -> lager:warning("unable to process monthly fee calculaton for Modb: ~s", [EModb]);
-                {'ok', EJObjs } -> [process_daily_fee(JObj, EModb, RawTableId) || JObj <- EJObjs] 
+            case kz_datamgr:get_results(EModb
+                                       ,<<"onbills/daily_fees">>
+                                       ,[{'endkey', ?DAILY_FEE_DOC_NAME(EMonth, EYear, EDay)}])
+            of
+                {'error', 'not_found'} ->
+                    lager:warning("unable to process monthly fee calculaton for Modb: ~s, skipping", [EModb]);
+                {'ok', EJObjs } ->
+                    [process_daily_fee(JObj, EModb, RawTableId) || JObj <- EJObjs] 
             end,
             OneTimeFees = process_one_time_fees(SModb, [{'startkey', ?BEGIN_DAY_TS(SMonth, SYear, SDay)}])
                            ++ process_one_time_fees(EModb, [{'endkey', ?END_DAY_TS(EMonth, EYear, EDay)}])

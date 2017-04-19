@@ -29,31 +29,37 @@ sync(Items, AccountId) ->
 
 -spec maybe_sync(kz_service_item:items(), ne_binary()) -> 'ok'|'delinquent'|'retry'.
 maybe_sync(Items, AccountId) ->
-    lager:info("IAM attempt to sync AccountId: ~p",[AccountId]), 
+    lager:info("onbill_trace:maybe_sync attempt to sync AccountId: ~p",[AccountId]), 
     case onbill_util:is_trial_account(AccountId) of
         'true' ->
             CurrentUsage = onbill_bk_util:current_usage_amount_in_units(AccountId),
             CurrentBalance = onbill_util:current_balance(AccountId),
-            lager:info("IAM Trial AccountId: ~p, CurrentBalance:~p, CurrentUsage: ~p",[AccountId, CurrentBalance, CurrentUsage]), 
+            lager:info("onbill_trace:maybe_sync -> trial account ->  CurrentBalance:~p, CurrentUsage: ~p"
+                      ,[CurrentBalance, CurrentUsage]), 
             case CurrentBalance > CurrentUsage of
                 'true' ->
                     case onbill_util:transit_to_full_suscription_state(AccountId) of
                         {'ok', _} ->
+                            lager:info("onbill_trace:maybe_sync moved to full_suscription_state"),
                             sync(Items, AccountId);
                         _ ->
+                            lager:info("onbill_trace:maybe_sync unable to move to full_suscription_state"), 
                             'retry'
                     end;
                 'false' ->
                     case onbill_util:trial_has_expired(AccountId) of
                         'true'->
+                            lager:info("onbill_trace:maybe_sync detected trial expiration"), 
                             onbill_notifications:maybe_send_trial_has_expired_update(AccountId),
                             onbill_bk_util:maybe_cancel_trunk_subscriptions(AccountId),
                             'delinquent';
                         'false' ->
+                            lager:info("onbill_trace:maybe_sync trial period == nothing to do"), 
                             'ok'
                     end
             end;
         'false' ->
+            lager:info("onbill_trace:maybe_sync account not trial, going to check for new period"), 
             maybe_billing_period_starts(Items, AccountId)
     end.
 
@@ -62,17 +68,25 @@ maybe_billing_period_starts(Items, AccountId) ->
     {Year, Month, Day} = onbill_util:period_start_date(AccountId, Timestamp),
     case kazoo_modb:open_doc(AccountId, ?MRC_DOC, Year, Month) of
         {'ok', _} ->
+            lager:info("onbill_trace:maybe_billing_period_starts ~p exists, going to execute run_sync/3"
+                      ,[?MRC_DOC]), 
             run_sync(Items, AccountId, Timestamp);
         {'error', 'not_found'} ->
             onbill_bk_util:maybe_issue_previous_billing_period_docs(AccountId, Year, Month, Day),
-            lager:debug("monthly_recurring doc not found, trying to create"),
+            lager:info("onbill_trace:maybe_billing_period_starts ~p not found, trying to create"
+                      ,[?MRC_DOC]),
             case onbill_bk_util:process_new_billing_period_mrc(AccountId, Timestamp) of
                 {'ok', 'mrc_processed'} -> 
+                    lager:info("onbill_trace:maybe_billing_period_starts new_billing_period_mrc "
+                                ++ "processed, executing run_sync/3"),
                     run_sync(Items, AccountId, Timestamp);
                 {'not_enough_funds', 'trunks_canceled'} ->
-                    lager:debug("trunks cancelled due to lack of funds, let's start from the beginning for ~p",[AccountId]),
+                    lager:info("onbill_trace:maybe_billing_period_starts trunks cancelled due to "
+                                ++ "lack of funds, let's start from the beginning"),
                     kz_service_sync:sync(AccountId);
                 {'not_enough_funds', 'no_trunks_set'} ->
+                    lager:info("onbill_trace:maybe_billing_period_starts no trunks, no money, "
+                                ++ "seting account as delinquent"),
                     onbill_notifications:maybe_send_service_suspend_update(AccountId),
                     'delinquent'
             end
@@ -82,34 +96,40 @@ maybe_billing_period_starts(Items, AccountId) ->
 run_sync(Items, AccountId, Timestamp) ->
     case onbill_bk_util:max_daily_usage_exceeded(Items, AccountId, Timestamp) of
         {'true', NewMax, ExcessDets} ->
-            lager:debug("sync daily AccountId: ~p; excess details: ~p",[AccountId, ExcessDets]),
+            lager:debug("onbill_trace:run_sync excess details: ~p",[ExcessDets]),
             _ = onbill_bk_util:charge_newly_added(AccountId, NewMax, ExcessDets, Timestamp),
             DailyCountItems = onbill_bk_util:select_daily_count_items_list(NewMax, AccountId),
-            lager:debug("sync daily AccountId: ~p; daily count items: ~p",[AccountId, DailyCountItems]),
+            lager:debug("onbill_trace:run_sync daily count items: ~p",[DailyCountItems]),
             sync(Timestamp, DailyCountItems, AccountId, NewMax, Items);
         'false' ->
-            lager:debug("max usage not exceeded, no sync needed for: ~p",[AccountId])
+            lager:debug("onbill_trace:run_sync max usage not exceeded, no sync needed")
     end,
     case onbill_util:maybe_administratively_convicted(AccountId) of
         'true' ->
+            lager:debug("onbill_trace:run_sync administratively_convicted, return delinquent"),
             'delinquent';
         'false' ->
             case onbill_util:maybe_convicted(AccountId) of
-                'true' -> 'delinquent';
-                'false' -> 'ok'
+                'true' ->
+                    lager:debug("onbill_trace:run_sync convicted, return delinquent"),
+                    'delinquent';
+                'false' ->
+                    lager:debug("onbill_trace:run_sync finished"),
+                    'ok'
             end
     end.
 
 sync(_Timestamp, [], _AccountId, _NewMax, _Items) ->
-    lager:debug("no daily count items found, daily fee sync not needed.");
+    lager:debug("onbill_trace:sync no daily count items found, daily fee sync not needed.");
 
 sync(Timestamp, ServiceItems, AccountId, NewMax, Items) ->
     case onbill_bk_util:items_amount(ServiceItems, AccountId, 0.0) of
         0.0 ->
-            lager:debug("daily fee items have zero cost, no changes needed.");
+            lager:debug("onbill_trace:sync daily fee items have zero cost, no changes needed.");
         ItemsCost ->
             onbill_bk_util:save_dailyfee_doc(Timestamp, AccountId, ItemsCost, NewMax, Items),
-            lager:debug("sync Daily fee calculation finished for ~p. Total: ~p",[AccountId, ItemsCost])
+            lager:debug("onbill_trace:sync sync Daily fee calculation finished, total: ~p"
+                       ,[ItemsCost])
     end.
 
 -spec is_good_standing(ne_binary()) -> boolean().
@@ -118,21 +138,11 @@ is_good_standing(AccountId) ->
     not onbill_util:maybe_convicted(AccountId).
 
 -spec is_good_standing(ne_binary(), ne_binary()) -> boolean().
-is_good_standing(_AccountId, Status) ->
-    lager:debug("is_good_standing/2 _AccountId ~p: ~p, Status Arg: ~p"
-               ,[_AccountId, Status =:= kzd_services:status_good(), Status]),
-    Status =:= kzd_services:status_good().
-
--spec transactions(ne_binary(), gregorian_seconds(), gregorian_seconds()) ->
-                          {'ok', kz_transaction:transactions()} |
-                          {'error', 'not_found'} |
-                          {'error', 'unknown_error'}.
-%transactions(AccountId, From, To) ->
-%    lager:info("IAM transactions AccountId: ~p, From: ~p, To: ~p",[AccountId, From, To]),
-%    case kz_transactions:fetch_local(AccountId, From, To) of
-%        {'error', _Reason}=Error -> Error;
-%        {'ok', _Transactions}=Res -> Res
-%    end.
+is_good_standing(AccountId, _Status) ->
+    is_good_standing(AccountId).
+    
+% We store all transactions local, so why double and then deduplicate them..
+-spec transactions(ne_binary(), gregorian_seconds(), gregorian_seconds()) -> {'ok', []}.
 transactions(_AccountId, _From, _To) ->
     {'ok', []}.
 

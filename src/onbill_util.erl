@@ -358,18 +358,28 @@ set_billing_day(AccountId) ->
 
 set_billing_day(BillingDay, AccountId) ->
     DbName = kz_util:format_account_id(AccountId,'encoded'),
-    NewDoc = case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
+    case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
         {ok, Doc} ->
-            kz_json:set_value(<<"pvt_billing_day">>, BillingDay, Doc);
+            NewDoc = kz_json:set_value(<<"pvt_billing_day">>, BillingDay, Doc),
+            kz_datamgr:ensure_saved(DbName, NewDoc),
+            NewDoc;
         {'error', 'not_found'} ->
+            NewDoc = kz_json:set_values([{<<"_id">>, ?ONBILL_DOC}
+                                        ,{<<"pvt_type">>, ?ONBILL_DOC}
+                                        ,{<<"pvt_account_id">>, AccountId}
+                                        ,{<<"pvt_billing_day">>, BillingDay}
+                                        ]
+                                       ,kz_json:new()),
+            kz_datamgr:ensure_saved(DbName, NewDoc),
+            NewDoc;
+        _ ->
             kz_json:set_values([{<<"_id">>, ?ONBILL_DOC}
                                ,{<<"pvt_type">>, ?ONBILL_DOC}
                                ,{<<"pvt_account_id">>, AccountId}
                                ,{<<"pvt_billing_day">>, BillingDay}
                                ]
                               ,kz_json:new())
-    end,
-    kz_datamgr:ensure_saved(DbName, NewDoc).
+    end.
 
 -spec account_creation_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
 account_creation_date(AccountId) ->
@@ -410,12 +420,24 @@ is_trial_account(AccountJObj) ->
 
 -spec maybe_convicted(ne_binary()) -> 'ok'|'delinquent'.
 maybe_convicted(AccountId) ->
+    case maybe_below_waterline(AccountId) of
+        'true' -> 'true';
+        'false' -> false;
+        'even' ->
+            not (account_creation_date(AccountId) == period_start_date(AccountId))
+    end.
+
+maybe_below_waterline(AccountId) ->
     Balance = current_balance(AccountId),
-    case maybe_allow_postpay(AccountId) of
-        'false' when Balance < 0 -> 'true';
-        'false' -> 'false';
-        {'true', MaxPostpay} when Balance < MaxPostpay ->  'true';
-        {'true', _} -> 'false'
+    MPpay = 
+        case maybe_allow_postpay(AccountId) of
+            'false' -> 0;
+            {'true', MaxPostpay} ->  abs(MaxPostpay)
+        end,
+    case Balance + MPpay of
+        Draft when Draft == 0 -> 'even';
+        Draft when Draft < 0 -> 'true';
+        Draft when Draft > 0 -> 'false'
     end.
 
 -spec maybe_administratively_convicted(ne_binary()) -> boolean().
