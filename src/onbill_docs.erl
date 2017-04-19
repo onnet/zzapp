@@ -280,7 +280,7 @@ aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
 
 aggregate_data(AccountId, Year, Month, Day, Carrier, {AggrVars, TotalNetto, TotalVAT, TotalBrutto}) ->
     TemplateId = <<"invoice">>,
-    Modb = onbill_util:period_end_modb_by_start(AccountId, Year, Month, Day),
+    Modb = onbill_util:period_end_modb(AccountId, Year, Month, Day),
     case kz_datamgr:open_doc(Modb, ?DOC_NAME_FORMAT(Carrier, TemplateId)) of
         {ok, InvoiceDoc} ->
             {[[{Key, kz_json:get_value(Key, InvoiceDoc)} || Key <- kz_json:get_keys(InvoiceDoc), filter_vars(Key)]] ++ AggrVars

@@ -172,7 +172,7 @@ onbills_modb_summary(Context) ->
                 Ts -> Ts
             end,
     {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, kz_term:to_integer(ReqTs)),
-    {EYear, EMonth, EDay} = onbill_util:period_last_day_by_first_one(SYear, SMonth, SDay),
+    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, kz_term:to_integer(ReqTs)),
     case SMonth of
         EMonth ->
             Modb = kazoo_modb:get_modb(AccountId, kz_term:to_integer(SYear), kz_term:to_integer(SMonth)),
@@ -245,7 +245,7 @@ validate_currency_sign(Context, _) ->
 validate_current_billing_period(Context, ?HTTP_GET) ->
     AccountId = cb_context:account_id(Context),
     {Year, Month, Day} = onbill_util:period_start_date(AccountId),
-    {EYear, EMonth, EDay} = onbill_util:period_last_day_by_first_one(Year, Month, Day),
+    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
     JObj =
         kz_json:from_list([{<<"account_id">>, AccountId}
                           ,{<<"period_start">>, onbill_util:date_json(Year, Month, Day)}
@@ -284,7 +284,9 @@ validate_period_balance(Context, ?HTTP_GET) ->
                        ,{<<"closing_balance">>, ClosingBalance}
                        ,{<<"account_id">>, AccountId}
                        ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
-                       ,{<<"period_end">>, onbill_util:date_json(onbill_util:period_last_day_by_first_one(SYear, SMonth, SDay))}
+                       ,{<<"period_end">>
+                        ,onbill_util:date_json(onbill_util:period_end_date(AccountId, kz_term:to_integer(PeriodTS)))
+                        }
                        ],
             cb_context:setters(Context
                               ,[{fun cb_context:set_resp_status/2, 'success'}

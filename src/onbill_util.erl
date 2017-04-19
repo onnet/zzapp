@@ -19,13 +19,14 @@
         ,normalize_view_active_results/2
         ,maybe_fee_active/2
         ,next_month/2
+        ,adjust_period_first_day/1
         ,adjust_period_first_day/3
+        ,adjust_period_last_day/1
         ,adjust_period_last_day/3
         ,days_in_period/2
         ,days_in_period/4
         ,days_left_in_period/2
-        ,period_last_day_by_first_one/3
-        ,period_end_modb_by_start/4
+        ,period_end_modb/4
         ,date_json/1
         ,date_json/3
         ,period_start_date/1
@@ -35,6 +36,7 @@
         ,next_period_start_date/4
         ,previous_period_start_date/2
         ,previous_period_start_date/4
+        ,period_end_date/1
         ,period_end_date/2
         ,period_end_date/4
         ,account_creation_date/1
@@ -211,7 +213,13 @@ next_month(Year, 12) ->
 next_month(Year, Month) ->
     {Year, Month + 1}.
 
+-spec adjust_period_first_day({kz_year(), kz_month(), kz_day()}) -> {kz_year(), kz_month(), kz_day()}.
 -spec adjust_period_first_day(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+adjust_period_first_day({Year, Month, Day}) ->
+    adjust_period_first_day(Year, Month, Day).
+
+adjust_period_first_day(Year, Month, 0) ->
+    adjust_period_first_day(Year, Month, 1);
 adjust_period_first_day(Year, Month, Day) ->
     LastDayOfMonth = calendar:last_day_of_the_month(Year, Month),
     case (Day > LastDayOfMonth) of
@@ -222,7 +230,11 @@ adjust_period_first_day(Year, Month, Day) ->
             {Year, Month, Day}
     end.
 
+-spec adjust_period_last_day({kz_year(), kz_month(), kz_day()}) -> {kz_year(), kz_month(), kz_day()}.
 -spec adjust_period_last_day(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+adjust_period_last_day({Year, Month, Day}) ->
+    adjust_period_last_day(Year, Month, Day).
+
 adjust_period_last_day(Year, Month, 0) ->
     {PYear, PMonth} = prev_month(Year, Month),
     {PYear, PMonth, calendar:last_day_of_the_month(PYear, PMonth)};
@@ -234,14 +246,6 @@ adjust_period_last_day(Year, Month, Day) ->
         'false' ->
             {Year, Month, Day}
     end.
-
--spec period_last_day_by_first_one(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
-period_last_day_by_first_one(Year, Month, 1) -> 
-    {Year, Month, calendar:last_day_of_the_month(Year, Month)};
-period_last_day_by_first_one(Year, Month, Day) -> 
-    {FY, FM, FD} = adjust_period_first_day(Year, Month, Day),
-    {NextMonthYear, NextMonth} = next_month(FY, FM),
-    adjust_period_last_day(NextMonthYear, NextMonth, FD - 1).
 
 -spec days_in_period(ne_binary(), integer()) -> integer().
 -spec days_in_period(ne_binary(), kz_year(), kz_month(), kz_day()) -> integer().
@@ -259,10 +263,9 @@ days_left_in_period(AccountId, Timestamp) ->
     -
     calendar:date_to_gregorian_days(Year, Month, Day) + 1.
 
--spec period_end_modb_by_start(ne_binary(), kz_year(), kz_month(), kz_day()) -> ne_binary().
-period_end_modb_by_start(AccountId, Year, Month, Day) ->
-    {SY, SM, SD} = adjust_period_first_day(Year, Month, Day),
-    {Y, M, _} = period_last_day_by_first_one(SY, SM, SD),
+-spec period_end_modb(ne_binary(), kz_year(), kz_month(), kz_day()) -> ne_binary().
+period_end_modb(AccountId, Year, Month, Day) ->
+    {Y, M, _} = period_end_date(AccountId, Year, Month, Day),
     kazoo_modb:get_modb(AccountId, Y, M).
 
 -spec date_json({kz_year(), kz_month(), kz_day()}) -> kz_proplist().
@@ -296,11 +299,16 @@ period_start_date(AccountId, Year, Month, Day) ->
     BDay = kz_term:to_integer(billing_day(AccountId)),
     case Day >= BDay of
         'true' ->
-             {Year, Month, BDay};
+             adjust_period_first_day(Year, Month, BDay);
         'false' ->
              {PrevYear, PrevMonth} = prev_month(Year, Month),
-             {PrevYear, PrevMonth, BDay}
+             adjust_period_first_day(PrevYear, PrevMonth, BDay)
     end.
+
+-spec period_end_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
+period_end_date(AccountId) ->
+    Timestamp = kz_time:current_tstamp(),
+    period_end_date(AccountId, Timestamp).
 
 -spec period_end_date(ne_binary(), gregorian_seconds()) -> {kz_year(), kz_month(), kz_day()}.
 period_end_date(AccountId, Timestamp) ->
@@ -309,8 +317,14 @@ period_end_date(AccountId, Timestamp) ->
 
 -spec period_end_date(ne_binary(), kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
 period_end_date(AccountId, Year, Month, Day) ->
-    {SYear, SMonth, SDay} = period_start_date(AccountId, Year, Month, Day),
-    period_last_day_by_first_one(SYear, SMonth, SDay).
+    BDay = kz_term:to_integer(billing_day(AccountId)),
+    case Day < BDay of
+        'true' ->
+             adjust_period_last_day(Year, Month, BDay-1);
+        'false' ->
+             {NextYear, NextMonth} = next_month(Year, Month),
+             adjust_period_last_day(NextYear, NextMonth, BDay-1)
+    end.
 
 -spec next_period_start_date(ne_binary(), gregorian_seconds()) -> {kz_year(), kz_month(), kz_day()}.
 -spec next_period_start_date(ne_binary(), kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
@@ -571,19 +585,16 @@ list_account_periods(AccountId) ->
     BillingDay = kz_term:to_integer(billing_day(AccountId)),
     Timestamp = calendar:datetime_to_gregorian_seconds({{Year, Month, BillingDay}, {0,0,0}}),
     TS_Now =  kz_time:current_tstamp(),
-    list_account_periods(AccountId, Year, Month, BillingDay, Timestamp, TS_Now, []).
+    list_account_periods(AccountId, Timestamp, TS_Now, []).
 
-list_account_periods(_, _, _, _, Timestamp, TS_Now, Acc) when Timestamp > TS_Now ->
+list_account_periods(_, Timestamp, TS_Now, Acc) when Timestamp > TS_Now ->
     Acc;
-list_account_periods(AccountId, Year, Month, BillingDay, _Timestamp, TS_Now, Acc) ->
-    {SYear, SMonth, SDay} = adjust_period_first_day(Year, Month, BillingDay),
-    {EYear, EMonth, EDay} = period_last_day_by_first_one(SYear, SMonth, SDay),
-    ThisPeriod = {[{<<"period_start">>, date_json(SYear, SMonth, SDay)}
-                  ,{<<"period_end">>, date_json(EYear, EMonth, EDay)}]},
-    {NextMonthYear, NextMonth} = next_month(SYear, SMonth),
-    {NYear, NMonth, NDay} = adjust_period_first_day(NextMonthYear, NextMonth, BillingDay),
-    NTimestamp = calendar:datetime_to_gregorian_seconds({{NYear, NMonth, NDay}, {0,0,0}}),
-    list_account_periods(AccountId, NYear, NMonth, NDay, NTimestamp, TS_Now, [ThisPeriod] ++ Acc).
+list_account_periods(AccountId, Timestamp, TS_Now, Acc) ->
+    ThisPeriod = {[{<<"period_start">>, date_json(period_start_date(AccountId, Timestamp))}
+                  ,{<<"period_end">>, date_json(period_end_date(AccountId, Timestamp))}]},
+    NextTimestamp =
+        calendar:datetime_to_gregorian_seconds({next_period_start_date(AccountId, Timestamp), {0,0,0}}),
+    list_account_periods(AccountId, NextTimestamp, TS_Now, [ThisPeriod] ++ Acc).
 
 -spec period_openning_balance(ne_binary(), kz_year(), kz_month(), kz_day()) -> number() | {'error', any()}.
 period_openning_balance(AccountId, Year, Month, Day) ->
