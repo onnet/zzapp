@@ -585,16 +585,20 @@ list_account_periods(AccountId) ->
     BillingDay = kz_term:to_integer(billing_day(AccountId)),
     Timestamp = calendar:datetime_to_gregorian_seconds({{Year, Month, BillingDay}, {0,0,0}}),
     TS_Now =  kz_time:current_tstamp(),
-    list_account_periods(AccountId, Timestamp, TS_Now, []).
+    list_account_periods(AccountId, BillingDay, Timestamp, TS_Now, []).
 
-list_account_periods(_, Timestamp, TS_Now, Acc) when Timestamp > TS_Now ->
+list_account_periods(_, _, Timestamp, TS_Now, Acc) when Timestamp > TS_Now ->
     Acc;
-list_account_periods(AccountId, Timestamp, TS_Now, Acc) ->
+list_account_periods(AccountId, BillingDay, Timestamp, TS_Now, Acc) ->
     ThisPeriod = {[{<<"period_start">>, date_json(period_start_date(AccountId, Timestamp))}
                   ,{<<"period_end">>, date_json(period_end_date(AccountId, Timestamp))}]},
+    DataBag = kz_json:set_values([{[<<"period_start">>, <<"billing_day">>], BillingDay}
+                                 ,{[<<"period_end">>, <<"billing_day">>], BillingDay}
+                                 ]
+                                ,ThisPeriod),
     NextTimestamp =
         calendar:datetime_to_gregorian_seconds({next_period_start_date(AccountId, Timestamp), {0,0,0}}),
-    list_account_periods(AccountId, NextTimestamp, TS_Now, [ThisPeriod] ++ Acc).
+    list_account_periods(AccountId, BillingDay, NextTimestamp, TS_Now, [DataBag] ++ Acc).
 
 -spec period_openning_balance(ne_binary(), kz_year(), kz_month(), kz_day()) -> number() | {'error', any()}.
 period_openning_balance(AccountId, Year, Month, Day) ->
