@@ -40,6 +40,7 @@ output_header(<<"current_state">>) ->
     ,<<"is_enabled">>
     ,<<"is_reseller">>
     ,<<"descendants_count">>
+    ,<<"billing_day">>
     ,<<"current_service_status">>
     ,<<"allow_postpay">>
     ,<<"max_postpay">>
@@ -93,6 +94,7 @@ current_state(_, [SubAccountId | DescendantsIds]) ->
      ,kz_account:is_enabled(JObj)
      ,kz_account:is_reseller(JObj)
      ,descendants_count(SubAccountId)
+     ,onbill_util:billing_day(SubAccountId)
      ,onbill_util:current_service_status(SubAccountId)
      ,AllowPostpay
      ,wht_util:units_to_dollars(MaxPostpay)
