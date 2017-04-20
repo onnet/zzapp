@@ -348,27 +348,47 @@ previous_period_start_date(AccountId, Year, Month, Day) ->
     {PrevMonthYear, PrevMonth} = prev_month(SYear, SMonth),
     adjust_period_first_day(PrevMonthYear, PrevMonth, SDay).
 
--spec billing_day(ne_binary() | kz_json:object()) -> integer() | 'undefined'.
+-spec maybe_force_postpay_billing_day(ne_binary()) -> boolean().
+maybe_force_postpay_billing_day(AccountId) ->
+    {'ok', MasterAccount} = kapps_util:get_master_account_id(),
+    kz_json:get_atom_value(<<"force_postpay_billing_day">>
+                          ,reseller_vars(AccountId)
+                          ,kz_json:get_atom_value(<<"force_postpay_billing_day">>,reseller_vars(MasterAccount),'true')
+                          ).
+
+-spec billing_day(ne_binary()) -> integer() | 'undefined'.
 billing_day(AccountId) when is_binary(AccountId) ->
-    billing_day(account_vars(AccountId));
-billing_day(AccountVarsJObj) ->
+    case maybe_allow_postpay(AccountId) of
+        {'true', _} ->
+            case maybe_force_postpay_billing_day(AccountId) of
+                'true' -> 1;
+                'false' ->
+                    billing_day(account_vars(AccountId), AccountId)
+            end;
+        'false' ->
+            billing_day(account_vars(AccountId), AccountId)
+    end.
+
+-spec billing_day(kz_json:object(), ne_binary()) -> integer() | 'undefined'.
+billing_day(AccountVarsJObj, AccountId) ->
     case kz_json:get_value(<<"pvt_billing_day">>, AccountVarsJObj) of
         'undefined' ->
-            AccountId = kz_json:get_value(<<"pvt_account_id">>, AccountVarsJObj),
             JObj = set_billing_day(AccountId),
             kz_json:get_value(<<"pvt_billing_day">>, JObj);
         BDay -> BDay
     end.
 
 set_billing_day(AccountId) ->
-    BillingDay =
-        case kz_json:get_value(<<"pvt_billing_period_type">>, account_vars(AccountId)) of
-            <<"calendar_month">> -> 1;
-            _ ->
-                {{_,_,Today},_} = calendar:universal_time(),
-                Today
-        end,
-    set_billing_day(BillingDay, AccountId).
+    {{_,_,Today},_} = calendar:universal_time(),
+    case maybe_allow_postpay(AccountId) of
+        {'true', _} ->
+            case maybe_force_postpay_billing_day(AccountId) of
+                'true' -> set_billing_day(1, AccountId);
+                'false' -> set_billing_day(Today, AccountId)
+            end;
+        'false' ->
+            set_billing_day(Today, AccountId)
+    end.
 
 set_billing_day(BillingDay, AccountId) ->
     DbName = kz_util:format_account_id(AccountId,'encoded'),

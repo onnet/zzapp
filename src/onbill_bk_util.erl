@@ -197,8 +197,8 @@ charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], T
         'false' ->
             DaysInPeriod = onbill_util:days_in_period(AccountId, Timestamp),
             DaysLeft = onbill_util:days_left_in_period(AccountId, Timestamp),
-            ItemJObj = kz_json:get_value(Path, NewMax),
             Ratio = DaysLeft / DaysInPeriod,
+            ItemJObj = kz_json:get_value(Path, NewMax),
 	    Reason =
 	        case Ratio of
 		    1.0 -> <<"monthly_recurring">>;
@@ -324,7 +324,15 @@ charge_mrc_category(AccountId, Category, NewMax, Timestamp) ->
 
 -spec charge_mrc_item(ne_binary(), kz_json:object(), gregorian_seconds()) -> 'ok'|kz_proplist(). 
 charge_mrc_item(AccountId, ItemJObj, Timestamp) ->
-    create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"monthly_recurring">>, 1.0).
+    case maybe_prorate_new_period(AccountId, Timestamp) of
+        'true' ->
+            DaysInPeriod = onbill_util:days_in_period(AccountId, Timestamp),
+            DaysLeft = onbill_util:days_left_in_period(AccountId, Timestamp),
+            Ratio = DaysLeft / DaysInPeriod,
+            create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"monthly_recurring">>, Ratio);
+        'false' ->
+            create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"monthly_recurring">>, 1.0)
+    end.
 
 -spec create_debit_tansaction(ne_binary(), kz_json:object(), gregorian_seconds(), ne_binary(), float()) -> 'ok'|kz_proplist(). 
 create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Ratio) ->
@@ -458,3 +466,36 @@ today_dailyfee_absent(AccountId) ->
 maybe_issue_previous_billing_period_docs(AccountId, Year, Month, Day) ->
     {PYear, PMonth, PDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
     _ = kz_util:spawn(fun onbill_docs:generate_docs/4, [AccountId, PYear, PMonth, PDay]).
+
+-spec maybe_prorate_new_period(ne_binary(), gregorian_seconds()) -> boolean().
+maybe_prorate_new_period(AccountId, Timestamp) ->
+    case onbill_util:maybe_allow_postpay(AccountId) of
+        {'true', _} ->
+            maybe_prorate_new_postpay_period(AccountId, Timestamp);
+        'false' ->
+            maybe_prorate_new_prepay_period(AccountId)
+    end.
+
+-spec maybe_prorate_new_prepay_period(ne_binary()) -> boolean().
+maybe_prorate_new_prepay_period(AccountId) ->
+    {'ok', MasterAccount} = kapps_util:get_master_account_id(),
+    kz_json:get_atom_value(<<"prepay_prorate_new_period">>
+                          ,onbill_util:reseller_vars(AccountId)
+                          ,kz_json:get_atom_value(<<"prepay_prorate_new_period">>
+                                                 ,onbill_util:reseller_vars(MasterAccount),'false')
+                          ).
+
+-spec maybe_prorate_new_postpay_period(ne_binary(), gregorian_seconds()) -> boolean().
+maybe_prorate_new_postpay_period(AccountId, Timestamp) ->
+    {'ok', MasterAccount} = kapps_util:get_master_account_id(),
+    {{Year, Month, _}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
+    case onbill_util:account_creation_date(AccountId) of
+        {Year, Month, _} -> 'true';
+        _ ->
+           kz_json:get_atom_value(<<"postpay_prorate_new_period">>
+                                 ,onbill_util:reseller_vars(AccountId)
+                                 ,kz_json:get_atom_value(<<"postpay_prorate_new_period">>
+                                                        ,onbill_util:reseller_vars(MasterAccount),'false')
+                                 )
+    end.
+
