@@ -329,7 +329,12 @@ charge_mrc_item(AccountId, ItemJObj, Timestamp) ->
             DaysInPeriod = onbill_util:days_in_period(AccountId, Timestamp),
             DaysLeft = onbill_util:days_left_in_period(AccountId, Timestamp),
             Ratio = DaysLeft / DaysInPeriod,
-            create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"monthly_recurring">>, Ratio);
+	        Reason =
+    	        case Ratio of
+    		    1.0 -> <<"monthly_recurring">>;
+    		    _ -> <<"recurring_prorate">>
+    		end,
+            create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Ratio);
         'false' ->
             create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"monthly_recurring">>, 1.0)
     end.
