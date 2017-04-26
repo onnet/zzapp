@@ -44,7 +44,7 @@ allowed_methods(_) ->
 -spec resource_exists(path_token()) -> 'true'.
 resource_exists() -> 'true'.
 resource_exists(PathToken) ->
-    lists:mamber(PathToken, ?POSSIBLE_ATTACHMENTS).
+    lists:member(PathToken, ?POSSIBLE_ATTACHMENTS).
 
 -spec content_types_provided(cb_context:context()) -> cb_context:context().
 -spec content_types_provided(cb_context:context(), path_token()) -> cb_context:context().

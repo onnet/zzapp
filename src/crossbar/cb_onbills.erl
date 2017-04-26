@@ -90,6 +90,7 @@ validate_generate(Context, AccountId, ?HTTP_PUT) ->
 validate_generate_ts(Context, AccountId, PeriodTimestamp) when is_integer(PeriodTimestamp) ->
     case kz_json:get_value(<<"doc_type">>, cb_context:req_data(Context)) of
         "calls_reports" -> generate_per_minute_reports(Context, AccountId, PeriodTimestamp);
+        "transaction_invoice" -> generate_per_minute_reports(Context, AccountId, PeriodTimestamp);
         _ -> maybe_generate_billing_docs(Context, AccountId, PeriodTimestamp, 'generate_docs')
     end;
 
