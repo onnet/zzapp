@@ -90,7 +90,10 @@ validate_generate(Context, AccountId, ?HTTP_PUT) ->
 validate_generate_ts(Context, AccountId, PeriodTimestamp) when is_integer(PeriodTimestamp) ->
     case kz_json:get_value(<<"doc_type">>, cb_context:req_data(Context)) of
         "calls_reports" -> generate_per_minute_reports(Context, AccountId, PeriodTimestamp);
-        "transaction_invoice" -> generate_per_minute_reports(Context, AccountId, PeriodTimestamp);
+        "transaction_invoice" ->
+            generate_transaction_based_invoice(Context
+                                              ,AccountId
+                                              ,kz_json:get_value(<<"transaction_id">>, cb_context:req_data(Context)));
         _ -> maybe_generate_billing_docs(Context, AccountId, PeriodTimestamp, 'generate_docs')
     end;
 
@@ -102,6 +105,17 @@ validate_generate_ts(Context, _, _) ->
       ,kz_json:from_list([{<<"message">>, Message}])
       ,Context
      ).
+
+generate_transaction_based_invoice(Context, AccountId, <<Year:4/binary, Month:2/binary, "-", _/binary>> = TransctionId) ->
+    {'ok', TransactionJobj} =
+        kazoo_modb:open_doc(AccountId, TransctionId),
+    {'ok', DocNumber} =
+        onbill_docs_numbering:maybe_get_new_number(AccountId
+                                                  ,<<"transaction_based_invoice">>
+                                                  ,DocType
+                                                  ,Year
+                                                  ,Month),
+
 
 maybe_generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName) ->
     case cb_context:is_superduper_admin(Context) of

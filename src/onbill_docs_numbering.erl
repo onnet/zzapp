@@ -2,6 +2,7 @@
 
 -export([get_binary_number/5
         ,get_new_binary_number/3
+        ,maybe_get_new_number/5
         ,number_lookup/5
         ]).
 

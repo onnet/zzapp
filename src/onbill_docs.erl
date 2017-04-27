@@ -5,7 +5,7 @@
         ,generate_docs/4
         ,per_minute_reports/2
         ,per_minute_reports/3
-        ,create_proforma_invoice/2
+        ,create_doc_by_type/3
         ]).
 
 -include("onbill.hrl").
@@ -334,10 +334,9 @@ per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSe
 per_minute_report(_, _, _, _, _, _, _, _) ->
     'ok'.
 
--spec create_proforma_invoice(number(), ne_binary()) -> any().
-create_proforma_invoice(Amount, AccountId) ->
+-spec create_doc_by_type(number(), ne_binary(), ne_binary()) -> any().
+create_doc_by_type(Amount, AccountId, DocType) ->
     {Year, Month, Day} = erlang:date(),
-    DocType = <<"proforma_invoice">>,
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     Carriers = onbill_util:account_carriers_list(AccountId),
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
