@@ -2,7 +2,7 @@
 
 -export([get_binary_number/5
         ,get_new_binary_number/3
-        ,maybe_get_new_number/5
+        ,maybe_get_new_number/4
         ,number_lookup/5
         ]).
 
@@ -85,6 +85,12 @@ number_lookup(AccountId, Carrier, DocType, Year, Month) ->
 %% We can issue new number for requested Month in case there is no such
 %% type of documents generated in later periods
 %%
+-spec maybe_get_new_number(ne_binary(), ne_binary(), kz_year(), kz_month()) -> {'ok', integer()}|{'error', atom()}.
+maybe_get_new_number(AccountId, DocType, Year, Month) ->
+    Carriers = onbill_util:account_carriers_list(AccountId),
+    MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
+    maybe_get_new_number(AccountId, MainCarrier, DocType, Year, Month).
+
 maybe_get_new_number(AccountId, Carrier, DocType, Year, Month) ->
     {NextMonthYear,NextMonth} = onbill_util:next_month(Year, Month),
     case no_docs_in_year_since_month(AccountId, Carrier, DocType, NextMonthYear, NextMonth)

@@ -109,13 +109,32 @@ validate_generate_ts(Context, _, _) ->
 generate_transaction_based_invoice(Context, AccountId, <<Year:4/binary, Month:2/binary, "-", _/binary>> = TransctionId) ->
     {'ok', TransactionJobj} =
         kazoo_modb:open_doc(AccountId, TransctionId),
+    Amount = kz_json:get_value(<<"amount">>, TransactionJobj),
+    ReqData = cb_context:req_data(Context),
+    InvoiceTS = 
+        case kz_json:get_value(<<"transaction_timestamp">>, ReqData) of
+            'undefined' -> ?TO_INT(kz_json:get_value(<<"created">>, TransactionJobj));
+            InTS -> ?TO_INT(InTS)
+        end,
+    {{InvYear, InvMonth, InvDay}, _} = calendar:gregorian_seconds_to_datetime(InvoiceTS),
     {'ok', DocNumber} =
         onbill_docs_numbering:maybe_get_new_number(AccountId
                                                   ,<<"transaction_based_invoice">>
-                                                  ,DocType
                                                   ,Year
                                                   ,Month),
-
+    case onbill_docs:create_doc_by_type(Amount, AccountId, <<"transaction_based_invoice">>, DocNumber, InvYear, InvMonth, InvDay) of
+        {'ok', JObj} ->
+            cb_context:set_resp_status(crossbar_doc:load(kz_doc:id(JObj)
+                                                        ,cb_context:set_account_modb(Context
+                                                                                    ,kz_term:to_integer(Year)
+                                                                                    ,kz_term:to_integer(Month)
+                                                                                    )
+                                                        ,?TYPE_CHECK_OPTION(<<"onbill">>)
+                                                        )
+                                      ,'success');
+        _ ->
+            cb_context:add_system_error('error', Context)
+    end.
 
 maybe_generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName) ->
     case cb_context:is_superduper_admin(Context) of

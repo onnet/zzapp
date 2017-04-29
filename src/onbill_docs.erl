@@ -6,6 +6,7 @@
         ,per_minute_reports/2
         ,per_minute_reports/3
         ,create_doc_by_type/3
+        ,create_doc_by_type/7
         ]).
 
 -include("onbill.hrl").
@@ -335,14 +336,20 @@ per_minute_report(_, _, _, _, _, _, _, _) ->
     'ok'.
 
 -spec create_doc_by_type(number(), ne_binary(), ne_binary()) -> any().
+-spec create_doc_by_type(number(), ne_binary(), ne_binary(), ne_binary(), kz_year(), kz_month(), kz_day()) -> any().
 create_doc_by_type(Amount, AccountId, DocType) ->
+    Carriers = onbill_util:account_carriers_list(AccountId),
+    MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
+    DocNumber = onbill_docs_numbering:get_new_binary_number(AccountId, MainCarrier, DocType),
     {Year, Month, Day} = erlang:date(),
+    create_doc_by_type(Amount, AccountId, DocType, DocNumber, Year, Month, Day).
+
+create_doc_by_type(Amount, AccountId, DocType, DocNumber, Year, Month, Day) ->
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     Carriers = onbill_util:account_carriers_list(AccountId),
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
     MainCarrierDoc = onbill_util:carrier_doc(MainCarrier, AccountId),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
-    DocNumber = onbill_docs_numbering:get_new_binary_number(AccountId, MainCarrier, DocType),
     VatifiedAmount = onbill_fees:vatify_amount(<<"total">>, kz_term:to_float(Amount), OnbillResellerVars),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(props:get_value(<<"total_brutto">>, VatifiedAmount)),
     {TotalVatDiv, TotalVatRem} = total_to_words(props:get_value(<<"total_vat">>, VatifiedAmount)),
