@@ -3,7 +3,7 @@
 -export([init/0
          ,allowed_methods/0, allowed_methods/1, allowed_methods/2
          ,resource_exists/0, resource_exists/1, resource_exists/2
-         ,content_types_provided/1, content_types_provided/3
+         ,content_types_provided/1, content_types_provided/2, content_types_provided/3
          ,validate/1, validate/2, validate/3
         ]).
 
@@ -36,10 +36,10 @@ init() ->
 -spec allowed_methods(path_token(),path_token()) -> http_methods().
 allowed_methods() ->
     [?HTTP_GET].
+allowed_methods(?GENERATE) ->
+    [?HTTP_PUT];
 allowed_methods(_) ->
     [?HTTP_GET].
-allowed_methods(?GENERATE,_) ->
-    [?HTTP_PUT];
 allowed_methods(_,?ATTACHMENT) ->
     [?HTTP_GET].
 
@@ -48,15 +48,15 @@ allowed_methods(_,?ATTACHMENT) ->
 -spec resource_exists(path_token(), path_token()) -> 'true'.
 resource_exists() -> 'true'.
 resource_exists(_) -> 'true'.
-resource_exists(?GENERATE,_) -> 'true';
 resource_exists(_,?ATTACHMENT) -> 'true'.
 
 -spec content_types_provided(cb_context:context()) -> cb_context:context().
+-spec content_types_provided(cb_context:context(), path_token()) -> cb_context:context().
 -spec content_types_provided(cb_context:context(), path_token(), path_token()) -> cb_context:context().
 content_types_provided(Context) ->
     Context.
-content_types_provided(Context,?GENERATE,_) ->
-    Context;
+content_types_provided(Context,?GENERATE) ->
+    Context.
 content_types_provided(Context,_,?ATTACHMENT) ->
     CTP = [{'to_binary', [{<<"application">>, <<"pdf">>}]}],
     cb_context:set_content_types_provided(Context, CTP).
@@ -75,14 +75,15 @@ validate(Context, ?BILLING_PERIODS) ->
 validate(Context, ?PERIOD_BALANCE) ->
     validate_period_balance(Context, cb_context:req_verb(Context));
 validate(Context, ?CURRENCY_SIGN) ->
-    validate_currency_sign(Context, cb_context:req_verb(Context)).
-validate(Context, ?GENERATE, Id) ->
-    validate_generate(Context, Id, cb_context:req_verb(Context));
+    validate_currency_sign(Context, cb_context:req_verb(Context));
+validate(Context, ?GENERATE) ->
+    validate_generate(Context, cb_context:req_verb(Context)).
 validate(Context, Id, ?ATTACHMENT) ->
     validate_onbill(Context, Id, ?ATTACHMENT, cb_context:req_verb(Context)).
 
--spec validate_generate(cb_context:context(), ne_binary(), http_method()) -> cb_context:context().
-validate_generate(Context, AccountId, ?HTTP_PUT) ->
+-spec validate_generate(cb_context:context(), http_method()) -> cb_context:context().
+validate_generate(Context, ?HTTP_PUT) ->
+    AccountId = cb_context:account_id(Context),
     PeriodTimestamp = kz_json:get_integer_value(<<"period_timestamp">>, cb_context:req_data(Context)),
     validate_generate_ts(Context, AccountId, PeriodTimestamp).
 
