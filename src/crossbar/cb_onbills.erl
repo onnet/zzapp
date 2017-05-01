@@ -257,6 +257,7 @@ validate_current_billing_period(Context, ?HTTP_GET) ->
     {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
     JObj =
         kz_json:from_list([{<<"account_id">>, AccountId}
+                          ,{<<"billing_day">>, onbill_util:billing_day(AccountId)}
                           ,{<<"period_start">>, onbill_util:date_json(Year, Month, Day)}
                           ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
                           ]),
