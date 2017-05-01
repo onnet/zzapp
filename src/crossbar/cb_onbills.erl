@@ -20,7 +20,6 @@
 -define(BILLING_PERIODS, <<"billing_periods">>).
 -define(PERIOD_BALANCE, <<"period_balance">>).
 -define(CURRENCY_SIGN, <<"currency_sign">>).
--define(ALL_CHILDREN, <<"all_children">>).
 -define(NOTIFICATION_MIME_TYPES, [{<<"text">>, <<"html">>}
                                %   ,{<<"text">>, <<"plain">>}
                                  ]).
@@ -147,30 +146,6 @@ maybe_generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName) ->
             end
     end.
 
-maybe_spawn_generate_billing_docs(AccountId, PeriodTimestamp, FunName, N) ->
-    case onbill_util:is_billable(AccountId) of
-        'true' ->
-            spawn(fun() ->
-                      timer:sleep(N * 2000),
-                      onbill_docs:FunName(AccountId, kz_term:to_integer(PeriodTimestamp))
-                  end),
-            N+1;
-        'false' -> N
-    end.
-
-generate_billing_docs(Context, ?ALL_CHILDREN, PeriodTimestamp, FunName) ->
-    ResellerId = cb_context:account_id(Context),
-    case onbill_util:get_children_list(ResellerId) of
-        {'ok', Accounts} ->
-            _ = lists:foldl(fun(X, N) ->
-                                maybe_spawn_generate_billing_docs(kz_json:get_value(<<"id">>, X), PeriodTimestamp, FunName, N)
-                            end
-                           ,1
-                           , Accounts),
-            cb_context:set_resp_status(Context, 'success');
-        {'error', _Reason} ->
-            cb_context:add_system_error('error', Context)
-    end;
 generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName) ->
     ResellerId = cb_context:account_id(Context),
     case onbill_util:validate_relationship(AccountId, ResellerId) of

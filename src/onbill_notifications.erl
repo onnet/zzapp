@@ -14,7 +14,7 @@
 -define(SERVICE_SUSPEND_KEY, <<"service_suspend">>).
 -define(TRIAL_HAS_EXPIRED_KEY, <<"trial_has_expired">>).
 -define(ONBILL_NOTIFICATION_ENABLED, <<"onbill_notification_enabled">>).
--define(KEY_SENT(Key), [<<"notifications">>, Key, <<"sent_mrc_approaching">>]).
+-define(KEY_SENT(Key), [<<"notifications">>, Key, <<"sent">>]).
 -define(KEY_ENABLED(Key), [<<"notifications">>, Key, <<"enabled">>]).
 -define(KEY_TSTAMP(Key), [<<"notifications">>, Key, <<"last_notification">>]).
 -define(KEY_PERIOD(Key),
@@ -312,8 +312,12 @@ set_key_tstamp(Key, JObj, TStamp) ->
     kz_json:set_value(?KEY_TSTAMP(Key), TStamp, JObj).
 
 -spec maybe_send_service_suspend_update(ne_binary()) -> any().
+-spec maybe_send_service_suspend_update(ne_binary(), kz_account:doc(), boolean()) -> any().
 maybe_send_service_suspend_update(AccountId) ->
     {'ok', AccountJObj} = kz_account:fetch(AccountId),
+    maybe_send_service_suspend_update(AccountId, AccountJObj, key_enabled(?SERVICE_SUSPEND_KEY, AccountJObj)).
+
+maybe_send_service_suspend_update(AccountId, AccountJObj, 'true') ->
     case key_tstamp(?SERVICE_SUSPEND_KEY, AccountJObj) of
         ServiceSuspendSent when is_number(ServiceSuspendSent) ->
             Cycle = ?KEY_REPEAT(?SERVICE_SUSPEND_KEY),
@@ -328,7 +332,9 @@ maybe_send_service_suspend_update(AccountId) ->
         _Else ->
             'ok' = send_account_update(AccountId, ?SERVICE_SUSPENDED_TEMPLATE, customer_update_databag(AccountId)),
             update_account_key_sent(?SERVICE_SUSPEND_KEY, AccountJObj)
-    end.
+    end;
+maybe_send_service_suspend_update(AccountId, _AccountJObj, 'false') ->
+    lager:debug("service suspended for account: ~p", [AccountId]).
 
 -spec maybe_send_trial_has_expired_update(ne_binary()) -> any().
 maybe_send_trial_has_expired_update(AccountId) ->
