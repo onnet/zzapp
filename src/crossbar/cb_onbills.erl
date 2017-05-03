@@ -77,27 +77,34 @@ validate(Context, ?PERIOD_BALANCE) ->
 validate(Context, ?CURRENCY_SIGN) ->
     validate_currency_sign(Context, cb_context:req_verb(Context));
 validate(Context, ?GENERATE) ->
+    lager:info("IAMGEN 1"),
     validate_generate(Context, cb_context:req_verb(Context)).
 validate(Context, Id, ?ATTACHMENT) ->
     validate_onbill(Context, Id, ?ATTACHMENT, cb_context:req_verb(Context)).
 
 -spec validate_generate(cb_context:context(), http_method()) -> cb_context:context().
 validate_generate(Context, ?HTTP_PUT) ->
+    lager:info("IAMGEN 2"),
     AccountId = cb_context:account_id(Context),
-    PeriodTimestamp = kz_json:get_integer_value(<<"period_timestamp">>, cb_context:req_data(Context)),
-    validate_generate_ts(Context, AccountId, PeriodTimestamp).
+    ReqData = cb_context:req_data(Context),
+    DocType = kz_json:get_value(<<"doc_type">>, ReqData),
+    Timestamp = kz_json:get_integer_value(<<"timestamp">>, ReqData),
+    validate_generate(Context, ?TO_BIN(DocType), AccountId, Timestamp).
 
-validate_generate_ts(Context, AccountId, PeriodTimestamp) when is_integer(PeriodTimestamp) ->
-    case kz_json:get_value(<<"doc_type">>, cb_context:req_data(Context)) of
-        "calls_reports" -> generate_per_minute_reports(Context, AccountId, PeriodTimestamp);
-        "transaction_invoice" ->
-            generate_transaction_based_invoice(Context
-                                              ,AccountId
-                                              ,kz_json:get_value(<<"transaction_id">>, cb_context:req_data(Context)));
-        _ -> maybe_generate_billing_docs(Context, AccountId, PeriodTimestamp, 'generate_docs')
-    end;
-
-validate_generate_ts(Context, _, _) ->
+validate_generate(Context, <<"calls_reports">>, AccountId, Timestamp) when is_integer(Timestamp) ->
+    lager:info("IAMGEN 3"),
+    generate_per_minute_reports(Context, AccountId, Timestamp);
+validate_generate(Context, <<"transaction_invoice">>, AccountId, Timestamp) when is_integer(Timestamp) ->
+    lager:info("IAMGEN 4"),
+    generate_transaction_based_invoice(Context
+                                      ,AccountId
+                                      ,kz_json:get_value(<<"transaction_id">>, cb_context:req_data(Context))
+                                      ,Timestamp);
+validate_generate(Context, _, AccountId, Timestamp) when is_integer(Timestamp) ->
+    lager:info("IAMGEN 5"),
+    maybe_generate_billing_docs(Context, AccountId, Timestamp, 'generate_docs');
+validate_generate(Context, _, _, _) ->
+    lager:info("IAMGEN 6"),
     Message = <<"Period timestamp required">>,
     cb_context:add_validation_error(
       <<"Period timestamp">>
@@ -106,28 +113,33 @@ validate_generate_ts(Context, _, _) ->
       ,Context
      ).
 
-generate_transaction_based_invoice(Context, AccountId, <<Year:4/binary, Month:2/binary, "-", _/binary>> = TransctionId) ->
+generate_transaction_based_invoice(Context, AccountId, <<Year:4/binary, Month:2/binary, "-", _/binary>> = TransctionId, Timestamp) ->
+    lager:info("IAMGEN 7"),
     {'ok', TransactionJobj} =
         kazoo_modb:open_doc(AccountId, TransctionId),
-    Amount = kz_json:get_value(<<"amount">>, TransactionJobj),
-    ReqData = cb_context:req_data(Context),
-    InvoiceTS = 
-        case kz_json:get_value(<<"transaction_timestamp">>, ReqData) of
-            'undefined' -> ?TO_INT(kz_json:get_value(<<"created">>, TransactionJobj));
-            InTS -> ?TO_INT(InTS)
-        end,
-    {{InvYear, InvMonth, InvDay}, _} = calendar:gregorian_seconds_to_datetime(InvoiceTS),
+  lager:info("IAMGEN 7.2  TransactionJobj: ~p",[TransactionJobj]),
+    Amount = kz_json:get_value(<<"pvt_amount">>, TransactionJobj),
+  lager:info("IAMGEN 7.3  Amount: ~p",[Amount]),
+    {{InvYear, InvMonth, InvDay}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     {'ok', DocNumber} =
         onbill_docs_numbering:maybe_get_new_number(AccountId
                                                   ,<<"transaction_based_invoice">>
-                                                  ,Year
-                                                  ,Month),
+                                                  ,InvYear
+                                                  ,InvMonth),
+            lager:info("IAMGEN 8 DocNumber: ~p",[DocNumber]),
     case onbill_docs:create_doc_by_type(Amount, AccountId, <<"transaction_based_invoice">>, DocNumber, InvYear, InvMonth, InvDay) of
         {'ok', JObj} ->
-            cb_context:set_resp_status(crossbar_doc:load(kz_doc:id(JObj)
+            lager:info("IAMGEN 9 JObj: ~p",[JObj]),
+            InvoiceId = kz_doc:id(JObj),
+            Values = [{[<<"metadata">>,<<"invoice_number">>], DocNumber}
+                     ,{[<<"metadata">>,<<"invoice_id">>], InvoiceId}
+                     ,{[<<"metadata">>,<<"invoice_timestamp">>], Timestamp}],
+            {'ok', NewDoc} = kazoo_modb:save_doc(AccountId, kz_json:set_values(Values,TransactionJobj), ?TO_INT(Year), ?TO_INT(Month)),
+            lager:info("IAMGEN 9 NewDoc: ~p",[NewDoc]),
+            cb_context:set_resp_status(crossbar_doc:load(InvoiceId
                                                         ,cb_context:set_account_modb(Context
-                                                                                    ,kz_term:to_integer(Year)
-                                                                                    ,kz_term:to_integer(Month)
+                                                                                    ,?TO_INT(Year)
+                                                                                    ,?TO_INT(Month)
                                                                                     )
                                                         ,?TYPE_CHECK_OPTION(<<"onbill">>)
                                                         )
@@ -139,8 +151,10 @@ generate_transaction_based_invoice(Context, AccountId, <<Year:4/binary, Month:2/
 maybe_generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName) ->
     case cb_context:is_superduper_admin(Context) of
         'true' ->
+    lager:info("IAMGEN 11"),
             generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName);
         'false' ->
+    lager:info("IAMGEN 12"),
             case kz_services:is_reseller(cb_context:auth_account_id(Context)) of
                 'true' -> generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName);
                 'false' -> cb_context:add_system_error('forbidden', Context)
@@ -148,17 +162,20 @@ maybe_generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName) ->
     end.
 
 generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName) ->
+    lager:info("IAMGEN 13"),
     ResellerId = cb_context:account_id(Context),
     case onbill_util:validate_relationship(AccountId, ResellerId) of
         'true' ->
-            _ = onbill_docs:FunName(AccountId, kz_term:to_integer(PeriodTimestamp)),
+    lager:info("IAMGEN 14"),
+            _ = onbill_docs:FunName(AccountId, ?TO_INT(PeriodTimestamp)),
             cb_context:set_resp_status(Context, 'success');
         'false' ->
+    lager:info("IAMGEN 15"),
             cb_context:add_system_error('forbidden', Context)
     end.
 
 generate_per_minute_reports(Context, AccountId, PeriodTimestamp) ->
-    onbill_docs:per_minute_reports(AccountId, kz_term:to_integer(PeriodTimestamp)),
+    onbill_docs:per_minute_reports(AccountId, ?TO_INT(PeriodTimestamp)),
     cb_context:set_resp_status(Context, 'success').
 
 -spec validate_onbill(cb_context:context(), http_method()) -> cb_context:context().
@@ -166,7 +183,7 @@ validate_onbill(Context, ?HTTP_GET) ->
     onbills_modb_summary(Context).
 
 validate_onbill(Context0, <<Year:4/binary, Month:2/binary, "-", _/binary>> = Id, ?ATTACHMENT, ?HTTP_GET) ->
-    Context = crossbar_doc:load(Id, cb_context:set_account_modb(Context0, kz_term:to_integer(Year), kz_term:to_integer(Month))),
+    Context = crossbar_doc:load(Id, cb_context:set_account_modb(Context0, ?TO_INT(Year), ?TO_INT(Month))),
     case kz_doc:attachment_names(cb_context:doc(Context)) of
         [] -> 
             cb_context:add_system_error('no_attachment_found', Context);
@@ -177,15 +194,15 @@ validate_onbill(Context0, <<Year:4/binary, Month:2/binary, "-", _/binary>> = Id,
 -spec onbills_modb_summary(cb_context:context()) -> cb_context:context().
 onbills_modb_summary(Context) ->
     AccountId = cb_context:account_id(Context),
-    ReqTs = case cb_context:req_value(Context, <<"period_timestamp">>) of
+    ReqTs = case cb_context:req_value(Context, <<"timestamp">>) of
                 'undefined' -> kz_time:current_tstamp();
                 Ts -> Ts
             end,
-    {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, kz_term:to_integer(ReqTs)),
-    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, kz_term:to_integer(ReqTs)),
+    {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, ?TO_INT(ReqTs)),
+    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, ?TO_INT(ReqTs)),
     case SMonth of
         EMonth ->
-            Modb = kazoo_modb:get_modb(AccountId, kz_term:to_integer(SYear), kz_term:to_integer(SMonth)),
+            Modb = kazoo_modb:get_modb(AccountId, ?TO_INT(SYear), ?TO_INT(SMonth)),
             onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
             Context1 = cb_context:set_account_db(Context, Modb),
             crossbar_doc:load_view(?PRIOD_DOCS_VIEW, [], Context1, fun onbill_util:normalize_view_results/2);
@@ -282,12 +299,12 @@ validate_billing_periods(Context, _) ->
 
 -spec validate_period_balance(cb_context:context(), http_method()) -> cb_context:context().
 validate_period_balance(Context, ?HTTP_GET) ->
-    case cb_context:req_value(Context, <<"period_timestamp">>) of
+    case cb_context:req_value(Context, <<"timestamp">>) of
         'undefined' ->
             Context;
         PeriodTS -> 
             AccountId = cb_context:account_id(Context),
-            {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, kz_term:to_integer(PeriodTS)),
+            {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, ?TO_INT(PeriodTS)),
             OpeningBalance = onbill_util:day_start_balance_dollars(AccountId, SYear, SMonth, SDay),
             {NYear, NMonth, NDay} = onbill_util:next_period_start_date(AccountId, SYear, SMonth, SDay),
             ClosingBalance = onbill_util:day_start_balance_dollars(AccountId, NYear, NMonth, NDay),
@@ -296,7 +313,7 @@ validate_period_balance(Context, ?HTTP_GET) ->
                        ,{<<"account_id">>, AccountId}
                        ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
                        ,{<<"period_end">>
-                        ,onbill_util:date_json(onbill_util:period_end_date(AccountId, kz_term:to_integer(PeriodTS)))
+                        ,onbill_util:date_json(onbill_util:period_end_date(AccountId, ?TO_INT(PeriodTS)))
                         }
                        ],
             cb_context:setters(Context
