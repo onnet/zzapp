@@ -345,6 +345,8 @@ create_doc_by_type(Amount, AccountId, DocType) ->
     create_doc_by_type(Amount, AccountId, DocType, DocNumber, Year, Month, Day).
 
 create_doc_by_type(Amount, AccountId, DocType, DocNumber, Year, Month, Day) ->
+    {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
+    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
     Carriers = onbill_util:account_carriers_list(AccountId),
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
@@ -361,6 +363,8 @@ create_doc_by_type(Amount, AccountId, DocType, DocNumber, Year, Month, Day) ->
            ,{<<"total_brutto_rem">>, TotalBruttoRem}
            ,{<<"onbill_doc_type">>, DocType}
            ,{<<"doc_number">>, DocNumber}
+           ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
+           ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
            ,{<<"currency_short">>, kz_json:get_value(<<"currency_short">>, OnbillResellerVars)}
            ,{<<"currency_sign">>, kz_json:get_value(<<"currency_sign">>, OnbillResellerVars)}
            ,{<<"carrier_vars">>, kz_json:set_values([{Key, kz_json:get_value(Key, MainCarrierDoc)}
