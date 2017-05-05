@@ -138,25 +138,16 @@ generate_transaction_based_invoice(Context, AccountId, <<Year:4/binary, Month:2/
     end
   catch
       _:{badmatch,{error,period_closed}} ->
-          crossbar_util:response('error', <<"Period closed">>, 400,{[{<<"message">>, <<"Period closed">>}]}, Context);
+          crossbar_util:response('error', <<"Period closed">>, 400,{[{<<"message">>, <<"Forbidden: period already closed">>}]}, Context);
       _:Err ->
           Message = kz_term:to_binary(io_lib:format("~p",[Err])),
           crossbar_util:response('error', <<"error">>, 400,{[{<<"message">>, Message}]}, Context)
   end.
 maybe_generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName) ->
-    case cb_context:is_superduper_admin(Context) of
-        'true' ->
-            generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName);
-        'false' ->
-            case kz_services:is_reseller(cb_context:auth_account_id(Context)) of
-                'true' -> generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName);
-                'false' -> cb_context:add_system_error('forbidden', Context)
-            end
-    end.
-
-generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName) ->
-    ResellerId = cb_context:account_id(Context),
-    case onbill_util:validate_relationship(AccountId, ResellerId) of
+    case cb_context:is_superduper_admin(Context)
+         orelse
+         (kz_services:get_reseller_id(AccountId) == cb_context:auth_account_id(Context))
+    of
         'true' ->
             _ = onbill_docs:FunName(AccountId, ?TO_INT(PeriodTimestamp)),
             cb_context:set_resp_status(Context, 'success');
