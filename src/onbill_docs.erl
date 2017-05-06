@@ -5,8 +5,8 @@
         ,generate_docs/4
         ,per_minute_reports/2
         ,per_minute_reports/3
-        ,create_doc_by_type/3
-        ,create_doc_by_type/7
+        ,create_doc/3
+        ,create_doc/7
         ]).
 
 -include("onbill.hrl").
@@ -335,16 +335,18 @@ per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSe
 per_minute_report(_, _, _, _, _, _, _, _) ->
     'ok'.
 
--spec create_doc_by_type(number(), ne_binary(), ne_binary()) -> any().
--spec create_doc_by_type(number(), ne_binary(), ne_binary(), ne_binary(), kz_year(), kz_month(), kz_day()) -> any().
-create_doc_by_type(Amount, AccountId, DocType) ->
+-spec create_doc(number(), ne_binary(), ne_binary()) -> any().
+-spec create_doc(number(), ne_binary(), ne_binary(), ne_binary(), kz_year(), kz_month(), kz_day()) -> any().
+create_doc(Amount, AccountId, DocVars) ->
     Carriers = onbill_util:account_carriers_list(AccountId),
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
+    DocType = kz_json:get_value(<<"document_type">>, DocVars),
     DocNumber = onbill_docs_numbering:get_new_binary_number(AccountId, MainCarrier, DocType),
     {Year, Month, Day} = erlang:date(),
-    create_doc_by_type(Amount, AccountId, DocType, DocNumber, Year, Month, Day).
+    create_doc(Amount, AccountId, DocVars, DocNumber, Year, Month, Day).
 
-create_doc_by_type(Amount, AccountId, DocType, DocNumber, Year, Month, Day) ->
+create_doc(Amount, AccountId, DocVars, DocNumber, Year, Month, Day) ->
+    DocType = kz_json:get_value(<<"document_type">>, DocVars),
     {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
     {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
     OnbillResellerVars = onbill_util:reseller_vars(AccountId),
@@ -361,6 +363,7 @@ create_doc_by_type(Amount, AccountId, DocType, DocNumber, Year, Month, Day) ->
            ,{<<"total_vat_rem">>, TotalVatRem}
            ,{<<"total_brutto_div">>, TotalBruttoDiv}
            ,{<<"total_brutto_rem">>, TotalBruttoRem}
+           ,{<<"document_vars">>, DocVars}
            ,{<<"onbill_doc_type">>, DocType}
            ,{<<"doc_number">>, DocNumber}
            ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}

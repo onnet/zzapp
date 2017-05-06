@@ -118,10 +118,16 @@ generate_transaction_based_invoice(Context, AccountId, <<Year:4/binary, Month:2/
                                                   ,<<"transaction_based_invoice">>
                                                   ,InvYear
                                                   ,InvMonth),
-    case onbill_docs:create_doc_by_type(Amount, AccountId, <<"transaction_based_invoice">>, DocNumber, InvYear, InvMonth, InvDay) of
+    InvoiceDescription = kz_json:get_value(<<"invoice_description">>, cb_context:req_data(Context)),
+    DocVarsList = props:filter_undefined([{<<"document_type">>, <<"transaction_based_invoice">>}
+                                      ,{<<"document_description">>, InvoiceDescription}
+                                      ,{<<"transaction_id">>, TransctionId}]),
+    DocVars = kz_json:set_values(DocVarsList,kz_json:new()),
+    case onbill_docs:create_doc(Amount, AccountId, DocVars, DocNumber, InvYear, InvMonth, InvDay) of
         {'ok', JObj} ->
             InvoiceId = kz_doc:id(JObj),
             Values = [{[<<"metadata">>,<<"invoice_number">>], DocNumber}
+                     ,{[<<"metadata">>,<<"invoice_description">>], InvoiceDescription}
                      ,{[<<"metadata">>,<<"invoice_id">>], InvoiceId}
                      ,{[<<"metadata">>,<<"invoice_timestamp">>], Timestamp}],
             {'ok', _NewDoc} = kazoo_modb:save_doc(AccountId, kz_json:set_values(Values,TransactionJobj), ?TO_INT(Year), ?TO_INT(Month)),
@@ -143,6 +149,7 @@ generate_transaction_based_invoice(Context, AccountId, <<Year:4/binary, Month:2/
           Message = kz_term:to_binary(io_lib:format("~p",[Err])),
           crossbar_util:response('error', <<"error">>, 400,{[{<<"message">>, Message}]}, Context)
   end.
+
 maybe_generate_billing_docs(Context, AccountId, PeriodTimestamp, FunName) ->
     case cb_context:is_superduper_admin(Context)
          orelse

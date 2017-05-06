@@ -23,8 +23,8 @@
           </h1>
         </div>
         <div class="col-xs-5 text-right">
-          <h1><small style="color: black;">INVOICE #{{ doc_pref }}{{ doc_number }}{{ doc_ind }}</small></h1>
-          <h3><small>{{ period_end.day }} {{ period_end.month_short }} {{ period_end.year }}</small></h3>
+          <h2><small style="color: black;">INVOICE #{{ doc_pref }}{{ doc_number }}{{ doc_ind }}</small></h2>
+          <h3><small>{{ doc_date_json.day }} {{ doc_date_json.month_short }} {{ doc_date_json.year }}</small></h3>
         </div>
       </div>
       <br />
@@ -60,14 +60,6 @@
         </div>
       </div>
       <br />
-        <h3>
-          <small>
-            Service period:
-            {{ period_start.day }} {{ period_start.month_short }} {{ period_start.year }}
-            -
-            {{ period_end.day }} {{ period_end.month_short }} {{ period_end.year }}
-          </small>
-        </h3>
       <br />
       <!-- / end client details section -->
       <table class="table table-bordered">
@@ -83,54 +75,25 @@
               <h4>Rate/Price</h4>
             </th>
             <th>
-              <h4>Disc</h4>
-            </th>
-            <th>
               <h4>Amount</h4>
             </th>
           </tr>
         </thead>
         <tbody>
-          {% for fee_line in monthly_fees %}
           <tr style="page-break-inside: avoid !important;">
             <td>
-              {% if fee_line.type == "daily_calculated" %}
-                {{ fee_line.name }}.
-                {% for period in fee_line.period %}
-                  {{ period.day }}
-                  {{ period.month_short }}
-                  {{ period.year }}{% if forloop.last %}.{% endif %}
-                {% endfor %}
-                Prorated.
-              {% elif fee_line.category == "number_activation" %}
-                Number activation: {{ fee_line.name }}. NRC.
-              {% elif fee_line.category == "monthly_recurring" %}
-                {{ fee_line.name }}. MRC.
-              {% elif fee_line.category == "recurring_prorate" %}
-                {{ fee_line.name }}. Prorated MRC. 
-                {% for period in fee_line.period %}
-                  {{ period.day }}
-                  {{ period.month_short }}
-                  {{ period.year }}{% if forloop.last %}.{% endif %}
-                {% endfor %}
-              {% else %}
-                {{ fee_line.name }}.
-              {% endif %}
+              {{ document_vars.document_description }}
             </td>
             <td class="text-right">
-              {{ fee_line.quantity }}
+              -
             </td>
             <td class="text-right">
-              {{ currency_sign }}{{ fee_line.rate_netto }}
+              {{ currency_sign }}{{ total_netto|floatformat:2 }}
             </td>
             <td class="text-right">
-              {{ currency_sign }}{{ fee_line.discount_netto }}
-            </td>
-            <td class="text-right">
-              {{ currency_sign }}{{ fee_line.discounted_cost_netto }}
+              {{ currency_sign }}{{ total_netto|floatformat:2 }}
             </td>
           </tr>
-          {% endfor %}
         </tbody>
       </table>
       <br />

@@ -23,7 +23,7 @@
           </h1>
         </div>
         <div class="col-xs-5 text-right">
-          <h1><small style="color: black;">PRO-FORMA INVOICE #{{ doc_pref }}{{ doc_number }}{{ doc_ind }}</small></h1>
+          <h2><small style="color: black;">PRO-FORMA INVOICE #{{ doc_pref }}{{ doc_number }}{{ doc_ind }}</small></h2>
           <h3><small>{{ doc_date_json.day }} {{ doc_date_json.month_short }} {{ doc_date_json.year }}</small></h3>
         </div>
       </div>
