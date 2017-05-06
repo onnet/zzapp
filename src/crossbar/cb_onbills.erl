@@ -12,7 +12,7 @@
 -include("onbill.hrl").
 
 -define(CB_LIST, <<"onbills/crossbar_listing">>).
--define(PRIOD_DOCS_VIEW, <<"onbills/docs_by_period_ts">>).
+-define(PERIOD_DOCS_VIEW, <<"onbills/docs_by_period_ts">>).
 -define(ATTACHMENT, <<"attachment">>).
 -define(GENERATE, <<"generate">>).
 -define(CURRENT_SERVICES, <<"current_services">>).
@@ -193,7 +193,7 @@ onbills_modb_summary(Context) ->
             Modb = kazoo_modb:get_modb(AccountId, ?TO_INT(SYear), ?TO_INT(SMonth)),
             onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
             Context1 = cb_context:set_account_db(Context, Modb),
-            crossbar_doc:load_view(?PRIOD_DOCS_VIEW, [], Context1, fun onbill_util:normalize_view_results/2);
+            crossbar_doc:load_view(?PERIOD_DOCS_VIEW, [], Context1, fun onbill_util:normalize_view_results/2);
         _ ->
             SViewOpts = [{'startkey', ?BEGIN_DAY_TS(SMonth, SYear, SDay)}
                         ,{'year', SYear}
@@ -203,11 +203,11 @@ onbills_modb_summary(Context) ->
                         ,{'year', EYear}
                         ,{'month', EMonth}
                         ],
-            SRes = case kazoo_modb:get_results(AccountId, ?PRIOD_DOCS_VIEW, SViewOpts) of
+            SRes = case kazoo_modb:get_results(AccountId, ?PERIOD_DOCS_VIEW, SViewOpts) of
                        {'ok', SJObjs} -> [kz_json:get_value(<<"value">>, JObj) || JObj <- SJObjs];
                        _ -> []
                    end,
-            ERes = case kazoo_modb:get_results(AccountId, ?PRIOD_DOCS_VIEW, EViewOpts) of
+            ERes = case kazoo_modb:get_results(AccountId, ?PERIOD_DOCS_VIEW, EViewOpts) of
                        {'ok', EJObjs} ->  [kz_json:get_value(<<"value">>, JObj) || JObj <- EJObjs];
                        _ -> []
                    end,

@@ -70,6 +70,7 @@ generate_docs(AccountId, Year, Month, Day, Carrier, VatUpdatedFeesList, {TotalNe
            ,{<<"start_date">>, ?DATE_STRING(SYear, SMonth, SDay)}
            ,{<<"end_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
            ,{<<"doc_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
+           ,{<<"doc_date_json">>, onbill_util:date_json(EYear, EMonth, EDay)}
            ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
            ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
            ,{<<"carrier_vars">>, kz_json:set_values([{Key, kz_json:get_value(Key, CarrierDoc)}
@@ -262,6 +263,7 @@ aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
            ,{<<"start_date">>, ?DATE_STRING(SYear, SMonth, SDay)}
            ,{<<"end_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
            ,{<<"doc_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
+           ,{<<"doc_date_json">>, onbill_util:date_json(EYear, EMonth, EDay)}
            ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
            ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
            ,{<<"total_netto">>, onbill_util:price_round(TotalNetto)}
@@ -322,6 +324,7 @@ per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSe
            ,{<<"start_date">>, ?DATE_STRING(SYear, SMonth, SDay)}
            ,{<<"end_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
            ,{<<"doc_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
+           ,{<<"doc_date_json">>, onbill_util:date_json(EYear, EMonth, EDay)}
            ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
            ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
            ,{<<"agrm_num">>, kz_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccountOnbillDoc)}
@@ -358,6 +361,7 @@ create_doc(Amount, AccountId, DocVars, DocNumber, Year, Month, Day) ->
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(props:get_value(<<"total_brutto">>, VatifiedAmount)),
     {TotalVatDiv, TotalVatRem} = total_to_words(props:get_value(<<"total_vat">>, VatifiedAmount)),
     Vars = [{<<"doc_date_json">>, onbill_util:date_json(Year, Month, Day)}
+           ,{<<"doc_date">>, ?DATE_STRING(Year, Month, Day)}
            ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillResellerVars, 0.0)}
            ,{<<"total_vat_div">>, TotalVatDiv}
            ,{<<"total_vat_rem">>, TotalVatRem}
