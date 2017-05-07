@@ -15,6 +15,8 @@
 
 -include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
 
+-define(TRANSACTION_TYPES, [<<"credit">>, <<"debit">>]).
+
 -spec init() -> 'ok'.
 init() ->
     _ = crossbar_bindings:bind(<<"*.allowed_methods.onbill_transactions">>, ?MODULE, 'allowed_methods'),
@@ -31,20 +33,20 @@ resource_exists(_) -> 'true'.
 -spec validate(cb_context:context(), path_token()) -> cb_context:context().
 validate(Context, Id) ->
     case maybe_valid_relationship(Context) of
-        'true' -> validate_periodic_fees(Context, Id, cb_context:req_verb(Context));
+        'true' -> validate_transaction(Context, Id, cb_context:req_verb(Context));
         'false' ->  cb_context:add_system_error('forbidden', Context)
     end.
 
--spec validate_periodic_fees(cb_context:context(), ne_binary(), path_token()) -> cb_context:context().
-validate_periodic_fees(Context, <<Year:4/binary, Month:2/binary, _:2/binary, "-dailyfee">> = Id, ?HTTP_GET) ->
+-spec validate_transaction(cb_context:context(), ne_binary(), path_token()) -> cb_context:context().
+validate_transaction(Context, <<Year:4/binary, Month:2/binary, _:2/binary, "-dailyfee">> = Id, ?HTTP_GET) ->
     leak_job_fields(crossbar_doc:load(Id
                                      ,cb_context:set_account_modb(Context, kz_term:to_integer(Year), kz_term:to_integer(Month))
                                      ,[{'expected_type', <<"debit">>}]
                                      ));
-validate_periodic_fees(Context, <<Year:4/binary, Month:2/binary, _/binary>> = Id, ?HTTP_GET) ->
+validate_transaction(Context, <<Year:4/binary, Month:2/binary, _/binary>> = Id, ?HTTP_GET) ->
     crossbar_doc:load(Id
                      ,cb_context:set_account_modb(Context, kz_term:to_integer(Year), kz_term:to_integer(Month))
-                     ,[{'expected_type', <<"debit">>}]
+                     ,[{'expected_type', ?TRANSACTION_TYPES}]
                      ).
 
 -spec maybe_valid_relationship(cb_context:context()) -> boolean().
