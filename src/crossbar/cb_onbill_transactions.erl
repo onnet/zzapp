@@ -16,6 +16,7 @@
 -include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
 
 -define(TRANSACTION_TYPES, [<<"credit">>, <<"debit">>]).
+-define(DELETABLE_REASONS, [<<"wire_transfer">>, <<"balance_correction">>]).
 
 -spec init() -> 'ok'.
 init() ->
@@ -25,7 +26,7 @@ init() ->
 
 -spec allowed_methods(path_token()) -> http_methods().
 allowed_methods(_) ->
-    [?HTTP_GET].
+    [?HTTP_GET, ?HTTP_DELETE].
 
 -spec resource_exists(path_token()) -> 'true'.
 resource_exists(_) -> 'true'.
@@ -47,7 +48,17 @@ validate_transaction(Context, <<Year:4/binary, Month:2/binary, _/binary>> = Id, 
     crossbar_doc:load(Id
                      ,cb_context:set_account_modb(Context, kz_term:to_integer(Year), kz_term:to_integer(Month))
                      ,[{'expected_type', ?TRANSACTION_TYPES}]
-                     ).
+                     );
+validate_transaction(Context, <<Year:4/binary, Month:2/binary, _/binary>> = Id, ?HTTP_DELETE) ->
+    Ctx1 = crossbar_doc:load(Id
+                            ,cb_context:set_account_modb(Context, kz_term:to_integer(Year), kz_term:to_integer(Month))
+                            ,[{'expected_type', ?TRANSACTION_TYPES}]
+                            ),
+    JObj = cb_context:doc(Ctx1),
+    case lists:member(kz_json:get_value(<<"pvt_reason">>, JObj), ?DELETABLE_REASONS) of
+        'true' -> crossbar_doc:delete(Ctx1);
+        'false' -> cb_context:add_system_error('forbidden', Ctx1)
+    end.
 
 -spec maybe_valid_relationship(cb_context:context()) -> boolean().
 maybe_valid_relationship(Context) ->
