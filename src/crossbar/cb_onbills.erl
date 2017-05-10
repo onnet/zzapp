@@ -23,6 +23,7 @@
 -define(NOTIFICATION_MIME_TYPES, [{<<"text">>, <<"html">>}
                                %   ,{<<"text">>, <<"plain">>}
                                  ]).
+-define(DELETABLE_ONBILL_DOC_TYPES, [<<"transaction_based_invoice">>]).
 
 -spec init() -> 'ok'.
 init() ->
@@ -39,7 +40,7 @@ allowed_methods() ->
 allowed_methods(?GENERATE) ->
     [?HTTP_PUT];
 allowed_methods(_) ->
-    [?HTTP_GET].
+    [?HTTP_GET, ?HTTP_DELETE].
 allowed_methods(_,?ATTACHMENT) ->
     [?HTTP_GET].
 
@@ -77,7 +78,9 @@ validate(Context, ?PERIOD_BALANCE) ->
 validate(Context, ?CURRENCY_SIGN) ->
     validate_currency_sign(Context, cb_context:req_verb(Context));
 validate(Context, ?GENERATE) ->
-    validate_generate(Context, cb_context:req_verb(Context)).
+    validate_generate(Context, cb_context:req_verb(Context));
+validate(Context, DocId) ->
+    validate_doc(Context, DocId, cb_context:req_verb(Context)).
 validate(Context, Id, ?ATTACHMENT) ->
     validate_onbill(Context, Id, ?ATTACHMENT, cb_context:req_verb(Context)).
 
@@ -106,6 +109,17 @@ validate_generate(Context, _, _, _) ->
       ,kz_json:from_list([{<<"message">>, Message}])
       ,Context
      ).
+
+validate_doc(Context, <<Year:4/binary, Month:2/binary, "-", _/binary>> = Id, ?HTTP_DELETE) ->
+    Ctx1 = crossbar_doc:load(Id
+                            ,cb_context:set_account_modb(Context, kz_term:to_integer(Year), kz_term:to_integer(Month))
+                            ,[{'expected_type', <<"onbill">>}]
+                            ),
+    JObj = cb_context:doc(Ctx1),
+    case lists:member(kz_json:get_value(<<"onbill_doc_type">>, JObj), ?DELETABLE_ONBILL_DOC_TYPES) of
+        'true' -> crossbar_doc:delete(Ctx1);
+        'false' -> cb_context:add_system_error('forbidden', Ctx1)
+    end.
 
 generate_transaction_based_invoice(Context, AccountId, <<Year:4/binary, Month:2/binary, "-", _/binary>> = TransctionId, Timestamp) ->
   try
