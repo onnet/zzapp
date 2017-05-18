@@ -1,0 +1,13 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "system_config.paypal",
+    "description": "Schema for paypal system_config",
+    "properties": {
+        "enabled": {
+            "default": true,
+            "description": "PayPal IPN processing enabled",
+            "type": "boolean"
+        }
+    },
+    "type": "object"
+}

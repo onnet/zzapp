@@ -21,6 +21,7 @@ populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
 -spec refresh(ne_binary(), non_neg_integer(), non_neg_integer()) -> 'ok'.
 -spec refresh(ne_binaries(), non_neg_integer()) -> 'no_return'.
 refresh() ->
+    kz_datamgr:revise_docs_from_folder(<<"system_schemas">>, 'onbill', "schemas"),
     Databases = get_databases(),
     refresh(Databases, length(Databases) + 1).
 
