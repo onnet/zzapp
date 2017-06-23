@@ -3,6 +3,7 @@
 -export([populate_modb_day_with_fee/4
          ,populate_modb_with_fees/3
          ,refresh/0
+         ,set_trunkstore_media_handling/0
         ]).
 
 -include("onbill.hrl").
@@ -18,8 +19,8 @@ populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
     kz_bookkeeper_onbill:populate_modb_day_with_fee(kz_term:to_binary(AccountId), Year, Month, Day).
 
 -spec refresh() -> 'no_return'.
--spec refresh(ne_binary(), non_neg_integer(), non_neg_integer()) -> 'ok'.
 -spec refresh(ne_binaries(), non_neg_integer()) -> 'no_return'.
+-spec refresh(ne_binary(), non_neg_integer(), non_neg_integer()) -> 'ok'.
 refresh() ->
     kz_datamgr:revise_docs_from_folder(<<"system_schemas">>, 'onbill', "schemas"),
     Databases = get_databases(),
@@ -61,3 +62,32 @@ get_databases() ->
 get_database_sort(Db1, Db2) ->
         kzs_util:db_priority(Db1) < kzs_util:db_priority(Db2).
 
+-spec set_trunkstore_media_handling() -> 'no_return'.
+-spec set_trunkstore_media_handling(ne_binaries(), non_neg_integer()) -> 'no_return'.
+set_trunkstore_media_handling() ->
+    Databases = get_databases(),
+    set_trunkstore_media_handling(Databases, length(Databases) + 1).
+
+set_trunkstore_media_handling([], _) -> 'no_return';
+set_trunkstore_media_handling([Database|Databases], Total) ->
+    case kz_datamgr:db_classification(Database) of
+        'account' ->
+            AccountDb = kz_util:format_account_id(Database, 'encoded'),
+            case kz_datamgr:get_result_ids(AccountDb, <<"trunkstore/lookup_user_flags">>) of
+                {ok,[DocId|_]} ->
+                    io:format("(~p/~p) found trunkstore doc in database '~s'~n",[length(Databases) + 1, Total, Database]),
+                    {'ok', TsDoc} = kz_datamgr:open_doc(AccountDb, DocId),
+                    [Server|H] = kz_json:get_value(<<"servers">>,TsDoc),
+                    NewServer = kz_json:set_value([<<"options">>,<<"media_handling">>], <<"process">>, Server),
+                    TsDocNew = kz_json:set_value(<<"servers">>, [NewServer|H], TsDoc),
+                    kz_datamgr:save_doc(AccountDb,TsDocNew),
+                    timer:sleep(?PAUSE);
+                _ ->
+                    io:format("(~p/~p) no trunkstore doc in database '~s'~n",[length(Databases) + 1, Total, Database]),
+                    'ok'
+            end;
+        _Else ->
+            io:format("(~p/~p) skipping database '~s'~n",[length(Databases) + 1, Total, Database]),
+            'ok'
+    end,
+    set_trunkstore_media_handling(Databases, Total).
