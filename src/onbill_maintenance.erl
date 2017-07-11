@@ -62,6 +62,10 @@ get_databases() ->
 get_database_sort(Db1, Db2) ->
         kzs_util:db_priority(Db1) < kzs_util:db_priority(Db2).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%  Manipulate trunkstore media handling %%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 -spec set_trunkstore_media_handling() -> 'no_return'.
 -spec set_trunkstore_media_handling(ne_binaries(), non_neg_integer()) -> 'no_return'.
 set_trunkstore_media_handling() ->
@@ -91,3 +95,20 @@ set_trunkstore_media_handling([Database|Databases], Total) ->
             'ok'
     end,
     set_trunkstore_media_handling(Databases, Total).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%u%%%%  Manipulate account billing_id handling %%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%-spec correct_billing_id() -> 'no_return'.
+%-spec correct_billing_id(ne_binaries(), non_neg_integer()) -> 'no_return'.
+%correct_billing_id() ->
+%    Databases = get_databases(),
+%    correct_billing_id(Databases, length(Databases) + 1).
+
+%correct_billing_id([], _) -> 'no_return';
+%correct_billing_id([Database|Databases], Total) ->
+%    case kz_datamgr:db_classification(Database) of
+%        'account' ->
+%            AccountDb = kz_util:format_account_id(Database, 'encoded'),
+
