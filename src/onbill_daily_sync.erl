@@ -12,7 +12,7 @@
         ]).
 
 -include("onbill.hrl").
--include_lib("kazoo/include/kz_databases.hrl").
+-include_lib("kazoo_stdlib/include/kz_databases.hrl").
 
 -define(CB_LISTING_BY_ID, <<"accounts/listing_by_id">>).
 

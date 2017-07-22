@@ -20,7 +20,7 @@
 
 -include("onbill.hrl").
 -include_lib("/opt/kazoo/core/braintree/include/braintree.hrl").
--include_lib("/opt/kazoo/core/kazoo/include/kz_databases.hrl").
+-include_lib("/opt/kazoo/core/kazoo_stdlib/include/kz_databases.hrl").
 -include_lib("/opt/kazoo/core/kazoo_transactions/include/kazoo_transactions.hrl").
 
 -spec max_daily_usage_exceeded(kz_service_item:items(), ne_binary(), integer()) -> any().
