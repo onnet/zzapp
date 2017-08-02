@@ -112,8 +112,16 @@ correct_billing_id([Database|Databases], Total) ->
     case kz_datamgr:db_classification(Database) of
         'account' ->
             AccountId = kz_util:format_account_id(Database, 'raw'),
-            kz_datamgr:save_doc(<<"services">>, kz_services:to_json(kz_services:set_billing_id(AccountId, AccountId)));
+            case kz_services:set_billing_id(AccountId, AccountId) of
+                'undefined' ->
+                    io:format("(~p/~p) skipping account database '~s' (~p) ~n",[length(Databases) + 1, Total, Database, AccountId]);
+                Services ->
+                    io:format("(~p/~p) updating account database '~s' (~p) ~n",[length(Databases) + 1, Total, Database, AccountId]),
+                    kz_datamgr:save_doc(<<"services">>, kz_services:to_json(Services)),
+                    timer:sleep(?PAUSE)
+            end;
         _Else ->
             io:format("(~p/~p) skipping database '~s'~n",[length(Databases) + 1, Total, Database]),
             'ok'
-    end.
+    end,
+    correct_billing_id(Databases, Total).
