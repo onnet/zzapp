@@ -4,6 +4,7 @@
          ,populate_modb_with_fees/3
          ,refresh/0
          ,set_trunkstore_media_handling/0
+         ,correct_billing_id/0
         ]).
 
 -include("onbill.hrl").
@@ -100,15 +101,19 @@ set_trunkstore_media_handling([Database|Databases], Total) ->
 %%%%%%%%%%%%%u%%%%  Manipulate account billing_id handling %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%-spec correct_billing_id() -> 'no_return'.
-%-spec correct_billing_id(ne_binaries(), non_neg_integer()) -> 'no_return'.
-%correct_billing_id() ->
-%    Databases = get_databases(),
-%    correct_billing_id(Databases, length(Databases) + 1).
+-spec correct_billing_id() -> 'no_return'.
+-spec correct_billing_id(ne_binaries(), non_neg_integer()) -> 'no_return'.
+correct_billing_id() ->
+    Databases = get_databases(),
+    correct_billing_id(Databases, length(Databases) + 1).
 
-%correct_billing_id([], _) -> 'no_return';
-%correct_billing_id([Database|Databases], Total) ->
-%    case kz_datamgr:db_classification(Database) of
-%        'account' ->
-%            AccountDb = kz_util:format_account_id(Database, 'encoded'),
-
+correct_billing_id([], _) -> 'no_return';
+correct_billing_id([Database|Databases], Total) ->
+    case kz_datamgr:db_classification(Database) of
+        'account' ->
+            AccountId = kz_util:format_account_id(Database, 'raw'),
+            kz_datamgr:save_doc(<<"services">>, kz_services:to_json(kz_services:set_billing_id(AccountId, AccountId)));
+        _Else ->
+            io:format("(~p/~p) skipping database '~s'~n",[length(Databases) + 1, Total, Database]),
+            'ok'
+    end.
