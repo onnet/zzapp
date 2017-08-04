@@ -5,6 +5,7 @@
          ,refresh/0
          ,set_trunkstore_media_handling/0
          ,correct_billing_id/0
+         ,set_device_fax_option/0
         ]).
 
 -include("onbill.hrl").
@@ -125,3 +126,44 @@ correct_billing_id([Database|Databases], Total) ->
             'ok'
     end,
     correct_billing_id(Databases, Total).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%  Manipulate device fax option  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-spec set_device_fax_option() -> 'no_return'.
+-spec set_device_fax_option(ne_binaries(), non_neg_integer()) -> 'no_return'.
+set_device_fax_option() ->
+    Databases = get_databases(),
+    set_device_fax_option(Databases, length(Databases) + 1).
+
+set_device_fax_option([], _) -> 'no_return';
+set_device_fax_option([Database|Databases], Total) ->
+    case kz_datamgr:db_classification(Database) of
+        'account' ->
+            AccountDb = kz_util:format_account_id(Database, 'encoded'),
+            case kz_datamgr:get_result_ids(AccountDb, <<"devices/crossbar_listing">>) of
+                {ok,DocIds} ->
+                    device_fax_option(AccountDb, DocIds);
+                _ ->
+                    io:format("(~p/~p) no trunkstore doc in database '~s'~n",[length(Databases) + 1, Total, Database]),
+                    'ok'
+            end;
+        _Else ->
+            io:format("(~p/~p) skipping database '~s'~n",[length(Databases) + 1, Total, Database]),
+            'ok'
+    end,
+    set_device_fax_option(Databases, Total).
+
+device_fax_option(_AccountDb, []) ->
+    'ok';
+device_fax_option(AccountDb, [DeviceId|T]) ->
+    io:format("found device doc ~p in database '~s'~n",[DeviceId, AccountDb]),
+    {'ok', Doc} = kz_datamgr:open_doc(AccountDb, DeviceId),
+    Keys = [[<<"media">>,<<"fax_option">>]
+           ,[<<"media">>,<<"fax">>]
+           ,[<<"media">>,<<"peer_to_peer">>]],
+    NewDoc = kz_json:delete_keys(Keys, Doc),
+    kz_datamgr:save_doc(AccountDb, NewDoc),
+    timer:sleep(?PAUSE),
+    device_fax_option(AccountDb, T).
