@@ -5,7 +5,8 @@
          ,refresh/0
          ,set_trunkstore_media_handling/0
          ,correct_billing_id/0
-         ,set_device_fax_option/0
+         ,cleanup_account_doc/0
+         ,cleanup_device_doc/0
         ]).
 
 -include("onbill.hrl").
@@ -128,42 +129,55 @@ correct_billing_id([Database|Databases], Total) ->
     correct_billing_id(Databases, Total).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%  Manipulate device fax option  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  CleanUp documents   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--spec set_device_fax_option() -> 'no_return'.
--spec set_device_fax_option(ne_binaries(), non_neg_integer()) -> 'no_return'.
-set_device_fax_option() ->
+-spec cleanup_account_doc() -> 'no_return'.
+cleanup_account_doc() ->
     Databases = get_databases(),
-    set_device_fax_option(Databases, length(Databases) + 1).
+    DelKeys = [[<<"media">>,<<"fax_option">>]
+           ,[<<"media">>,<<"fax">>]
+           ,[<<"media">>,<<"peer_to_peer">>]],
+    SetValues = [{[<<"media">>,<<"fax_option">>], 'true'}
+              ],
+    cleanup_doc('account', <<"account/listing_by_name">>, DelKeys, SetValues, Databases, length(Databases) + 1).
 
-set_device_fax_option([], _) -> 'no_return';
-set_device_fax_option([Database|Databases], Total) ->
+-spec cleanup_device_doc() -> 'no_return'.
+cleanup_device_doc() ->
+    Databases = get_databases(),
+    DelKeys = [[<<"media">>,<<"fax_option">>]
+           ,[<<"media">>,<<"fax">>]
+           ,[<<"media">>,<<"peer_to_peer">>]],
+    SetValues = [{[<<"media">>,<<"fax_option">>], 'true'}
+              ],
+    cleanup_doc('account', <<"devices/crossbar_listing">>, DelKeys, SetValues, Databases, length(Databases) + 1).
+
+-spec cleanup_doc(atom(), ne_binary(), kz_proplist(), kz_proplist(),  ne_binaries(), non_neg_integer()) -> 'no_return'.
+cleanup_doc(_, _, _, _, [], _) -> 'no_return';
+cleanup_doc(DbType, View, DelKeys, SetValues, [Database|Databases], Total) ->
     case kz_datamgr:db_classification(Database) of
-        'account' ->
-            AccountDb = kz_util:format_account_id(Database, 'encoded'),
-            case kz_datamgr:get_result_ids(AccountDb, <<"devices/crossbar_listing">>) of
+        DbType ->
+            EncodedDb = kz_util:format_account_id(Database, 'encoded'),
+            case kz_datamgr:get_result_ids(EncodedDb, View) of
                 {ok,DocIds} ->
-                    device_fax_option(AccountDb, DocIds);
+                    process_document(DelKeys, SetValues, EncodedDb, DocIds);
                 _ ->
-                    io:format("(~p/~p) no trunkstore doc in database '~s'~n",[length(Databases) + 1, Total, Database]),
+                    io:format("(~p/~p) no documents of interest in database '~s'~n",[length(Databases) + 1, Total, Database]),
                     'ok'
             end;
         _Else ->
             io:format("(~p/~p) skipping database '~s'~n",[length(Databases) + 1, Total, Database]),
             'ok'
     end,
-    set_device_fax_option(Databases, Total).
+    cleanup_doc(DbType, View, DelKeys, SetValues, Databases, Total).
 
-device_fax_option(_AccountDb, []) ->
+process_document(_, _, _, []) ->
     'ok';
-device_fax_option(AccountDb, [DeviceId|T]) ->
-    io:format("found device doc ~p in database '~s'~n",[DeviceId, AccountDb]),
-    {'ok', Doc} = kz_datamgr:open_doc(AccountDb, DeviceId),
-    Keys = [[<<"media">>,<<"fax_option">>]
-           ,[<<"media">>,<<"fax">>]
-           ,[<<"media">>,<<"peer_to_peer">>]],
-    NewDoc = kz_json:delete_keys(Keys, Doc),
-    kz_datamgr:save_doc(AccountDb, NewDoc),
+process_document(DelKeys, SetValues, EncodedDb, [DeviceId|T]) ->
+    io:format("found doc ~p in database '~s'~n",[DeviceId, EncodedDb]),
+    {'ok', Doc} = kz_datamgr:open_doc(EncodedDb, DeviceId),
+    TmpDoc = kz_json:delete_keys(DelKeys, Doc),
+    NewDoc = kz_json:set_values(SetValues, TmpDoc),
+    kz_datamgr:save_doc(EncodedDb, NewDoc),
     timer:sleep(?PAUSE),
-    device_fax_option(AccountDb, T).
+    process_document(DelKeys, SetValues, EncodedDb, T).
