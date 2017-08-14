@@ -4,6 +4,8 @@
         ,populate_modb_with_fees/3
         ,refresh/0
         ,correct_billing_id/0
+        ,set_billing_day/1
+        ,set_billing_day/2
         ]).
 
 -include("onbill.hrl").
@@ -90,3 +92,33 @@ correct_billing_id([Database|Databases], Total) ->
             'ok'
     end,
     correct_billing_id(Databases, Total).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%  Set account billing day %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-spec set_billing_day(ne_binary()) -> 'ok'.
+set_billing_day(Day) ->
+    Databases = get_databases(),
+    set_billing_day(Day, Databases, length(Databases) + 1).
+
+-spec set_billing_day(ne_binary(), ne_binary()) -> 'ok'.
+set_billing_day(AccountId, Day) ->
+    onbill_util:set_billing_day(?TO_INT(Day), AccountId),
+    'ok'.
+
+-spec set_billing_day(ne_binary(), ne_binaries(), non_neg_integer()) -> 'ok'.
+set_billing_day(_, [], _) -> 'no_return';
+set_billing_day(Day, [Database|Databases], Total) ->
+    case kz_datamgr:db_classification(Database) of
+        'account' ->
+            AccountId = kz_util:format_account_id(Database, 'raw'),
+            io:format("(~p/~p) updating account database '~s' (~p) ~n",[length(Databases) + 1, Total, Database, AccountId]),
+            onbill_util:set_billing_day(?TO_INT(Day), AccountId),
+            timer:sleep(?PAUSE);
+        _Else ->
+            io:format("(~p/~p) skipping database '~s'~n",[length(Databases) + 1, Total, Database]),
+            'ok'
+    end,
+    set_billing_day(Day, Databases, Total).
+

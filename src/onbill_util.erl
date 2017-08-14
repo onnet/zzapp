@@ -42,6 +42,7 @@
         ,account_creation_date/1
         ,account_creation_ts/1
         ,billing_day/1
+        ,set_billing_day/2
         ,maybe_allow_postpay/1
         ,trial_has_expired/1
         ,is_trial_account/1
@@ -356,6 +357,14 @@ maybe_force_postpay_billing_day(AccountId) ->
                           ,kz_json:get_atom_value(<<"force_postpay_billing_day">>,reseller_vars(MasterAccount),'true')
                           ).
 
+-spec maybe_force_prepay_billing_day(ne_binary()) -> boolean().
+maybe_force_prepay_billing_day(AccountId) ->
+    {'ok', MasterAccount} = kapps_util:get_master_account_id(),
+    kz_json:get_atom_value(<<"force_prepay_billing_day">>
+                          ,reseller_vars(AccountId)
+                          ,kz_json:get_atom_value(<<"force_prepay_billing_day">>,reseller_vars(MasterAccount),'false')
+                          ).
+
 -spec billing_day(ne_binary()) -> integer() | 'undefined'.
 billing_day(AccountId) when is_binary(AccountId) ->
     case maybe_allow_postpay(AccountId) of
@@ -366,7 +375,11 @@ billing_day(AccountId) when is_binary(AccountId) ->
                     billing_day(account_vars(AccountId), AccountId)
             end;
         'false' ->
-            billing_day(account_vars(AccountId), AccountId)
+            case maybe_force_prepay_billing_day(AccountId) of
+                'true' -> 1;
+                'false' ->
+                    billing_day(account_vars(AccountId), AccountId)
+            end
     end.
 
 -spec billing_day(kz_json:object(), ne_binary()) -> integer() | 'undefined'.
@@ -387,9 +400,13 @@ set_billing_day(AccountId) ->
                 'false' -> set_billing_day(Today, AccountId)
             end;
         'false' ->
-            set_billing_day(Today, AccountId)
+            case maybe_force_prepay_billing_day(AccountId) of
+                'true' -> set_billing_day(1, AccountId);
+                'false' -> set_billing_day(Today, AccountId)
+            end
     end.
 
+-spec set_billing_day(integer(), ne_binary()) -> kz_json:object().
 set_billing_day(BillingDay, AccountId) ->
     DbName = kz_util:format_account_id(AccountId,'encoded'),
     case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
