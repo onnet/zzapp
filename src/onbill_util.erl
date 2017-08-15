@@ -354,7 +354,7 @@ maybe_force_postpay_billing_day(AccountId) ->
     {'ok', MasterAccount} = kapps_util:get_master_account_id(),
     kz_json:get_atom_value(<<"force_postpay_billing_day">>
                           ,reseller_vars(AccountId)
-                          ,kz_json:get_atom_value(<<"force_postpay_billing_day">>,reseller_vars(MasterAccount),'true')
+                          ,kz_json:get_atom_value(<<"force_postpay_billing_day">>,reseller_vars(MasterAccount),'false')
                           ).
 
 -spec maybe_force_prepay_billing_day(ne_binary()) -> boolean().
