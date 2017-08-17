@@ -101,7 +101,7 @@ enhance_vat_brutto(FeeLine, OnbillResellerVars) ->
                 ,{<<"rate_brutto">>, onbill_util:price_round(Rate)}
                 ,{<<"cost_brutto">>, onbill_util:price_round(Cost)}
                 ,{<<"discount_brutto">>, onbill_util:price_round(Discount)}
-                ,{<<"discounted_cost_brutto">>, onbill_util:price_round(Discount)}
+                ,{<<"discounted_cost_brutto">>, onbill_util:price_round(DiscountedCost)}
                 ,{<<"vat_line_total">>, VatLineTotal}
                 ,{<<"vat_line_discounted_total">>, VatLineDiscountedTotal}
                 ],
