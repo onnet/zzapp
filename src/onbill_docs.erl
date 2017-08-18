@@ -168,13 +168,16 @@ render_tpl(ErlyMod, Vars) ->
     erlang:iolist_to_binary(IoList).
 
 create_pdf(Vars, TemplateId, Carrier, AccountId) ->
+    WkhtmlOptions = kz_json:get_value([?WKHTML_OPTIONS, <<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary>>]
+                                     ,props:get_value(<<"carrier_vars">>,Vars, kz_json:new())
+                                     ,<<>>),
     Rand = kz_binary:rand_hex(5),
     Prefix = <<AccountId/binary, "-", (?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, "-", Rand/binary>>,
     HTMLFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".html">>]),
     PDFFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".pdf">>]),
     HTMLTpl = prepare_tpl(Vars, TemplateId, Carrier, AccountId),
     file:write_file(HTMLFile, HTMLTpl),
-    Cmd = <<?HTML_TO_PDF/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
+    Cmd = <<?HTML_TO_PDF(WkhtmlOptions)/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
     case os:cmd(kz_term:to_list(Cmd)) of
         [] ->
             file:read_file(PDFFile);

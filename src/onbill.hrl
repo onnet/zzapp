@@ -42,7 +42,8 @@
          ,Carrier/binary
          ,"_"
          ,TemplateId/binary>>).
--define(HTML_TO_PDF, <<"/usr/local/bin/wkhtmltopdf --quiet">>).
+-define(HTML_TO_PDF(WkhtmlOptions), <<"/usr/local/bin/wkhtmltopdf --quiet ", WkhtmlOptions/binary>>).
+-define(WKHTML_OPTIONS, <<"wkhtmltopdf_options">>).
 -define(DEFAULT_REGEX, <<"^\\d*$">>).
 -define(DATE_STRING(Year, Month, Day)
        ,<<(kz_time:pad_day(Day))/binary, ".",(kz_time:pad_month(Month))/binary,".",(?TO_BIN(Year))/binary>>).
