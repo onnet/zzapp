@@ -20,6 +20,7 @@
 -define(BILLING_PERIODS, <<"billing_periods">>).
 -define(PERIOD_BALANCE, <<"period_balance">>).
 -define(CURRENCY_SIGN, <<"currency_sign">>).
+-define(BILLING_STATUS, <<"billing_status">>).
 -define(NOTIFICATION_MIME_TYPES, [{<<"text">>, <<"html">>}
                                %   ,{<<"text">>, <<"plain">>}
                                  ]).
@@ -77,6 +78,8 @@ validate(Context, ?PERIOD_BALANCE) ->
     validate_period_balance(Context, cb_context:req_verb(Context));
 validate(Context, ?CURRENCY_SIGN) ->
     validate_currency_sign(Context, cb_context:req_verb(Context));
+validate(Context, ?BILLING_STATUS) ->
+    validate_billing_status(Context, cb_context:req_verb(Context));
 validate(Context, ?GENERATE) ->
     validate_generate(Context, cb_context:req_verb(Context));
 validate(Context, DocId) ->
@@ -254,13 +257,8 @@ validate_current_services(Context, _) ->
 -spec validate_currency_sign(cb_context:context(), http_method()) -> cb_context:context().
 validate_currency_sign(Context, ?HTTP_GET) ->
     AccountId = cb_context:account_id(Context),
-    Vars =
-        case kz_services:is_reseller(AccountId) of
-            'true' -> onbill_util:account_vars(AccountId);
-            'false' -> onbill_util:reseller_vars(AccountId)
-        end,
     JObj =
-        kz_json:from_list([{<<"currency_sign">>, kz_json:get_value(<<"currency_sign">>, Vars)}
+        kz_json:from_list([{<<"currency_sign">>, currency_sign(AccountId)}
                           ,{<<"account_id">>, AccountId}
                           ]),
     cb_context:setters(Context
@@ -268,6 +266,32 @@ validate_currency_sign(Context, ?HTTP_GET) ->
                        ,{fun cb_context:set_resp_data/2, JObj}
                        ]);
 validate_currency_sign(Context, _) ->
+    Context.
+
+currency_sign(AccountId) ->
+    Vars =
+        case kz_services:is_reseller(AccountId) of
+            'true' -> onbill_util:account_vars(AccountId);
+            'false' -> onbill_util:reseller_vars(AccountId)
+        end,
+    kz_json:get_value(<<"currency_sign">>, Vars).
+
+-spec validate_billing_status(cb_context:context(), http_method()) -> cb_context:context().
+validate_billing_status(Context, ?HTTP_GET) ->
+    AccountId = cb_context:account_id(Context),
+    JObj =
+        kz_json:from_list([{<<"display_billing">>
+                           ,kz_json:get_value(<<"display_billing">>
+                                             ,onbill_util:reseller_vars(AccountId)
+                                             ,'false')}
+                          ,{<<"currency_sign">>, currency_sign(AccountId)}
+                          ,{<<"account_id">>, AccountId}
+                          ]),
+    cb_context:setters(Context
+                      ,[{fun cb_context:set_resp_status/2, 'success'}
+                       ,{fun cb_context:set_resp_data/2, JObj}
+                       ]);
+validate_billing_status(Context, _) ->
     Context.
 
 -spec validate_current_billing_period(cb_context:context(), http_method()) -> cb_context:context().
