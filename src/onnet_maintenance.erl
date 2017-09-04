@@ -8,8 +8,6 @@
 
 -include("onbill.hrl").
 
--define(PAUSE, 300).
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%  CleanUp documents   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -59,7 +57,7 @@ cleanup_doc(DbType, View, DelKeys, SetValues, [Database|Databases], Total) ->
             EncodedDb = kz_util:format_account_id(Database, 'encoded'),
             case kz_datamgr:get_result_ids(EncodedDb, View) of
                 {ok,DocIds} ->
-                    process_document(DelKeys, SetValues, EncodedDb, DocIds);
+                    onbill_util:process_document(DelKeys, SetValues, EncodedDb, DocIds);
                 _ ->
                     io:format("(~p/~p) no documents of interest in database '~s'~n",[length(Databases) + 1, Total, Database]),
                     'ok'
@@ -69,17 +67,6 @@ cleanup_doc(DbType, View, DelKeys, SetValues, [Database|Databases], Total) ->
             'ok'
     end,
     cleanup_doc(DbType, View, DelKeys, SetValues, Databases, Total).
-
-process_document(_, _, _, []) ->
-    'ok';
-process_document(DelKeys, SetValues, EncodedDb, [DeviceId|T]) ->
-    io:format("found doc ~p in database '~s'~n",[DeviceId, EncodedDb]),
-    {'ok', Doc} = kz_datamgr:open_doc(EncodedDb, DeviceId),
-    TmpDoc = kz_json:delete_keys(DelKeys, Doc),
-    NewDoc = kz_json:set_values(SetValues, TmpDoc),
-    kz_datamgr:save_doc(EncodedDb, NewDoc),
-    timer:sleep(?PAUSE),
-    process_document(DelKeys, SetValues, EncodedDb, T).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%  Manipulate trunkstore media handling %%%%%%%%%%%%%%%%%%%%%%%%%%

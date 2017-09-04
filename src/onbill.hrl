@@ -57,6 +57,7 @@
        ,<<(?TO_BIN(Year))/binary, (kz_time:pad_month(Month))/binary, (kz_time:pad_day(Day))/binary,  "-dailyfee">>).
 -define(BEGIN_DAY_TS(Month, Year, Day), calendar:datetime_to_gregorian_seconds({{Year, Month, Day},{0,0,0}})).
 -define(END_DAY_TS(Month, Year, Day), calendar:datetime_to_gregorian_seconds({{Year, Month, Day},{23,59,59}})).
+-define(PAUSE, 500).
 
 -define(ONBILL_HRL, 'true').
 -endif.

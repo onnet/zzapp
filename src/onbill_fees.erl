@@ -358,7 +358,7 @@ dates_sequence_reduce(DatesList) ->
 
 format_days_of_month(Year, Month, DatesList) ->
     Days = [?TO_INT(D) || {Y,M,D} <- DatesList, Year == Y  andalso Month == M],
-    onbill_util:date_json(Year, Month, days_sequence_reduce(Days)).
+    onbill_util:period_json(Year, Month, days_sequence_reduce(Days)).
 
 -spec days_sequence_reduce(kz_proplist()) -> kz_proplist().
 days_sequence_reduce([Digit]) ->

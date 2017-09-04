@@ -29,6 +29,7 @@
         ,period_end_modb/4
         ,date_json/1
         ,date_json/3
+        ,period_json/3
         ,period_start_date/1
         ,period_start_date/2
         ,period_start_date/4
@@ -64,6 +65,7 @@
         ,day_start_balance/4
         ,day_start_balance_dollars/4
         ,get_range/3
+        ,process_document/4
         ]).
 
 -include("onbill.hrl").
@@ -283,6 +285,16 @@ date_json(Year, Month, Day) ->
                       ,{<<"day">>, Day}
                       ,{<<"day_begins_ts">>, calendar:datetime_to_gregorian_seconds({{?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)}, {0,0,0}})}
                       ,{<<"day_ends_ts">>, calendar:datetime_to_gregorian_seconds({{?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)}, {23,59,59}})}
+                      ]).
+
+-spec period_json(kz_year(), kz_month(), kz_day()) -> kz_proplist().
+period_json(Year, Month, Day) ->
+    kz_json:from_list([{<<"year">>, ?TO_BIN(Year)}
+                      ,{<<"month_short">>, ?TO_BIN(httpd_util:month(?TO_INT(Month)))}
+                      ,{<<"month_pad">>, ?TO_BIN(kz_time:pad_month(Month))}
+                      ,{<<"day">>, Day}
+                  %    ,{<<"day_begins_ts">>, calendar:datetime_to_gregorian_seconds({{?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)}, {0,0,0}})}
+                  %    ,{<<"day_ends_ts">>, calendar:datetime_to_gregorian_seconds({{?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)}, {23,59,59}})}
                       ]).
 
 -spec period_start_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
@@ -713,4 +725,16 @@ get_range(AccountId, From, To) ->
           ]
       end || MODb <- kazoo_modb:get_range(AccountId, From, To)
     ].
+
+-spec process_document(kz_proplists(), kz_proplists(), ne_binary(), kz_proplists()) -> any().
+process_document(_, _, _, []) ->
+    'ok';
+process_document(DelKeys, SetValues, EncodedDb, [DocId|T]) ->
+    io:format("found doc ~p in database '~s'~n",[DocId, EncodedDb]),
+    {'ok', Doc} = kz_datamgr:open_doc(EncodedDb, DocId),
+    TmpDoc = kz_json:delete_keys(DelKeys, Doc),
+    NewDoc = kz_json:set_values(SetValues, TmpDoc),
+    kz_datamgr:save_doc(EncodedDb, NewDoc),
+    timer:sleep(?PAUSE),
+    process_document(DelKeys, SetValues, EncodedDb, T).
 

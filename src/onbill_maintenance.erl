@@ -10,15 +10,13 @@
 
 -include("onbill.hrl").
 
--define(PAUSE, 300).
-
 -spec populate_modb_with_fees(ne_binary(), integer(), integer()) -> ok.
 populate_modb_with_fees(AccountId, Year, Month) ->
-    kz_bookkeeper_onbill:populate_modb_with_fees(kz_term:to_binary(AccountId), Year, Month).
+    kz_bookkeeper_onbill:populate_modb_with_fees(kz_term:to_binary(AccountId), ?TO_INT(Year), ?TO_INT(Month)).
 
 -spec populate_modb_day_with_fee(ne_binary(), integer(), integer(), integer()) -> ok.
 populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
-    kz_bookkeeper_onbill:populate_modb_day_with_fee(kz_term:to_binary(AccountId), Year, Month, Day).
+    kz_bookkeeper_onbill:populate_modb_day_with_fee(kz_term:to_binary(AccountId), ?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)).
 
 -spec refresh() -> 'no_return'.
 -spec refresh(ne_binaries(), non_neg_integer()) -> 'no_return'.
@@ -79,6 +77,9 @@ correct_billing_id([Database|Databases], Total) ->
     case kz_datamgr:db_classification(Database) of
         'account' ->
             AccountId = kz_util:format_account_id(Database, 'raw'),
+            EncodedDb = kz_util:format_account_id(Database, 'encoded'),
+            onbill_util:process_document([<<"billing_id">>], [], EncodedDb, [AccountId]),
+            onbill_util:process_document([<<"billing_id">>], [], <<"accounts">>, [AccountId]),
             case kz_services:set_billing_id(AccountId, AccountId) of
                 'undefined' ->
                     io:format("(~p/~p) skipping account database '~s' (~p) ~n",[length(Databases) + 1, Total, Database, AccountId]);
