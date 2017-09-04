@@ -33,7 +33,11 @@
     <td style="border: 1px solid black;">
       {{ fee_line.name }}
       {% if fee_line.period %}
-        {{ fee_line.period.day }}.{{ fee_line.period.month_pad }}.{{ fee_line.period.year }}
+        {% for period in fee_line.period %}
+           {{ period.day }}
+           {{ period.month_short }}
+           {{ period.year }}{% if forloop.last %}.{% endif %}
+        {% endfor %}
       {% endif %}
     </td>
     <td style="border: 1px solid black;">{{ fee_line.code_name }}</td>
