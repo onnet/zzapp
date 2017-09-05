@@ -6,6 +6,7 @@
         ,correct_billing_id/0
         ,set_billing_day/1
         ,set_billing_day/2
+        ,set_rate_option/4
         ]).
 
 -include("onbill.hrl").
@@ -78,8 +79,8 @@ correct_billing_id([Database|Databases], Total) ->
         'account' ->
             AccountId = kz_util:format_account_id(Database, 'raw'),
             EncodedDb = kz_util:format_account_id(Database, 'encoded'),
-            onbill_util:process_document([<<"billing_id">>], [], EncodedDb, [AccountId]),
-            onbill_util:process_document([<<"billing_id">>], [], <<"accounts">>, [AccountId]),
+            onbill_util:process_documents([<<"billing_id">>], [], EncodedDb, [AccountId]),
+            onbill_util:process_documents([<<"billing_id">>], [], <<"accounts">>, [AccountId]),
             case kz_services:set_billing_id(AccountId, AccountId) of
                 'undefined' ->
                     io:format("(~p/~p) skipping account database '~s' (~p) ~n",[length(Databases) + 1, Total, Database, AccountId]);
@@ -122,4 +123,18 @@ set_billing_day(Day, [Database|Databases], Total) ->
             'ok'
     end,
     set_billing_day(Day, Databases, Total).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%  Set option to ratedeck  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-spec set_rate_option(ne_binary(), ne_binary(), ne_binary(), ne_binary()) -> 'ok'.
+set_rate_option(RatedeckDb, Option, K, V) ->
+    case kz_datamgr:get_result_ids(RatedeckDb, <<"rates/crossbar_listing">>) of
+        {ok,DocIds} ->
+            onbill_util:process_documents_case([], [{<<"options">>, [Option]}], RatedeckDb, DocIds, {K,V});
+        _ ->
+            io:format("No rates found ~n"),
+            'ok'
+    end.
 

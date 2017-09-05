@@ -57,7 +57,7 @@ cleanup_doc(DbType, View, DelKeys, SetValues, [Database|Databases], Total) ->
             EncodedDb = kz_util:format_account_id(Database, 'encoded'),
             case kz_datamgr:get_result_ids(EncodedDb, View) of
                 {ok,DocIds} ->
-                    onbill_util:process_document(DelKeys, SetValues, EncodedDb, DocIds);
+                    onbill_util:process_documents(DelKeys, SetValues, EncodedDb, DocIds);
                 _ ->
                     io:format("(~p/~p) no documents of interest in database '~s'~n",[length(Databases) + 1, Total, Database]),
                     'ok'

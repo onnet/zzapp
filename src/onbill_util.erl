@@ -65,7 +65,8 @@
         ,day_start_balance/4
         ,day_start_balance_dollars/4
         ,get_range/3
-        ,process_document/4
+        ,process_documents/4
+        ,process_documents_case/5
         ]).
 
 -include("onbill.hrl").
@@ -726,15 +727,32 @@ get_range(AccountId, From, To) ->
       end || MODb <- kazoo_modb:get_range(AccountId, From, To)
     ].
 
--spec process_document(kz_proplists(), kz_proplists(), ne_binary(), kz_proplists()) -> any().
-process_document(_, _, _, []) ->
+-spec process_documents(kz_proplists(), kz_proplists(), ne_binary(), kz_proplists()) -> any().
+process_documents(_, _, _, []) ->
     'ok';
-process_document(DelKeys, SetValues, EncodedDb, [DocId|T]) ->
+process_documents(DelKeys, SetValues, EncodedDb, [DocId|T]) ->
     io:format("found doc ~p in database '~s'~n",[DocId, EncodedDb]),
     {'ok', Doc} = kz_datamgr:open_doc(EncodedDb, DocId),
     TmpDoc = kz_json:delete_keys(DelKeys, Doc),
     NewDoc = kz_json:set_values(SetValues, TmpDoc),
     kz_datamgr:save_doc(EncodedDb, NewDoc),
     timer:sleep(?PAUSE),
-    process_document(DelKeys, SetValues, EncodedDb, T).
+    process_documents(DelKeys, SetValues, EncodedDb, T).
+
+
+-spec process_documents_case(kz_proplists(), kz_proplists(), ne_binary(), kz_proplists(), any()) -> any().
+process_documents_case(_, _, _, [], _) ->
+    'ok';
+process_documents_case(DelKeys, SetValues, EncodedDb, [DocId|T], {K,V}) ->
+    io:format("found doc ~p in database '~s'~n",[DocId, EncodedDb]),
+    {'ok', Doc} = kz_datamgr:open_doc(EncodedDb, DocId),
+    case kz_json:get_value(K, Doc) of
+        V ->
+            TmpDoc = kz_json:delete_keys(DelKeys, Doc),
+            NewDoc = kz_json:set_values(SetValues, TmpDoc),
+            kz_datamgr:save_doc(EncodedDb, NewDoc),
+            timer:sleep(?PAUSE);
+        _ -> 'ok'
+    end,
+    process_documents_case(DelKeys, SetValues, EncodedDb, T, {K,V}).
 
