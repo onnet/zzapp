@@ -1,12 +1,9 @@
 <head>
   <meta charset="UTF-8">
 </head>
-
-<br />
 <h1 align=center>АКТ оказания услуг </h1>
 <h4 align=center>по Договору № {{ doc_pref }}{{ doc_number }}-{{ doc_ind }} от {{ doc_date }}<br />
 за оказанные услуги электросвязи за период: {{ start_date }} - {{ end_date }}</h4>
-<br />
 <table width="100%">
   <tr>
     <td width="50%" align="left">г. Санкт-Петербург</td>
@@ -15,9 +12,8 @@
     </td>
   </tr>
 </table>
-<br />
-<h4 align=justify>{{ oper_name }} (далее — {{ oper_name_further }}), с одной стороны, и {{ account_name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том, что в соответствии с Договором об оказании услуг связи № {{ agrm_num }} от {{ agrm_date }}, заключенным между Сторонами (далее — «Договор»), {{ oper_name_further }} в указанный период оказал Клиенту Услуги:
-</h4><br />
+<h4 align=justify>{{ carrier_vars.oper_name }} (далее — {{ carrier_vars.oper_name_further }}), с одной стороны, и {{ account_name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том, что в соответствии с Договором об оказании услуг связи № {{ agrm_num }} от {{ agrm_date }}, заключенным между Сторонами (далее — «Договор»), {{ oper_name_further }} в указанный период оказал Клиенту Услуги:
+</h4>
 <table style="border-collapse: collapse;">
   <tr style="border: 1px solid black;">
     <td style="border: 1px solid black;" width="5%"><h4 align="center">№</h4></td>
@@ -55,7 +51,8 @@
     <td width="14%"  style="text-align: center;">{{ total_vat|floatformat:2 }}</td>
   </tr>
  </table>
-<br />Всего оказано услуг на сумму:
+<span  style="padding-top: 30px;">
+Всего оказано услуг на сумму:
 {% if total_brutto_div %}
   {{ total_brutto_div }}
 {% else %}
@@ -79,17 +76,54 @@
 {% else %}
   00{% endif %}
 коп.
-<br />
-<br />
-<h4 align="center">Указанные услуги полностью соответствуют условиям Договора. <br />
-Клиент претензий к объему оказанных услуг и их качеству не имеет.</h4><br /><br />
-<table>
+</span>
+<h4 align="center">
+Указанные услуги полностью соответствуют условиям Договора. <br />
+Клиент претензий к объему оказанных услуг и их качеству не имеет.
+</h4>
+<br /><br />
+<table width="100%">
   <tr>
-    <td width=50%>
-      <h4 align="center">КЛИЕНТ<br /><br /><br />________________________<br /><br /><br />МП</h4>
+    <td width="50%">
+      <h4 align="center">
+        <p>КЛИЕНТ</p>
+       </h4>
     </td>
-    <td width=49%>
-      <h4 align="center">{{ oper_signatory }}<br /><br /><br />________________________<br />({{ oper_dir }})<br /><br />МП</h4><p align="center">{{ oper_agent }}<br />{{ oper_power }}</p>
+    <td>
+      <h4 align="center">
+        <p>{{ carrier_vars.oper_signatory }}<p>
+      </h4>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <h4 align="center">
+        <p>________________________<p>
+      </h4>
+    </td>
+    <td>
+      <h4 align="center">
+        <p>________________________</p>
+      </h4>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <h4 align="center">
+        <p></p>
+        <p>МП</p>
+      </h4>
+    </td>
+    <td>
+      <h4 align="center">
+        ({{ carrier_vars.oper_dir }})
+        <p>МП</p>
+      </h4>
+      <p align="center">
+        {{ carrier_vars.oper_agent }}
+        <br />
+        {{ carrier_vars.oper_power }}
+      </p>
     </td>
   </tr>
 </table>
