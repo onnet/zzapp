@@ -12,7 +12,12 @@
     </td>
   </tr>
 </table>
-<h4 align=justify>{{ carrier_vars.oper_name }} (далее — {{ carrier_vars.oper_name_further }}), с одной стороны, и {{ account_name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том, что в соответствии с Договором об оказании услуг связи № {{ agrm_num }} от {{ agrm_date }}, заключенным между Сторонами (далее — «Договор»), {{ oper_name_further }} в указанный период оказал Клиенту Услуги:
+<h4 align=justify>
+  {{ carrier_vars.oper_name }} (далее — {{ carrier_vars.oper_name_further }}), с одной стороны,
+  и {{ account_name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том,
+  что в соответствии с Договором об оказании услуг связи № {{ agrm_num }} от {{ agrm_date }},
+  заключенным между Сторонами (далее — «Договор»),
+  {{ oper_name_further }} в указанный период оказал Клиенту Услуги:
 </h4>
 <table style="border-collapse: collapse;">
   <tr style="border: 1px solid black;">
