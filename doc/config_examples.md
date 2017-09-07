@@ -99,8 +99,8 @@ onbill doc account's example
    "per_minute_item_name": "Междугородная и международная связь",
    "oper_name_short": "ПАО «Вымпел-Коммуникации»",
    "oper_signatory": "ОПЕРАТОР",
-   "caller_number_regex": "^7812\\d*$",
-   "called_number_regex": "^(?!7812)\\d*$",
+   "caller_number_regex": "^\\+?7812\\d*$",
+   "called_number_regex": "^\\+?(?!7812)\\d*$",
    "onbill_doc_types": [
        "invoice",
        "act"
