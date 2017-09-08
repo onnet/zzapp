@@ -11,8 +11,6 @@
 
 -include("onbill.hrl").
 
--define(CB_LIST, <<"onbills/crossbar_listing">>).
--define(PERIOD_DOCS_VIEW, <<"onbills/docs_by_period_ts">>).
 -define(ATTACHMENT, <<"attachment">>).
 -define(GENERATE, <<"generate">>).
 -define(CURRENT_SERVICES, <<"current_services">>).

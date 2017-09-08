@@ -210,7 +210,7 @@ save_pdf(DocId, Vars, TemplateId, Carrier, AccountId, Year, Month) ->
     Result.
 
 total_to_words(Total) ->
-    [TotalDiv, TotalRem] = binary:split(float_to_binary(Total,[{decimals,2}]), <<".">>),
+    [TotalDiv, TotalRem] = binary:split(float_to_binary(kz_term:to_float(Total),[{decimals,2}]), <<".">>),
     {unicode:characters_to_binary(amount_into_words:render(TotalDiv), unicode, utf8)
     ,unicode:characters_to_binary(amount_into_words:render(TotalRem), unicode, utf8)
     }.
@@ -250,11 +250,8 @@ aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
     MainCarrierDoc = onbill_util:carrier_doc(MainCarrier, AccountId),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
-    {AggregatedVars, TotalNetto, TotalVAT, TotalBrutto} = lists:foldl(fun(Carrier, Acc) ->
-                                                                          aggregate_data(AccountId, Year, Month, Day, Carrier, Acc)
-                                                                      end
-                                                                     ,{[], 0, 0, 0}
-                                                                     ,Carriers),
+    {AggregatedVars, TotalNetto, TotalVAT, TotalBrutto} =
+        aggregate_data(AccountId, {SYear, SMonth, SDay}, {EYear, EMonth, EDay}),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(TotalBrutto),
     {TotalVatDiv, TotalVatRem} = total_to_words(TotalVAT),
     Vars = [{<<"aggregated_vars">>, AggregatedVars}
@@ -279,17 +276,34 @@ aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
            ],
     save_pdf(Vars, DocType, MainCarrier, AccountId, Year, Month).
 
-aggregate_data(AccountId, Year, Month, Day, Carrier, {AggrVars, TotalNetto, TotalVAT, TotalBrutto}) ->
-    TemplateId = <<"invoice">>,
-    Modb = onbill_util:period_end_modb(AccountId, Year, Month, Day),
-    case kz_datamgr:open_doc(Modb, ?DOC_NAME_FORMAT(Carrier, TemplateId)) of
-        {ok, InvoiceDoc} ->
+aggregate_data(AccountId, {SYear, SMonth, _}, {SYear, SMonth, _}) ->
+    Modb = kazoo_modb:get_modb(AccountId, SYear, SMonth),
+    _ = onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
+    case kz_datamgr:get_results(Modb, ?CB_LIST, ['include_docs']) of
+        {'error', 'not_found'} ->
+            lager:warning("unable to process aggregate_data calculaton for Modb: ~s, skipping", [Modb]),
+            {[], 0, 0, 0};
+        {'ok', JObjs } ->
+            lists:foldl(fun(JObj, Acc) ->
+                           aggregate_data(kz_json:get_value(<<"value">>, JObj, kz_json:new()), Acc)
+                        end
+                       ,{[], 0, 0, 0}
+                       ,JObjs)
+    end;
+aggregate_data(AccountId, {_SYear, _SMonth, _SDay}, {_EYear, _EMonth, _EDay}) ->
+    lager:warning("Invoice aggregation not implemented for cross month billing beriods yet. AccounId: ~p", [AccountId]),
+    {[], 0, 0, 0}.
+
+aggregate_data(InvoiceDoc, {AggrVars, TotalNetto, TotalVAT, TotalBrutto}) ->
+    case kz_json:get_value(<<"type">>, InvoiceDoc) of
+        <<"invoice">> ->
             {[[{Key, kz_json:get_value(Key, InvoiceDoc)} || Key <- kz_json:get_keys(InvoiceDoc), filter_vars(Key)]] ++ AggrVars
             ,kz_json:get_value(<<"total_netto">>, InvoiceDoc) + TotalNetto
             ,kz_json:get_value(<<"total_vat">>, InvoiceDoc) + TotalVAT
             ,kz_json:get_value(<<"total_brutto">>, InvoiceDoc) + TotalBrutto
             };
-        _ -> {AggrVars, TotalNetto, TotalVAT, TotalBrutto} 
+        _ ->
+            {AggrVars, TotalNetto, TotalVAT, TotalBrutto} 
     end.
     
 -spec per_minute_reports(ne_binary(), integer()) -> 'ok'.
