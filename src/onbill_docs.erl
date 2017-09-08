@@ -49,7 +49,7 @@ generate_docs(AccountId, Year, Month, Day, Carrier, VatUpdatedFeesList, {TotalNe
     {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
     {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
     CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
-    OnbillResellerVars = onbill_util:reseller_vars(AccountId),
+    ResellerVars = onbill_util:reseller_vars(AccountId),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(TotalBrutto),
     {TotalVatDiv, TotalVatRem} = total_to_words(TotalVAT),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
@@ -62,9 +62,9 @@ generate_docs(AccountId, Year, Month, Day, Carrier, VatUpdatedFeesList, {TotalNe
            ,{<<"total_brutto">>, onbill_util:price_round(TotalBrutto)}
            ,{<<"total_brutto_div">>, TotalBruttoDiv}
            ,{<<"total_brutto_rem">>, TotalBruttoRem}
-           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillResellerVars, 0.0)}
-           ,{<<"currency_short">>, kz_json:get_value(<<"currency_short">>, OnbillResellerVars)}
-           ,{<<"currency_sign">>, kz_json:get_value(<<"currency_sign">>, OnbillResellerVars)}
+           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, ResellerVars, 0.0)}
+           ,{<<"currency_short">>, kz_json:get_value(<<"currency_short">>, ResellerVars)}
+           ,{<<"currency_sign">>, kz_json:get_value(<<"currency_sign">>, ResellerVars)}
            ,{<<"agrm_num">>, kz_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccountOnbillDoc)}
            ,{<<"agrm_date">>, kz_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccountOnbillDoc)}
            ,{<<"start_date">>, ?DATE_STRING(SYear, SMonth, SDay)}
@@ -73,6 +73,7 @@ generate_docs(AccountId, Year, Month, Day, Carrier, VatUpdatedFeesList, {TotalNe
            ,{<<"doc_date_json">>, onbill_util:date_json(EYear, EMonth, EDay)}
            ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
            ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
+           ,{<<"reseller_vars">>, pack_vars(ResellerVars)}
            ,{<<"carrier_vars">>, pack_vars(CarrierDoc)}
            ,{<<"account_vars">>, pack_vars(AccountOnbillDoc)}
            ], 
@@ -246,7 +247,7 @@ aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
     DocType = <<"aggregated_invoice">>,
     {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
     {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
-    OnbillResellerVars = onbill_util:reseller_vars(AccountId),
+    ResellerVars = onbill_util:reseller_vars(AccountId),
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
     MainCarrierDoc = onbill_util:carrier_doc(MainCarrier, AccountId),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
@@ -264,13 +265,14 @@ aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
            ,{<<"total_netto">>, onbill_util:price_round(TotalNetto)}
            ,{<<"total_vat">>, onbill_util:price_round(TotalVAT)}
            ,{<<"total_brutto">>, onbill_util:price_round(TotalBrutto)}
-           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillResellerVars, 0.0)}
+           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, ResellerVars, 0.0)}
            ,{<<"total_vat_div">>, TotalVatDiv}
            ,{<<"total_vat_rem">>, TotalVatRem}
            ,{<<"total_brutto_div">>, TotalBruttoDiv}
            ,{<<"total_brutto_rem">>, TotalBruttoRem}
            ,{<<"onbill_doc_type">>, DocType}
            ,{<<"doc_number">>, onbill_docs_numbering:get_binary_number(AccountId, MainCarrier, DocType, Year, Month)}
+           ,{<<"reseller_vars">>, pack_vars(ResellerVars)}
            ,{<<"carrier_vars">>, pack_vars(MainCarrierDoc)}
            ,{<<"account_vars">>, pack_vars(AccountOnbillDoc)}
            ],
@@ -328,7 +330,7 @@ per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSe
     DocType = <<"calls_report">>,
     {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
     {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
-    OnbillResellerVars = onbill_util:reseller_vars(AccountId),
+    ResellerVars = onbill_util:reseller_vars(AccountId),
     CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
     {CallsJObjs, CallsTotalSec, CallsTotalSumm} = onbill_fees:per_minute_calls(AccountId, Year, Month, 1, Carrier),
@@ -342,10 +344,11 @@ per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSe
            ,{<<"agrm_num">>, kz_json:get_value([<<"agrm">>, Carrier, <<"number">>], AccountOnbillDoc)}
            ,{<<"agrm_date">>, kz_json:get_value([<<"agrm">>, Carrier, <<"date">>], AccountOnbillDoc)}
            ,{<<"onbill_doc_type">>, DocType}
+           ,{<<"reseller_vars">>, pack_vars(ResellerVars)}
            ,{<<"carrier_vars">>, pack_vars(CarrierDoc)}
            ,{<<"account_vars">>, pack_vars(AccountOnbillDoc)}
            ]
-           ++ onbill_fees:vatify_amount(<<"total">>, CallsTotalSumm, OnbillResellerVars),
+           ++ onbill_fees:vatify_amount(<<"total">>, CallsTotalSumm, ResellerVars),
     save_pdf(Vars, DocType, Carrier, AccountId, Year, Month);
 per_minute_report(_, _, _, _, _, _, _, _) ->
     'ok'.
@@ -364,17 +367,17 @@ create_doc(Amount, AccountId, DocVars, DocNumber, Year, Month, Day) ->
     DocType = kz_json:get_value(<<"document_type">>, DocVars),
     {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
     {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
-    OnbillResellerVars = onbill_util:reseller_vars(AccountId),
+    ResellerVars = onbill_util:reseller_vars(AccountId),
     Carriers = onbill_util:account_carriers_list(AccountId),
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
     MainCarrierDoc = onbill_util:carrier_doc(MainCarrier, AccountId),
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
-    VatifiedAmount = onbill_fees:vatify_amount(<<"total">>, kz_term:to_float(Amount), OnbillResellerVars),
+    VatifiedAmount = onbill_fees:vatify_amount(<<"total">>, kz_term:to_float(Amount), ResellerVars),
     {TotalBruttoDiv, TotalBruttoRem} = total_to_words(props:get_value(<<"total_brutto">>, VatifiedAmount)),
     {TotalVatDiv, TotalVatRem} = total_to_words(props:get_value(<<"total_vat">>, VatifiedAmount)),
     Vars = [{<<"doc_date_json">>, onbill_util:date_json(Year, Month, Day)}
            ,{<<"doc_date">>, ?DATE_STRING(Year, Month, Day)}
-           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, OnbillResellerVars, 0.0)}
+           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, ResellerVars, 0.0)}
            ,{<<"total_vat_div">>, TotalVatDiv}
            ,{<<"total_vat_rem">>, TotalVatRem}
            ,{<<"total_brutto_div">>, TotalBruttoDiv}
@@ -384,8 +387,9 @@ create_doc(Amount, AccountId, DocVars, DocNumber, Year, Month, Day) ->
            ,{<<"doc_number">>, DocNumber}
            ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
            ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
-           ,{<<"currency_short">>, kz_json:get_value(<<"currency_short">>, OnbillResellerVars)}
-           ,{<<"currency_sign">>, kz_json:get_value(<<"currency_sign">>, OnbillResellerVars)}
+           ,{<<"currency_short">>, kz_json:get_value(<<"currency_short">>, ResellerVars)}
+           ,{<<"currency_sign">>, kz_json:get_value(<<"currency_sign">>, ResellerVars)}
+           ,{<<"reseller_vars">>, pack_vars(ResellerVars)}
            ,{<<"carrier_vars">>, pack_vars(MainCarrierDoc)}
            ,{<<"account_vars">>, pack_vars(AccountOnbillDoc)}
            ]

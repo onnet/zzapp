@@ -1,9 +1,34 @@
 <head>
   <meta charset="UTF-8">
+  <link href='http://fonts.googleapis.com/css?family=Tangerine&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+  <link href='http://fonts.googleapis.com/css?family=Crafty+Girls&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+  <link href='http://fonts.googleapis.com/css?family=Lobster&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+  <link href='http://fonts.googleapis.com/css?family=PT+Serif&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+  <style>
+    * {
+      font-family: 'PT Serif';
+      font-size: 13;
+    }
+  </style>
 </head>
+<body>
+
+<p style="font-family: 'Orbitron';">Орбитрон</p>
+<p style="font-family: 'Open Sans';">Опен Санс</p>
+<p style="font-family: 'Tangerine';">Tangerine - Тангерин</p>
+<p style="font-family: 'Verdana';">Verdana - Вердана</p>
+<p style="font-family: 'Crafty Girls';">Crafty+Girls - Графти Гёрлс</p>
+<p style="font-family: 'Lobster';">Лобстер</p>
+<p style="font-family: 'PT Serif';">ПТ Сериф</p>
+
 <h1 align=center>АКТ оказания услуг </h1>
-<h4 align=center>по Договору № {{ doc_pref }}{{ doc_number }}-{{ doc_ind }} от {{ doc_date }}<br />
-за оказанные услуги электросвязи за период: {{ start_date }} - {{ end_date }}</h4>
+<h4 align=center>
+  по Договору №
+  {{ carrier_vars.doc_pref }}{{ agrm_num }}{% if carrier_vars.doc_ind %}-{{ carrier_vars.doc_ind }}{% endif %}
+  от {{ agrm_date }}
+  <br />
+  за оказанные услуги электросвязи за период: {{ start_date }} - {{ end_date }}
+</h4>
 <table width="100%">
   <tr>
     <td width="50%" align="left">г. Санкт-Петербург</td>
@@ -14,10 +39,10 @@
 </table>
 <h4 align=justify>
   {{ carrier_vars.oper_name }} (далее — {{ carrier_vars.oper_name_further }}), с одной стороны,
-  и {{ account_name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том,
+  и {{ account_vars.account_name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том,
   что в соответствии с Договором об оказании услуг связи № {{ agrm_num }} от {{ agrm_date }},
   заключенным между Сторонами (далее — «Договор»),
-  {{ oper_name_further }} в указанный период оказал Клиенту Услуги:
+  {{ account_vars.oper_name_further }} в указанный период оказал Клиенту Услуги:
 </h4>
 <table style="border-collapse: collapse;">
   <tr style="border: 1px solid black;">
@@ -25,8 +50,8 @@
     <td style="border: 1px solid black;" width=44%><h4 align="center">Наименование услуги</h4></td>
     <td style="border: 1px solid black;" width=8%><h4 align="center">Ед. Изм.</h4></td>
     <td style="border: 1px solid black;" width=14%><h4 align="center">Кол-во</h4></td>
-    <td style="border: 1px solid black;" width=14%><h4 align="center">Цена {{ currency1 }}.</h4></td>
-    <td style="border: 1px solid black;" width=14%><h4 align="center">Сумма {{ currency1 }}.</h4></td>
+    <td style="border: 1px solid black;" width=14%><h4 align="center">Цена, {{ reseller_vars.currency_short }}.</h4></td>
+    <td style="border: 1px solid black;" width=14%><h4 align="center">Сумма, {{ reseller_vars.currency1 }}.</h4></td>
   </tr>
 {% for fee_line in monthly_fees %}
   <tr style="text-align: center;">
@@ -132,3 +157,4 @@
     </td>
   </tr>
 </table>
+</body>
