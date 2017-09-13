@@ -282,7 +282,7 @@ date_json(Year, Month, Day) when is_integer(Day) ->
 date_json(Year, Month, Day) ->
     kz_json:from_list([{<<"year">>, ?TO_BIN(Year)}
                       ,{<<"month_short">>, ?TO_BIN(httpd_util:month(?TO_INT(Month)))}
-                      ,{<<"month_pad">>, ?TO_BIN(kz_time:pad_month(Month))}
+                      ,{<<"month_pad">>, ?TO_BIN(kz_date:pad_month(Month))}
                       ,{<<"day">>, Day}
                       ,{<<"day_begins_ts">>, calendar:datetime_to_gregorian_seconds({{?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)}, {0,0,0}})}
                       ,{<<"day_ends_ts">>, calendar:datetime_to_gregorian_seconds({{?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)}, {23,59,59}})}
@@ -292,7 +292,7 @@ date_json(Year, Month, Day) ->
 period_json(Year, Month, Day) ->
     kz_json:from_list([{<<"year">>, ?TO_BIN(Year)}
                       ,{<<"month_short">>, ?TO_BIN(httpd_util:month(?TO_INT(Month)))}
-                      ,{<<"month_pad">>, ?TO_BIN(kz_time:pad_month(Month))}
+                      ,{<<"month_pad">>, ?TO_BIN(kz_date:pad_month(Month))}
                       ,{<<"day">>, Day}
                   %    ,{<<"day_begins_ts">>, calendar:datetime_to_gregorian_seconds({{?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)}, {0,0,0}})}
                   %    ,{<<"day_ends_ts">>, calendar:datetime_to_gregorian_seconds({{?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)}, {23,59,59}})}
@@ -683,7 +683,7 @@ day_start_balance(AccountId, Year, Month, Day) ->
     Timestamp = calendar:datetime_to_gregorian_seconds({{Year, Month, Day}, {0,0,0}}),
     maybe_add_design_doc(kazoo_modb:get_modb(AccountId, Year, Month), <<"onbills">>),
     ViewOptions = [{'year', kz_term:to_binary(Year)}
-                  ,{'month', kz_time:pad_month(Month)}
+                  ,{'month', kz_date:pad_month(Month)}
                   ,{'endkey', Timestamp}
                   ],
     case kazoo_modb:get_results(AccountId, View, ViewOptions) of

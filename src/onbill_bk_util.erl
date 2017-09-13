@@ -52,8 +52,8 @@ max_daily_usage_exceeded(Items, AccountId, Timestamp) ->
 -spec prepare_dailyfee_doc_name(integer(), integer(), integer()) -> ne_binary().
 prepare_dailyfee_doc_name(Y, M, D) ->
     Year = kz_term:to_binary(Y),
-    Month = kz_time:pad_month(M),
-    Day = kz_time:pad_month(D),
+    Month = kz_date:pad_month(M),
+    Day = kz_date:pad_month(D),
     <<Year/binary, Month/binary, Day/binary, "-dailyfee">>.
 
 -spec select_daily_count_items_list(kz_service_item:items(), ne_binary()) -> kz_proplist().
