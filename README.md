@@ -1,2 +1,2 @@
 # onbill
-Onnet billing Kazoo app
+Onnet billing Kazoo app by kirill.sysoev@gmail.com
