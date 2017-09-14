@@ -28,7 +28,7 @@
   <table border=0>
     <tr>
       <td width="80%" align="center">
-          <font size=12>СЧЕТ-ФАКТУРА № {{ carrier_vars.doc_pref }}{{ agrm_num }}{{ carrier_vars.doc_ind }} от {{ agrm_date }}
+          <font size=12>СЧЕТ-ФАКТУРА № {{ carrier_vars.doc_pref }}{{ doc_number }}{{ carrier_vars.doc_ind }} от {{ agrm_date }}
         <br />
         ИСПРАВЛЕНИЕ № <u> --- </u> от <u>   -------   </u></font>
         <br />
@@ -39,7 +39,8 @@
           Приложение №1<br />
           к постановлению Правительства<br />
           Российской Федерации<br />
-          от 26.12.2011 г. № 1137</span>
+          от 26.12.2011 г. № 1137
+        </span>
       </td>
     </tr>
   </table>
@@ -64,7 +65,7 @@
   <font size="9">
     Дополнительные (условия оплаты по договору (контракту), способ отправления и т.д.)
   </font>
-  Договор № {{ agrm_num }} от {{ agrm_date }}
+  Договор № {{ carrier_vars.doc_pref }}{{ agrm_num }} от {{ agrm_date }}
   <br />
   <table class="bordered_table" style="width: 100%;">
     <tr>
