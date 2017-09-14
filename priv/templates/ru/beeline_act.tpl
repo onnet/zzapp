@@ -147,7 +147,7 @@
           <p>МП</p>
         </h4>
         <p align="center">
-          Агент {{ carrier_vars.oper_agent }}
+          Агент {{ carrier_vars.oper_agent_short }}
           <br />
           (на основании доверенности {{ carrier_vars.oper_power }})
         </p>

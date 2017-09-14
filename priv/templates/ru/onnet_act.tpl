@@ -145,7 +145,7 @@
           <p>МП</p>
         </h4>
         <p align="center">
-          {{ carrier_vars.oper_agent }}
+          {{ carrier_vars.oper_agent_short }}
           <br />
           {{ carrier_vars.oper_power }}
         </p>
