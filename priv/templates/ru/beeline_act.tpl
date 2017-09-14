@@ -26,11 +26,13 @@
     </tr>
   </table>
   <h4 align=justify>
-    {{ carrier_vars.oper_name }} (далее — «{{ carrier_vars.oper_name_further }}»), с одной стороны,
+    {{ carrier_vars.oper_name }} (далее — «{{ carrier_vars.oper_name_further }}»), организованное по законам
+    Российской Федерации и имеющее местонахождение {{ carrier_vars.oper_addr }} в лице генерального директора
+    {{ carrier_vars.oper_agent }} {{ carrier_vars.in_person_of }}, действующего по доверенности
+    {{carrier_vars.oper_power }}, с одной стороны,
     и {{ account_vars.account_name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том,
     что в соответствии с Договором об оказании услуг связи № {{ agrm_num }} от {{ agrm_date }},
-    заключенным между Сторонами (далее — «Договор»),
-    {{ carrier_vars.oper_name_further }} в указанный период оказал Клиенту Услуги:
+    заключенным между Сторонами (далее — «Договор»), {{ carrier_vars.oper_name_further }} в указанный период оказал Клиенту Услуги:
   </h4>
   <table style="border-collapse: collapse;" width="100%">
     <tr style="border: 1px solid black;">
@@ -145,9 +147,9 @@
           <p>МП</p>
         </h4>
         <p align="center">
-          {{ carrier_vars.oper_agent }}
+          Агент {{ carrier_vars.oper_agent }}
           <br />
-          {{ carrier_vars.oper_power }}
+          (на основании доверенности {{ carrier_vars.oper_power }})
         </p>
       </td>
     </tr>
