@@ -1,0 +1,42 @@
+{
+   "_id": "onbill_carrier.beeline",
+   "doc_pref": "IO#",
+   "doc_ind": "-BK",
+   "continious_doc_numbering": true,
+   "oper_name": "Публичное Акционерное Общество «Вымпел-Коммуникации»",
+   "oper_name_short": "ПАО «Вымпел-Коммуникации»",
+   "oper_addr": "Россия, 127083, г. Москва, ул. Восьмого марта, дом 10 строение 14",
+   "inn": 7713076301,
+   "kpp": 997750001,
+   "oper_agent": "Закрытое Акционерное Общество «ОнНет комьюникейшнс»",
+   "oper_agent_short": "ЗАО «ОнНет комьюникейшнс»",
+   "oper_agent_addr": "194156, г. Санкт-Петербург, пр-кт Энгельса, д. 27 лит. З",
+   "oper_agent_inn": 7802201145,
+   "oper_agent_kpp": 780201001,
+   "in_person_of": "Сысоева Кирилла Вадимовича",
+   "oper_power": "№ 227/2016 от 15.09.2016 г.",
+   "oper_buh": "Сысоев К.В.",
+   "oper_dir": "Сысоев К.В.",
+   "comment1": "Оплате подлежит Единый счет на расчетный счет ЗАО «ОнНет комьюникейшнс» Получатель: ЗАО «ОнНет комьюникейшнс».  Банковские реквизиты: Филиал «Северная столица» АО «Райффайзенбанк», г. Санкт-Петербург, p/c 40702810303000017060, к/с 30101810100000000723, БИК 044030723",
+   "per_minute_item_name": "Междугородная и международная связь",
+   "oper_signatory": "За и от имени Билайн",
+   "caller_number_regex": "^\\+?7812\\d*$",
+   "called_number_regex": "^\\+?(?!7812)\\d*$",
+   "onbill_doc_types": [
+       "invoice",
+       "act"
+   ],
+   "oper_name_further": "Билайн",
+   "wkhtmltopdf_options": {
+       "beeline_invoice": "-O Landscape"
+   },
+   "pvt_vsn": "1",
+   "pvt_account_id": "d2047d303c22e5399c796a93848dcd9f",
+   "pvt_account_db": "account%2Fd2%2F04%2F7d303c22e5399c796a93848dcd9f",
+   "pvt_created": 63670201477,
+   "pvt_modified": 63672011622,
+   "pvt_request_id": "9c6b04ef6abca84f7ba72aa61cb74bfb",
+   "pvt_auth_user_id": "5ae2a5e8a47a88469f5ba7d216b88980",
+   "pvt_auth_account_id": "d2047d303c22e5399c796a93848dcd9f",
+   "pvt_is_authenticated": true
+}

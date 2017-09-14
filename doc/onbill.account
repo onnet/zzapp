@@ -1,0 +1,27 @@
+{
+   "_id": "onbill",
+   "iso_code_country_of_residence": "ru",
+   "language": "ru-RU",
+   "billing_address": {
+       "line1": "198101, Санкт-Петербург",
+       "line2": "ул. Рентгена д. 5",
+       "line3": "Офис 777"
+   },
+   "account_name": "ЗАО «Центр МРТФ»",
+   "account_inn": 1234567890,
+   "account_kpp": "098765",
+   "aggregate_invoice": true,
+   "agrm": {
+       "onnet": {
+           "number": "0822-PRE",
+           "date": "01.01.2011"
+       },
+       "beeline": {
+           "number": "0822-PRE",
+           "date": "01.01.2011"
+       }
+   },
+   "pvt_billing_day": 1,
+   "pvt_account_id": "0c237d13a4a9dbe43dfac69e8e890832",
+   "pvt_type": "onbill"
+}

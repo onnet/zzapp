@@ -1,0 +1,35 @@
+{
+   "_id": "onbill_carrier.onnet",
+   "oper_name": "Закрытое Акционерное Общество «ОнНет комьюникейшнс»",
+   "oper_addr": "194156, г. Санкт-Петербург, пр-кт Энгельса, д. 27 лит. З",
+   "inn": 7802201145,
+   "kpp": 780201001,
+   "oper_buh": "Сысоева И.А.",
+   "oper_dir": "Сысоев К.В.",
+   "per_minute_item_name": "Местные вызовы СПб",
+   "oper_name_short": "ЗАО «ОнНет комьюникейшнс»",
+   "oper_signatory": "ОПЕРАТОР",
+   "onbill_doc_types": [
+       "invoice",
+       "act"
+   ],
+   "doc_ind": "-Б",
+   "oper_name_further": "Оператор",
+   "carrier_type": "main",
+   "oper_account_number": 40702810702110000000,
+   "oper_bank_name": "Филиал ПАО Банк «ЮГРА» в г. Санкт-Петербурге, г. Санкт-Петербург",
+   "oper_bank_bik": "044030774",
+   "oper_corr_number": 30101810900000002000,
+   "pvt_vsn": "1",
+   "pvt_account_id": "d2047d303c22e5399c796a93848dcd9f",
+   "pvt_account_db": "account%2Fd2%2F04%2F7d303c22e5399c796a93848dcd9f",
+   "pvt_created": 63670201440,
+   "pvt_modified": 63670275445,
+   "pvt_request_id": "bebac268b0e2f865c4131fe3113f5f6e",
+   "pvt_auth_user_id": "5ae2a5e8a47a88469f5ba7d216b88980",
+   "pvt_auth_account_id": "d2047d303c22e5399c796a93848dcd9f",
+   "pvt_is_authenticated": true,
+   "wkhtmltopdf_options": {
+       "onnet_invoice": "-O Landscape"
+   }
+}

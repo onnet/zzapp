@@ -1,0 +1,50 @@
+{
+   "_id": "onbill",
+   "pvt_billing_day": 1,
+   "pvt_account_id": "d2047d303c22e5399c796a93848dcd9f",
+   "pvt_type": "onbill",
+   "force_postpay_billing_day": true,
+   "pvt_vsn": "1",
+   "pvt_account_db": "account%2Fd2%2F04%2F7d303c22e5399c796a93848dcd9f",
+   "pvt_modified": 63671227619,
+   "pvt_request_id": "32d7151a6810f0da481e7ab6d09010be",
+   "pvt_auth_user_id": "5ae2a5e8a47a88469f5ba7d216b88980",
+   "pvt_auth_account_id": "d2047d303c22e5399c796a93848dcd9f",
+   "pvt_is_authenticated": true,
+   "force_prepay_billing_day": true,
+   "country_of_residence": "ru",
+   "default_service_plan": "voip_service_plan",
+   "apply_discount_to_prorated": true,
+   "vat_disposition": "brutto",
+   "vat_rate": 18,
+   "currency_sign": "₽ ",
+   "iso_code_country_of_residence": "ru",
+   "pvt_daily_count_categories": [
+       "monthly_services"
+   ],
+   "carriers": [
+       "onnet",
+       "beeline"
+   ],
+   "extra_codes": {
+       "phone_numbers": {
+           "code_number": 796,
+           "code_name": "шт"
+       },
+       "number_activation": {
+           "code_number": 796,
+           "code_name": "шт"
+       },
+       "monthly_services": {
+           "code_number": 796,
+           "code_name": "шт"
+       },
+       "default": {
+           "code_number": "-",
+           "code_name": "-"
+       }
+   },
+   "currency_short": "руб",
+   "currency1": "руб",
+   "display_billing": true
+}
