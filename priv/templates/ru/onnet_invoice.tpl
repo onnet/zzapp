@@ -163,11 +163,11 @@
         <font size="8">11</font>
       </td>
     </tr>
-<!-- begin_services -->
-<!-- begin_item -->
-{% for fee_line in monthly_fees %}
-<tr>
-	<td width="23%">
+    <!-- begin_services -->
+    <!-- begin_item -->
+    {% for fee_line in monthly_fees %}
+      <tr>
+        <td width="23%">
           {{ fee_line.name }}
           {% if fee_line.period %}
             {% for period in fee_line.period %}
@@ -177,67 +177,67 @@
             {% endfor %}
           {% endif %}
         </td>
-	<td width="3%" align="center">{{ fee_line.code_number }}</td>
-	<td width="8%" align="center">{{ fee_line.code_name }}</td>
-	<td width="5%" align="right">{{ fee_line.quantity }}</td>
-	<td width="7%" align="right">{{ fee_line.rate_netto|floatformat:2 }}</td>
-	<td width="10%" align="right">{{ fee_line.cost_netto|floatformat:2 }}</td>
-	<td width="5%" align="center">Без акциза</td>
-	<td width="6%" align="right">{{ vat_rate }}%</td>
-	<td width="7%" align="right">{{ fee_line.vat_line_total|floatformat:2 }}</td>
-	<td width="10%" align="right">{{ fee_line.cost_brutto|floatformat:2 }}</td>
-	<td width="4%" align="center">--</td>
-	<td width="8%" align="center">--</td>
-	<td width="7%" align="center">--</td>
-</tr>
-{% endfor %}
-<!-- end_item -->
-<!-- end_services -->
-<tr>
-	<td width="46%" colspan=5>Всего к оплате:</td>		
-	<td width="10%" align="right">{{ total_netto|floatformat:2 }}</td>
-	<td width="11%" align="center" colspan="2">X</td>
-	<td width="7%" align="right">{{ total_vat|floatformat:2 }}</td>
-	<td width="10%" align="right">{{ total_brutto|floatformat:2 }}</td>
-</tr>	
-</table>
-<br />
-<table>
-	<tr>
-	<td width="50%">
-	Руководитель организации<br />
-	или иное уполномоченное лицо ________________ ({{ oper_dir }})<br />
-	<table border="0">
-	<tr>
-	<td width="50%" align="right"><font size=6>(подпись)</font></td>
-	<td width="33%" align="center"><font size=6>(ф.и.о.)</font></td>
-	</tr>
-        {% if oper_dov %}
-       	<tr>
-          <td width="90%" align="right"><h5>{{ oper_dov }}</h5></td>
-        </tr>
-        {% endif %}
-</table>			
-	</td>
-	<td width="50%">
-	Главный бухгалтер<br />
-	или иное уполномоченное лицо ________________ ({{ oper_buh }})<br />
-	<table border="0">
-	<tr>
-	<td width="50%" align="right"><font size=6>(подпись)</font></td>
-	<td width="33%" align="center"><font size=6>(ф.и.о.)</font></td>
-        </tr>
-        {% if oper_dov %}
-        <tr>
-        <td width="90%" align="right"><h5>{{ oper_dov }}</h5></td>
-        </tr>
-                                {% endif %}
-			</table>	
-		</td>
-	</tr>
-</table>
-<br />
-{{ comment1 }}
-<br />
-Примечание. Первый экземпляр — покупателю, второй экземпляр — продавцу
+        <td width="3%" align="center">{{ fee_line.code_number }}</td>
+        <td width="8%" align="center">{{ fee_line.code_name }}</td>
+        <td width="5%" align="right">{{ fee_line.quantity }}</td>
+        <td width="7%" align="right">{{ fee_line.rate_netto|floatformat:2 }}</td>
+        <td width="10%" align="right">{{ fee_line.cost_netto|floatformat:2 }}</td>
+        <td width="5%" align="center">Без акциза</td>
+        <td width="6%" align="right">{{ vat_rate }}%</td>
+        <td width="7%" align="right">{{ fee_line.vat_line_total|floatformat:2 }}</td>
+        <td width="10%" align="right">{{ fee_line.cost_brutto|floatformat:2 }}</td>
+        <td width="4%" align="center">--</td>
+        <td width="8%" align="center">--</td>
+        <td width="7%" align="center">--</td>
+      </tr>
+    {% endfor %}
+    <!-- end_item -->
+    <!-- end_services -->
+    <tr>
+      <td width="46%" colspan=5>Всего к оплате:</td>		
+      <td width="10%" align="right">{{ total_netto|floatformat:2 }}</td>
+      <td width="11%" align="center" colspan="2">X</td>
+      <td width="7%" align="right">{{ total_vat|floatformat:2 }}</td>
+      <td width="10%" align="right">{{ total_brutto|floatformat:2 }}</td>
+    </tr>	
+  </table>
+  <br />
+  <table>
+    <tr>
+      <td width="50%">
+        Руководитель организации<br />
+        или иное уполномоченное лицо ________________ ({{ oper_dir }})<br />
+        <table border="0">
+          <tr>
+            <td width="50%" align="right"><font size=6>(подпись)</font></td>
+            <td width="33%" align="center"><font size=6>(ф.и.о.)</font></td>
+          </tr>
+          {% if oper_dov %}
+            <tr>
+              <td width="90%" align="right"><h5>{{ oper_dov }}</h5></td>
+            </tr>
+          {% endif %}
+        </table>			
+      </td>
+      <td width="50%">
+        Главный бухгалтер<br />
+        или иное уполномоченное лицо ________________ ({{ oper_buh }})<br />
+        <table border="0">
+          <tr>
+            <td width="50%" align="right"><font size=6>(подпись)</font></td>
+            <td width="33%" align="center"><font size=6>(ф.и.о.)</font></td>
+          </tr>
+          {% if oper_dov %}
+            <tr>
+              <td width="90%" align="right"><h5>{{ oper_dov }}</h5></td>
+            </tr>
+          {% endif %}
+        </table>	
+      </td>
+    </tr>
+  </table>
+  <br />
+  {{ comment1 }}
+  <br />
+  Примечание. Первый экземпляр — покупателю, второй экземпляр — продавцу
 </body>
