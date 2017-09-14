@@ -199,7 +199,7 @@
         </td>
         <td width="3%">{{ fee_line.code_number }}</td>
         <td width="8%">{{ fee_line.code_name }}</td>
-        <td width="5%" style="text-align: right;">{{ fee_line.quantity }}</td>
+        <td width="5%" style="text-align: right;">{{ fee_line.quantity|floatformat:2 }}</td>
         <td width="7%" style="text-align: right;">{{ fee_line.rate_netto|floatformat:2 }}</td>
         <td width="10%" style="text-align: right;">{{ fee_line.cost_netto|floatformat:2 }}</td>
         <td width="5%">Без акциза</td>

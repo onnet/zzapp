@@ -279,7 +279,6 @@ process_one_time_fee(JObj, Modb) ->
     ,kz_json:get_value([<<"metadata">>, <<"description">>], DFDoc)
     ,kz_json:get_value([<<"metadata">>, <<"rate">>], DFDoc, Amount) * kz_json:get_value([<<"metadata">>, <<"ratio">>], DFDoc, 1.0)
     ,kz_json:get_value([<<"metadata">>, <<"quantity">>], DFDoc, 1)
-  %  ,[onbill_util:date_json(Year, Month, Day)]
     ,onbill_util:date_json(Year, Month, Day)
     ,DaysInMonth
     ,one_time_fee_name(Reason, DFDoc)

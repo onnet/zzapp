@@ -56,7 +56,7 @@
         {% endif %}
       </td>
       <td style="border: 1px solid black;">{{ fee_line.code_name }}</td>
-      <td style="border: 1px solid black;">{{ fee_line.quantity }}</td>
+      <td style="border: 1px solid black;">{{ fee_line.quantity|floatformat:2 }}</td>
       <td style="border: 1px solid black;">{{ fee_line.rate_brutto|floatformat:2 }}</td>
       <td style="border: 1px solid black;">{{ fee_line.cost_brutto|floatformat:2 }}</td>
     </tr>
