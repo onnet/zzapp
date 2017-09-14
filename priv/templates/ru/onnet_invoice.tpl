@@ -28,7 +28,7 @@
   <table border=0>
     <tr>
       <td width="80%" align="center">
-          <font size=12>СЧЕТ-ФАКТУРА № {{ carrier_vars.doc_pref }}{{ agrm_num }}{{ carrier_vars.doc_ind }} от {{ agrm_date }}
+          <font size=12>СЧЕТ-ФАКТУРА № {{ carrier_vars.doc_pref }}{{ doc_number }}{{ carrier_vars.doc_ind }} от {{ doc_date }}
         <br />
         ИСПРАВЛЕНИЕ № <u> --- </u> от <u>   -------   </u></font>
         <br />

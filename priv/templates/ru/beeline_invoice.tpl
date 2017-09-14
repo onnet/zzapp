@@ -35,11 +35,11 @@
         за оказанные услуги электросвязи за период: {{ start_date }} - {{ end_date }}
       </td>
       <td align="right" width="20%">
-        <font size="7">	
+        <span style="font-size: 7;">	
           Приложение №1<br />
           к постановлению Правительства<br />
           Российской Федерации<br />
-          от 26.12.2011 г. № 1137</font>
+          от 26.12.2011 г. № 1137</span>
       </td>
     </tr>
   </table>
@@ -241,13 +241,23 @@
           </tr>
           <tr>
             <td  style="width: 35%;">
-              <span style="padding-left: 17em;">(подпись)</span>
+              <span style="padding-left: 23em; font-size: 10;">
+                (подпись)
+              </span>
             </td>
-            <td><span style="padding-left: 5em;">(ф.и.о.)</span></td>
+            <td>
+              <span style="padding-left: 8em; font-size: 10;">
+                (ф.и.о.)
+              </span>
+            </td>
           </tr>
-          {% if oper_dov %}
+          {% if carrier_vars.oper_power %}
             <tr>
-              <td width="90%" align="right"><h5>{{ carrier_vars.oper_dov }}</h5></td>
+              <td colspan=2>
+                <span style="padding-left: 13em; font-size: 11;">
+                  (на основании доверенности {{ carrier_vars.oper_power }})
+                </span>
+              </td>
             </tr>
           {% endif %}
         </table>			
@@ -264,23 +274,36 @@
           </tr>
           <tr>
             <td  style="width: 35%;">
-              <span style="padding-left: 17em;">(подпись)</span>
+              <span style="padding-left: 23em; font-size: 10;">
+                (подпись)
+              </span>
             </td>
-            <td><span style="padding-left: 5em;">(ф.и.о.)</span></td>
+            <td>
+              <span style="padding-left: 8em; font-size: 10;">
+                (ф.и.о.)
+              </span>
+            </td>
           </tr>
-          {% if oper_dov %}
+          {% if carrier_vars.oper_power %}
             <tr>
-              <td width="90%" align="right"><h5>{{ carrier_vars.oper_dov }}</h5></td>
+              <td colspan=2>
+                <span style="padding-left: 13em; font-size: 11;">
+                  (на основании доверенности {{ carrier_vars.oper_power }})
+                </span>
+              </td>
             </tr>
           {% endif %}
         </table>	
       </td>
     </tr>
   </table>
-  <br />
-  {% if comment1 %}
-    {{ comment1 }}
+  {% if carrier_vars.comment1 %}
+    <br />
+    {{ carrier_vars.comment1 }}
+    <br />
     <br />
   {% endif %}
-  Примечание. Первый экземпляр — покупателю, второй экземпляр — продавцу
+  <span style="font-size: 10;">
+    Примечание. Первый экземпляр — покупателю, второй экземпляр — продавцу
+  </span>
 </body>
