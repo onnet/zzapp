@@ -2,13 +2,28 @@
   <meta charset="UTF-8">
   <link href='http://fonts.googleapis.com/css?family=PT+Sans+Narrow&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
   <style>
+
     * {
       font-family: 'PT Sans Narrow';
       font-size: 13;
     }
+
+    table {
+        width: 100%;
+    }
+
+    .bordered_table {
+      border-collapse: collapse;
+    }
+
+    .bordered_table tr,
+    .bordered_table td {
+      border: 1px solid black;
+      text-align: center;
+    }
+
   </style>
 </head>
-
 <body>
   <table border=0>
     <tr>
@@ -28,7 +43,6 @@
       </td>
     </tr>
   </table>
-  <br />
   Продавец: {{ carrier_vars.oper_name }}<br />
   Адрес: {{ carrier_vars.oper_addr }}<br />
   ИНН/КПП продавца: {{ carrier_vars.inn }} / {{ carrier_vars.kpp }} <br />
@@ -36,14 +50,20 @@
   Грузополучатель и его адрес: ----<br />
   К платежно-расчетному документу № ______ от ______ <br />
   Покупатель: {{ account_vars.account_name }}<br />
-  Адрес: {{ account_vars.account_addr }}<br />
+  Адрес:
+    {{ account_vars.billing_address.line1 }}
+    {{ account_vars.billing_address.line2 }}
+    {{ account_vars.billing_address.line3 }}
+    <br />
   ИНН/КПП покупателя: {{ account_vars.account_inn }} / {{ account_vars.account_kpp }} <br />
   Валюта: наименование, код <u>Российский рубль, 643</u><br />
   <font size="9">
-    Дополнительные (условия оплаты по договору (контракту), способ отправления и т.д.)</font> Договор № {{ agrm_num }} от {{ agrm_date }}
-    <br />
-  <table style="border-collapse: collapse; border: 1px solid black; width: 100%;">
-    <tr align="center">
+    Дополнительные (условия оплаты по договору (контракту), способ отправления и т.д.)
+  </font>
+  Договор № {{ agrm_num }} от {{ agrm_date }}
+  <br />
+  <table class="bordered_table" style="width: 100%;">
+    <tr>
       <td align="center" width="23%" rowspan="2">
         <font size="9">
   	Наименование товара<br />(описание выполненных работ, оказанных услуг), имущественного права
@@ -100,7 +120,7 @@
         </font>
       </td>
     </tr>
-    <tr align="center">
+    <tr>
       <td width="3%" align="center">
         <font size="8">
           к<br />о<br />д<br />
@@ -122,7 +142,7 @@
         </font>
       </td>
     </tr>
-    <tr align="center">
+    <tr>
       <td width="23%">
         <font size="8">1</font>
       </td>
@@ -167,7 +187,7 @@
     <!-- begin_item -->
     {% for fee_line in monthly_fees %}
       <tr>
-        <td width="23%">
+        <td width="23%" style="text-align: left;">
           {{ fee_line.name }}
           {% if fee_line.period %}
             {% for period in fee_line.period %}
@@ -177,59 +197,76 @@
             {% endfor %}
           {% endif %}
         </td>
-        <td width="3%" align="center">{{ fee_line.code_number }}</td>
-        <td width="8%" align="center">{{ fee_line.code_name }}</td>
-        <td width="5%" align="right">{{ fee_line.quantity }}</td>
-        <td width="7%" align="right">{{ fee_line.rate_netto|floatformat:2 }}</td>
-        <td width="10%" align="right">{{ fee_line.cost_netto|floatformat:2 }}</td>
-        <td width="5%" align="center">Без акциза</td>
-        <td width="6%" align="right">{{ vat_rate }}%</td>
-        <td width="7%" align="right">{{ fee_line.vat_line_total|floatformat:2 }}</td>
-        <td width="10%" align="right">{{ fee_line.cost_brutto|floatformat:2 }}</td>
-        <td width="4%" align="center">--</td>
-        <td width="8%" align="center">--</td>
-        <td width="7%" align="center">--</td>
+        <td width="3%">{{ fee_line.code_number }}</td>
+        <td width="8%">{{ fee_line.code_name }}</td>
+        <td width="5%" style="text-align: right;">{{ fee_line.quantity }}</td>
+        <td width="7%" style="text-align: right;">{{ fee_line.rate_netto|floatformat:2 }}</td>
+        <td width="10%" style="text-align: right;">{{ fee_line.cost_netto|floatformat:2 }}</td>
+        <td width="5%">Без акциза</td>
+        <td width="6%" style="text-align: right;">{{ vat_rate }}%</td>
+        <td width="7%" style="text-align: right;">{{ fee_line.vat_line_total|floatformat:2 }}</td>
+        <td width="10%" style="text-align: right;">{{ fee_line.cost_brutto|floatformat:2 }}</td>
+        <td width="4%">--</td>
+        <td width="8%">--</td>
+        <td width="7%">--</td>
       </tr>
     {% endfor %}
     <!-- end_item -->
     <!-- end_services -->
     <tr>
-      <td width="46%" colspan=5>Всего к оплате:</td>		
-      <td width="10%" align="right">{{ total_netto|floatformat:2 }}</td>
-      <td width="11%" align="center" colspan="2">X</td>
-      <td width="7%" align="right">{{ total_vat|floatformat:2 }}</td>
-      <td width="10%" align="right">{{ total_brutto|floatformat:2 }}</td>
+      <td width="46%" style="text-align: left;" colspan=5>Всего к оплате:</td>		
+      <td width="10%" style="text-align: right;">{{ total_netto|floatformat:2 }}</td>
+      <td width="11%" colspan="2">X</td>
+      <td width="7%" style="text-align: right;">{{ total_vat|floatformat:2 }}</td>
+      <td width="10%" style="text-align: right;">{{ total_brutto|floatformat:2 }}</td>
     </tr>	
   </table>
   <br />
-  <table>
+  <table style="width: 100%;">
     <tr>
       <td width="50%">
-        Руководитель организации<br />
-        или иное уполномоченное лицо ________________ ({{ oper_dir }})<br />
         <table border="0">
           <tr>
-            <td width="50%" align="right"><font size=6>(подпись)</font></td>
-            <td width="33%" align="center"><font size=6>(ф.и.о.)</font></td>
+            <td colspan=2>
+              Руководитель организации
+              <br />
+              или иное уполномоченное лицо
+              _________________________________________
+              ({{ carrier_vars.oper_dir }})
+            </td>
+          </tr>
+          <tr>
+            <td  style="width: 35%;">
+              <span style="padding-left: 17em;">(подпись)</span>
+            </td>
+            <td><span style="padding-left: 5em;">(ф.и.о.)</span></td>
           </tr>
           {% if oper_dov %}
             <tr>
-              <td width="90%" align="right"><h5>{{ oper_dov }}</h5></td>
+              <td width="90%" align="right"><h5>{{ carrier_vars.oper_dov }}</h5></td>
             </tr>
           {% endif %}
         </table>			
       </td>
       <td width="50%">
-        Главный бухгалтер<br />
-        или иное уполномоченное лицо ________________ ({{ oper_buh }})<br />
         <table border="0">
           <tr>
-            <td width="50%" align="right"><font size=6>(подпись)</font></td>
-            <td width="33%" align="center"><font size=6>(ф.и.о.)</font></td>
+            <td colspan=2>
+              Главный бухгалтер<br />
+              или иное уполномоченное лицо
+              _________________________________________
+              ({{ carrier_vars.oper_buh }})
+            </td>
+          </tr>
+          <tr>
+            <td  style="width: 35%;">
+              <span style="padding-left: 17em;">(подпись)</span>
+            </td>
+            <td><span style="padding-left: 5em;">(ф.и.о.)</span></td>
           </tr>
           {% if oper_dov %}
             <tr>
-              <td width="90%" align="right"><h5>{{ oper_dov }}</h5></td>
+              <td width="90%" align="right"><h5>{{ carrier_vars.oper_dov }}</h5></td>
             </tr>
           {% endif %}
         </table>	
