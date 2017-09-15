@@ -11,9 +11,7 @@
 <body>
   <h1 align=center>АКТ оказания услуг </h1>
   <h4 align=center>
-    по Договору №
-    {{ carrier_vars.doc_pref }}{{ agrm_num }}{{ carrier_vars.doc_ind }}
-    от {{ agrm_date }}
+    по Договору № {{ agrm_num }} от {{ agrm_date }}
     <br />
     за оказанные услуги электросвязи за период: {{ start_date }} - {{ end_date }}
   </h4>

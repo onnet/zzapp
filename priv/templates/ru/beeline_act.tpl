@@ -12,8 +12,7 @@
   <h1 align=center>АКТ оказания услуг </h1>
   <h4 align=center>
     по Договору №
-    {{ carrier_vars.doc_pref }}{{ agrm_num }}{{ carrier_vars.doc_ind }}
-    от {{ agrm_date }}
+    {{ carrier_vars.doc_pref }}{{ agrm_num }} от {{ agrm_date }}
     <br />
     за оказанные услуги электросвязи за период: {{ start_date }} - {{ end_date }}
   </h4>
@@ -31,7 +30,7 @@
     {{ carrier_vars.oper_agent }} {{ carrier_vars.in_person_of }}, действующего по доверенности
     {{carrier_vars.oper_power }}, с одной стороны,
     и {{ account_vars.account_name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том,
-    что в соответствии с Договором об оказании услуг связи № {{ agrm_num }} от {{ agrm_date }},
+    что в соответствии с Договором об оказании услуг связи № {{ carrier_vars.doc_pref }}{{ agrm_num }} от {{ agrm_date }},
     заключенным между Сторонами (далее — «Договор»), {{ carrier_vars.oper_name_further }} в указанный период оказал Клиенту Услуги:
   </h4>
   <table style="border-collapse: collapse;" width="100%">
