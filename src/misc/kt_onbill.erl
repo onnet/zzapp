@@ -12,6 +12,8 @@
 
 %% Appliers
 -export([current_state/2
+        ,import_accounts/3
+        ,is_allowed/1
         ]).
 
 -include_lib("tasks/src/tasks.hrl").
@@ -19,7 +21,18 @@
 
 -define(CATEGORY, "onbill").
 -define(ACTIONS, [<<"current_state">>
+                 ,<<"import_accounts">>
                  ]).
+
+-define(IMPORT_ACCOUNTS_DOC_FIELDS
+       ,[<<"account_name">>
+        ,<<"users">>
+        ]).
+
+-define(IMPORT_ACCOUNTS_MANDATORY_FIELDS
+       ,[<<"account_name">>
+        ]).
+
 
 %%%===================================================================
 %%% API
@@ -68,6 +81,17 @@ action(<<"current_state">>) ->
     ,{<<"doc">>, <<"Just an experimentsl feature.\n"
                    "No additional parametres needed.\n"
                  >>}
+    ];
+
+action(<<"import_accounts">>) ->
+    Mandatory = ?IMPORT_ACCOUNTS_MANDATORY_FIELDS,
+    Optional = ?IMPORT_ACCOUNTS_DOC_FIELDS -- Mandatory,
+
+    [{<<"description">>, <<"Bulk-create accounts using account_names list">>}
+    ,{<<"doc">>, <<"Creates accounts from file">>}
+    ,{<<"expected_content">>, <<"text/csv">>}
+    ,{<<"mandatory">>, Mandatory}
+    ,{<<"optional">>, Optional}
     ].
 
 %%% Verifiers
@@ -154,3 +178,30 @@ estimated_monthly_total(AccountId) ->
         'true' -> onbill_bk_util:current_usage_amount(AccountId);
         'false' -> 'no_service_plan_assigned'
     end.
+
+-spec is_allowed(kz_tasks:extra_args()) -> boolean().
+is_allowed(ExtraArgs) ->
+    AuthAccountId = maps:get('auth_account_id', ExtraArgs),
+    AccountId = maps:get('account_id', ExtraArgs),
+    {'ok', AccountDoc} = kz_account:fetch(AccountId),
+    {'ok', AuthAccountDoc} = kz_account:fetch(AuthAccountId),
+    kz_util:is_in_account_hierarchy(AuthAccountId, AccountId, 'true')
+        andalso kz_account:is_reseller(AccountDoc)
+        orelse kz_account:is_superduper_admin(AuthAccountDoc).
+
+-spec import_accounts(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) ->
+                    {kz_tasks:return(), sets:set()}.
+import_accounts(ExtraArgs, init, Args) ->
+    kz_datamgr:suppress_change_notice(),
+    IterValue = sets:new(),
+    import_accounts(ExtraArgs, IterValue, Args);
+import_accounts(#{account_id := _Account
+        ,auth_account_id := _AuthAccountId
+        }
+      ,_AccountIds
+      ,_Args=#{<<"account_name">> := AccountName
+             ,<<"users">> := Users
+             }
+      ) ->
+    lager:info("IAM kz_onbill AccountName: ~p Users: ~p",[AccountName, Users]),
+    'ok'.
