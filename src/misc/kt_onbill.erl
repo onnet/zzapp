@@ -26,6 +26,7 @@
 
 -define(IMPORT_ACCOUNTS_DOC_FIELDS
        ,[<<"account_name">>
+        ,<<"realm">>
         ,<<"users">>
         ]).
 
@@ -33,6 +34,24 @@
        ,[<<"account_name">>
         ]).
 
+-define(ACCOUNT_REALM_SUFFIX
+       ,kapps_config:get_binary(<<"crossbar.accounts">>, <<"account_realm_suffix">>, <<"sip.onnet.su">>)).
+
+-define(MK_USER,
+    {[{<<"call_forward">>,
+       {[{<<"substitute">>,false},
+         {<<"enabled">>,false},
+         {<<"require_keypress">>,false},
+         {<<"keep_caller_id">>,false},
+         {<<"direct_calls_only">>,false}]}},
+      {<<"enabled">>, 'true'},
+      {<<"priv_level">>,<<"user">>},
+      {<<"vm_to_email_enabled">>,true},
+      {<<"fax_to_email_enabled">>,true},
+      {<<"verified">>,false},
+      {<<"timezone">>,<<"UTC">>},
+      {<<"record_call">>,false}
+     ]}).
 
 %%%===================================================================
 %%% API
@@ -130,6 +149,40 @@ current_state(_, [SubAccountId | DescendantsIds]) ->
      ], DescendantsIds}.
 
 
+-spec import_accounts(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) ->
+                    {kz_tasks:return(), sets:set()}.
+import_accounts(ExtraArgs, init, Args) ->
+    kz_datamgr:suppress_change_notice(),
+    IterValue = sets:new(),
+    import_accounts(ExtraArgs, IterValue, Args);
+import_accounts(#{account_id := ResellerId
+        ,auth_account_id := _AuthAccountId
+        }
+      ,_AccountIds
+      ,_Args=#{<<"account_name">> := AccountName
+             ,<<"users">> := UserString
+             }
+      ) ->
+    Realm = <<AccountName/binary, ".", (?ACCOUNT_REALM_SUFFIX)/binary>>,
+    Context = create_account(ResellerId, AccountName, Realm),
+    case cb_context:resp_status(Context) of
+        'success' ->
+    %        kz_util:spawn(fun create_default_callflow/1, [Context]),
+            RespData = cb_context:resp_data(Context),
+            AccountId = kz_json:get_value(<<"id">>, RespData),
+            case UserString of
+                'undefined' ->
+                    'account_created';
+                _ ->
+                    Users = binary:split(re:replace(UserString, "\\s+", "", [global,{return,binary}])
+                                        ,[<<",">>,<<";">>]),
+                    create_users(AccountId, Users, Context),
+                    'account_created'
+            end;
+        _ ->
+            'account_not_created'
+    end.
+
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
@@ -189,19 +242,45 @@ is_allowed(ExtraArgs) ->
         andalso kz_account:is_reseller(AccountDoc)
         orelse kz_account:is_superduper_admin(AuthAccountDoc).
 
--spec import_accounts(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) ->
-                    {kz_tasks:return(), sets:set()}.
-import_accounts(ExtraArgs, init, Args) ->
-    kz_datamgr:suppress_change_notice(),
-    IterValue = sets:new(),
-    import_accounts(ExtraArgs, IterValue, Args);
-import_accounts(#{account_id := _Account
-        ,auth_account_id := _AuthAccountId
-        }
-      ,_AccountIds
-      ,_Args=#{<<"account_name">> := AccountName
-             ,<<"users">> := Users
-             }
-      ) ->
-    lager:info("IAM kz_onbill AccountName: ~p Users: ~p",[AccountName, Users]),
-    'ok'.
+create_account(ResellerId, AccountName, Realm) ->
+    Tree = crossbar_util:get_tree(ResellerId) ++ [ResellerId],
+    Props = [{<<"pvt_type">>, kz_account:type()}
+            ,{<<"name">>, AccountName}
+            ,{<<"realm">>, Realm}
+            ,{<<"pvt_tree">>, Tree}
+            ],
+    Ctx1 = cb_context:set_account_id(cb_context:new(), ResellerId),
+    Ctx2 = cb_context:set_doc(Ctx1, kz_json:set_values(Props, kz_json:new())),
+    cb_accounts:put(Ctx2).
+
+create_users(_AccountId, [], _Context) -> 'ok';
+create_users(AccountId, [UserName|Users], Context) -> 
+    UserPassword = kz_binary:rand_hex(10),
+    Props = props:filter_empty([
+         {[<<"username">>], UserName}
+        ,{[<<"first_name">>], <<"Firstname">>}
+        ,{[<<"last_name">>], <<"Surname">>}
+        ,{[<<"email">>], UserName}
+        ,{[<<"password">>], UserPassword}
+        ,{[<<"priv_level">>], <<"admin">>}
+        ]),
+    UserData = kz_json:set_values(Props, ?MK_USER),
+    Ctx1 = cb_context:set_account_id(Context, AccountId),
+    Ctx2 = cb_context:set_doc(Ctx1, UserData),
+    Ctx3 = cb_context:set_req_data(Ctx2, UserData),
+    Ctx4 = cb_users_v1:create_user(cb_context:set_accepting_charges(Ctx3)),
+    send_email(Ctx4),
+    timer:sleep(500),
+    create_users(AccountId, Users, Context).
+
+-spec send_email(cb_context:context()) -> 'ok'.
+send_email(Context) ->
+    Doc = cb_context:doc(Context),
+    ReqData = cb_context:req_data(Context),
+    Req = [{<<"Account-ID">>, cb_context:account_id(Context)}
+          ,{<<"User-ID">>, kz_doc:id(Doc)}
+          ,{<<"Password">>, kz_json:get_value(<<"password">>, ReqData)}
+           | kz_api:default_headers(?APP_NAME, ?APP_VERSION)
+          ],
+    kapps_notify_publisher:cast(Req, fun kapi_notifications:publish_new_user/1).
+
