@@ -167,17 +167,17 @@ import_accounts(#{account_id := ResellerId
     Context = create_account(ResellerId, AccountName, Realm),
     case cb_context:resp_status(Context) of
         'success' ->
-    %        kz_util:spawn(fun create_default_callflow/1, [Context]),
+            kz_util:spawn(fun cb_onbill_signup:create_default_callflow/1, [Context]),
             RespData = cb_context:resp_data(Context),
             AccountId = kz_json:get_value(<<"id">>, RespData),
             case UserString of
                 'undefined' ->
-                    'account_created';
+                    AccountId;
                 _ ->
                     Users = binary:split(re:replace(UserString, "\\s+", "", [global,{return,binary}])
                                         ,[<<",">>,<<";">>]),
                     create_users(AccountId, Users, Context),
-                    'account_created'
+                    AccountId
             end;
         _ ->
             'account_not_created'
@@ -247,6 +247,8 @@ create_account(ResellerId, AccountName, Realm) ->
     Props = [{<<"pvt_type">>, kz_account:type()}
             ,{<<"name">>, AccountName}
             ,{<<"realm">>, Realm}
+            ,{<<"timezone">>,<<"Europe/Moscow">>}
+            ,{<<"language">>,<<"ru-ru">>}
             ,{<<"pvt_tree">>, Tree}
             ],
     Ctx1 = cb_context:set_account_id(cb_context:new(), ResellerId),
@@ -262,6 +264,7 @@ create_users(AccountId, [UserName|Users], Context) ->
         ,{[<<"last_name">>], <<"Surname">>}
         ,{[<<"email">>], UserName}
         ,{[<<"password">>], UserPassword}
+        ,{[<<"timezone">>],<<"Europe/Moscow">>}
         ,{[<<"priv_level">>], <<"admin">>}
         ]),
     UserData = kz_json:set_values(Props, ?MK_USER),
