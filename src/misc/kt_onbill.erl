@@ -303,7 +303,7 @@ create_users(AccountId, [UserName|Users], Context) ->
     Props = props:filter_empty([
          {[<<"username">>], UserName}
         ,{[<<"id">>], UUID}
-        ,{[<<"_id">>], UUID}
+     %   ,{[<<"_id">>], UUID}
         ,{[<<"first_name">>], <<"Firstname">>}
         ,{[<<"last_name">>], <<"Surname">>}
         ,{[<<"email">>], UserName}
