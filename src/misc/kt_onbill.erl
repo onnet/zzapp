@@ -309,10 +309,13 @@ create_users(AccountId, [UserName|Users], Context) ->
         ,{[<<"priv_level">>], <<"admin">>}
         ]),
     UserData = kz_json:set_values(Props, ?MK_USER),
+lager:info("IAM kt_onbill create_users UserData: ~p",[UserData]),
     Ctx1 = cb_context:set_account_id(Context, AccountId),
     Ctx2 = cb_context:set_doc(Ctx1, UserData),
     Ctx3 = cb_context:set_req_data(Ctx2, UserData),
     Ctx4 = cb_users_v1:create_user(cb_context:set_accepting_charges(Ctx3)),
+lager:info("IAM kt_onbill create_users RespStatus: ~p",[cb_context:resp_status(Ctx4)]),
+lager:info("IAM kt_onbill create_users RespData: ~p",[cb_context:resp_data(Ctx4)]),
     send_email(Ctx4),
     timer:sleep(1000),
     create_users(AccountId, Users, Context).
