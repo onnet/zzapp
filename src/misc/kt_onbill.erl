@@ -203,7 +203,7 @@ add_users(ExtraArgs, init, Args) ->
     kz_datamgr:suppress_change_notice(),
     IterValue = sets:new(),
     add_users(ExtraArgs, IterValue, Args);
-add_users(#{account_id := ResellerId
+add_users(#{account_id := _ResellerId
         ,auth_account_id := _AuthAccountId
         }
       ,_AccountIds
@@ -211,7 +211,9 @@ add_users(#{account_id := ResellerId
              ,<<"users">> := UserString
              }
       ) ->
-    Context = cb_context:set_account_id(cb_context:new(), ResellerId),
+  %  Context = cb_context:set_account_id(cb_context:new(), ResellerId),
+    Context0 = cb_context:set_account_id(cb_context:new(), AccountId),
+    Context = cb_context:set_account_db(Context0, kz_util:format_account_id(AccountId, 'encoded')),
     case UserString of
         'undefined' ->
             AccountId;
