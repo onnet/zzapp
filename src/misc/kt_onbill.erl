@@ -13,6 +13,7 @@
 %% Appliers
 -export([current_state/2
         ,import_accounts/3
+        ,add_users/3
         ,is_allowed/1
         ]).
 
@@ -22,6 +23,7 @@
 -define(CATEGORY, "onbill").
 -define(ACTIONS, [<<"current_state">>
                  ,<<"import_accounts">>
+                 ,<<"add_users">>
                  ]).
 
 -define(IMPORT_ACCOUNTS_DOC_FIELDS
@@ -32,6 +34,11 @@
 
 -define(IMPORT_ACCOUNTS_MANDATORY_FIELDS
        ,[<<"account_name">>
+        ]).
+
+-define(ADD_USERS_DOC_FIELDS
+       ,[<<"account_id">>
+        ,<<"users">>
         ]).
 
 -define(ACCOUNT_REALM_SUFFIX
@@ -111,6 +118,14 @@ action(<<"import_accounts">>) ->
     ,{<<"expected_content">>, <<"text/csv">>}
     ,{<<"mandatory">>, Mandatory}
     ,{<<"optional">>, Optional}
+    ];
+
+action(<<"add_users">>) ->
+    [{<<"description">>, <<"Bulk create users using account_id,emails list">>}
+    ,{<<"doc">>, <<"Creates users for accounts from file">>}
+    ,{<<"expected_content">>, <<"text/csv">>}
+    ,{<<"mandatory">>, ?ADD_USERS_DOC_FIELDS}
+    ,{<<"optional">>, []}
     ].
 
 %%% Verifiers
@@ -148,7 +163,6 @@ current_state(_, [SubAccountId | DescendantsIds]) ->
      ,kz_services:category_quantity(<<"devices">>, Services)
      ], DescendantsIds}.
 
-
 -spec import_accounts(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) ->
                     {kz_tasks:return(), sets:set()}.
 import_accounts(ExtraArgs, init, Args) ->
@@ -181,6 +195,31 @@ import_accounts(#{account_id := ResellerId
             end;
         _ ->
             'account_not_created'
+    end.
+
+-spec add_users(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) ->
+                    {kz_tasks:return(), sets:set()}.
+add_users(ExtraArgs, init, Args) ->
+    kz_datamgr:suppress_change_notice(),
+    IterValue = sets:new(),
+    add_users(ExtraArgs, IterValue, Args);
+add_users(#{account_id := ResellerId
+        ,auth_account_id := _AuthAccountId
+        }
+      ,_AccountIds
+      ,_Args=#{<<"AccountId">> := AccountId
+             ,<<"users">> := UserString
+             }
+      ) ->
+    Context = cb_context:set_account_id(cb_context:new(), ResellerId),
+    case UserString of
+        'undefined' ->
+            AccountId;
+        _ ->
+            Users = binary:split(re:replace(UserString, "\\s+", "", [global,{return,binary}])
+                                ,[<<",">>,<<";">>]),
+            create_users(AccountId, Users, Context),
+            AccountId
     end.
 
 %%%===================================================================
@@ -273,7 +312,7 @@ create_users(AccountId, [UserName|Users], Context) ->
     Ctx3 = cb_context:set_req_data(Ctx2, UserData),
     Ctx4 = cb_users_v1:create_user(cb_context:set_accepting_charges(Ctx3)),
     send_email(Ctx4),
-    timer:sleep(500),
+    timer:sleep(1000),
     create_users(AccountId, Users, Context).
 
 -spec send_email(cb_context:context()) -> 'ok'.
