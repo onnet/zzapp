@@ -207,7 +207,7 @@ add_users(#{account_id := ResellerId
         ,auth_account_id := _AuthAccountId
         }
       ,_AccountIds
-      ,_Args=#{<<"AccountId">> := AccountId
+      ,_Args=#{<<"account_id">> := AccountId
              ,<<"users">> := UserString
              }
       ) ->
