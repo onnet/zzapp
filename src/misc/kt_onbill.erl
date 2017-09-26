@@ -299,8 +299,11 @@ create_account(ResellerId, AccountName, Realm) ->
 create_users(_AccountId, [], _Context) -> 'ok';
 create_users(AccountId, [UserName|Users], Context) -> 
     UserPassword = kz_binary:rand_hex(10),
+    UUID = kz_datamgr:get_uuid(),
     Props = props:filter_empty([
          {[<<"username">>], UserName}
+        ,{[<<"id">>], UUID}
+        ,{[<<"_id">>], UUID}
         ,{[<<"first_name">>], <<"Firstname">>}
         ,{[<<"last_name">>], <<"Surname">>}
         ,{[<<"email">>], UserName}
