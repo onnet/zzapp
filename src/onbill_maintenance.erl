@@ -132,7 +132,8 @@ set_billing_day(Day, [Database|Databases], Total) ->
 set_rate_option(RatedeckDb, Option, K, V) ->
     case kz_datamgr:get_result_ids(RatedeckDb, <<"rates/crossbar_listing">>) of
         {ok,DocIds} ->
-            onbill_util:process_documents_case([], [{<<"options">>, [Option]}], RatedeckDb, DocIds, {K,V});
+            Opts = binary:split(Option, <<",">>),
+            onbill_util:process_documents_case([], [{<<"options">>, Opts}], RatedeckDb, DocIds, {K,V});
         _ ->
             io:format("No rates found ~n"),
             'ok'
