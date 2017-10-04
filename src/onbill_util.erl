@@ -192,7 +192,7 @@ normalize_view_results(JObj, Acc) ->
 
 -spec normalize_view_active_results(kz_json:object(), kz_json:objects()) -> kz_json:objects().
 normalize_view_active_results(JObj, Acc) ->
-    case maybe_fee_active(kz_time:current_tstamp(), JObj) of
+    case maybe_fee_active(kz_time:now_s(), JObj) of
         'true' ->
             [kz_json:get_value(<<"value">>, JObj)|Acc];
         'false' ->
@@ -300,7 +300,7 @@ period_json(Year, Month, Day) ->
 
 -spec period_start_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
 period_start_date(AccountId) ->
-    Timestamp = kz_time:current_tstamp(),
+    Timestamp = kz_time:now_s(),
     period_start_date(AccountId, Timestamp).
 
 -spec period_start_date(ne_binary(), gregorian_seconds()) -> {kz_year(), kz_month(), kz_day()}.
@@ -321,7 +321,7 @@ period_start_date(AccountId, Year, Month, Day) ->
 
 -spec period_end_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
 period_end_date(AccountId) ->
-    Timestamp = kz_time:current_tstamp(),
+    Timestamp = kz_time:now_s(),
     period_end_date(AccountId, Timestamp).
 
 -spec period_end_date(ne_binary(), gregorian_seconds()) -> {kz_year(), kz_month(), kz_day()}.
@@ -623,7 +623,7 @@ current_account_dollars(AccountId) ->
 
 -spec maybe_process_new_billing_period(ne_binary()) -> boolean().
 maybe_process_new_billing_period(AccountId) ->
-    {Year, Month, _} = period_start_date(AccountId, kz_time:current_tstamp()),
+    {Year, Month, _} = period_start_date(AccountId, kz_time:now_s()),
     case kazoo_modb:open_doc(AccountId, ?MRC_DOC, Year, Month) of
         {'ok', _} -> 'false';
         {'error', 'not_found'} -> 'true'
@@ -634,7 +634,7 @@ list_account_periods(AccountId) ->
     {Year, Month, _Day} = account_creation_date(AccountId),
     BillingDay = kz_term:to_integer(billing_day(AccountId)),
     Timestamp = calendar:datetime_to_gregorian_seconds({{Year, Month, BillingDay}, {0,0,0}}),
-    TS_Now =  kz_time:current_tstamp(),
+    TS_Now =  kz_time:now_s(),
     list_account_periods(AccountId, BillingDay, Timestamp, TS_Now, []).
 
 list_account_periods(_, _, Timestamp, TS_Now, Acc) when Timestamp > TS_Now ->
