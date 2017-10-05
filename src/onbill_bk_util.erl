@@ -459,7 +459,7 @@ current_usage_amount(AccountId) ->
 
 -spec today_dailyfee_absent(ne_binary()) -> boolean().
 today_dailyfee_absent(AccountId) ->
-    Timestamp = kz_time:now_s(),
+    Timestamp = kz_time:current_tstamp(),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     DailyFeeId = prepare_dailyfee_doc_name(Year, Month, Day),
     case kazoo_modb:open_doc(AccountId, DailyFeeId, Year, Month) of

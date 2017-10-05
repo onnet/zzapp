@@ -64,7 +64,7 @@ maybe_sync(Items, AccountId) ->
     end.
 
 maybe_billing_period_starts(Items, AccountId) ->
-    Timestamp = kz_time:now_s(),
+    Timestamp = kz_time:current_tstamp(),
     {Year, Month, Day} = onbill_util:period_start_date(AccountId, Timestamp),
     case kazoo_modb:open_doc(AccountId, ?MRC_DOC, Year, Month) of
         {'ok', _} ->
@@ -167,7 +167,7 @@ commit_transactions(BillingId, Transactions, Try) when Try > 0 ->
             NewTransactions = kz_json:get_value(<<"transactions">>, JObj, [])
                 ++ kz_transactions:to_json(Transactions),
             JObj1 = kz_json:set_values([{<<"pvt_dirty">>, 'true'}
-                                        ,{<<"pvt_modified">>, kz_time:now_s()}
+                                        ,{<<"pvt_modified">>, kz_time:current_tstamp()}
                                         ,{<<"transactions">>, NewTransactions}
                                        ], JObj),
             case kz_datamgr:save_doc(?KZ_SERVICES_DB, JObj1) of

@@ -198,7 +198,7 @@ validate_onbill(Context0, <<Year:4/binary, Month:2/binary, "-", _/binary>> = Id,
 onbills_modb_summary(Context) ->
     AccountId = cb_context:account_id(Context),
     ReqTs = case cb_context:req_value(Context, <<"timestamp">>) of
-                'undefined' -> kz_time:now_s();
+                'undefined' -> kz_time:current_tstamp();
                 Ts -> Ts
             end,
     {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, ?TO_INT(ReqTs)),

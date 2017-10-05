@@ -185,7 +185,7 @@ maybe_send_account_updates(AccountId, AccountJObj) ->
 
 -spec maybe_new_billing_period_approaching(ne_binary(), kz_account:doc()) -> 'ok'.
 maybe_new_billing_period_approaching(AccountId, AccountJObj) ->
-    Timestamp = kz_time:now_s(),
+    Timestamp = kz_time:current_tstamp(),
     Days_Before_MRC_Update = ?KEY_PERIOD(?MRC_APPROACHING_KEY),
     case onbill_util:days_left_in_period(AccountId, Timestamp) of
         DaysLeft when DaysLeft < Days_Before_MRC_Update ->
@@ -207,7 +207,7 @@ maybe_send_new_billing_period_approaching_update(AccountId, AccountJObj, 'true')
     case key_tstamp(?MRC_APPROACHING_KEY, AccountJObj) of
         MRC_ApproachingSent when is_number(MRC_ApproachingSent) ->
             Cycle = ?KEY_REPEAT(?MRC_APPROACHING_KEY),
-            Diff = kz_time:now_s() - MRC_ApproachingSent,
+            Diff = kz_time:current_tstamp() - MRC_ApproachingSent,
             case Diff >= Cycle of
                'true' ->
                    'ok' = send_account_update(AccountId, ?MRC_APPROACHING_TEMPLATE, customer_update_databag(AccountId)),
@@ -254,7 +254,7 @@ services_info_databag(AccountId) ->
     ItemsList = onbill_bk_util:select_non_zero_items_list(Items, AccountId),
     ItemsCalculatedList = [onbill_bk_util:calc_item(ItemJObj, AccountId) || ItemJObj <- ItemsList],
 
-    Timestamp = kz_time:now_s(),
+    Timestamp = kz_time:current_tstamp(),
     DaysLeft =  onbill_util:days_left_in_period(AccountId, Timestamp),
     {NextPeriodYear, NextPeriodMonth, NextPeriodDay} = onbill_util:next_period_start_date(AccountId, Timestamp),
 
@@ -304,7 +304,7 @@ key_tstamp(Key, JObj) ->
 
 -spec set_key_tstamp(ne_binary(), kz_account:doc()) -> kz_account:doc().
 set_key_tstamp(Key, JObj) ->
-    TStamp = kz_time:now_s(),
+    TStamp = kz_time:current_tstamp(),
     set_key_tstamp(Key, JObj, TStamp).
 
 -spec set_key_tstamp(ne_binary(), kz_account:doc(), number()) -> kz_account:doc().
@@ -321,7 +321,7 @@ maybe_send_service_suspend_update(AccountId, AccountJObj, 'true') ->
     case key_tstamp(?SERVICE_SUSPEND_KEY, AccountJObj) of
         ServiceSuspendSent when is_number(ServiceSuspendSent) ->
             Cycle = ?KEY_REPEAT(?SERVICE_SUSPEND_KEY),
-            Diff = kz_time:now_s() - ServiceSuspendSent,
+            Diff = kz_time:current_tstamp() - ServiceSuspendSent,
             case Diff >= Cycle of
                'true' ->
                    'ok' = send_account_update(AccountId, ?SERVICE_SUSPENDED_TEMPLATE, customer_update_databag(AccountId)),

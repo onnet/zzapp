@@ -32,7 +32,7 @@ reconcile(Services) ->
             lager:debug("empty results when reconciling ~s", [AccountId]),
             kz_services:reset_category(?CATEGORY, Services);
         {'ok', FeeDocs} ->
-            JObjs = count_active_fees(kz_time:now_s(), FeeDocs),
+            JObjs = count_active_fees(kz_time:current_tstamp(), FeeDocs),
             lager:debug("reconciling ~p fees in ~s: ~p", [length(JObjs), AccountId, JObjs]),
             lists:foldl(fun reconcile_fee/2
                        ,kz_services:reset_category(?CATEGORY, Services)
