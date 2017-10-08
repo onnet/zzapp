@@ -279,9 +279,23 @@ lager:info("IAM A11: ~p",[A11]),
         ,{<<"account_name">>, AccountName}
         ,{<<"account_inn">>, AccountINN}
         ,{<<"account_kpp">>, AccountKPP}
-        ,{[<<"billing_address">>,<<"line1">>], <<A11/binary, ", ", A1/binary, ", ", A2/binary, ", ", A3/binary>>}
-        ,{[<<"billing_address">>,<<"line2">>], <<A4/binary, ", ", A5/binary, ", ", A6/binary>>}
-        ,{[<<"billing_address">>,<<"line3">>], <<A7/binary, ", ", A8/binary, ", ", A9/binary>>}
+        ,{[<<"billing_address">>,<<"line1">>]
+         ,<<A11/binary
+           ,(maybe_format_address_element(A1))/binary
+           ,(maybe_format_address_element(A2))/binary
+           ,(maybe_format_address_element(A3))/binary>>
+         }
+        ,{[<<"billing_address">>,<<"line2">>]
+         ,<<(maybe_format_address_element(A4))/binary
+           ,(maybe_format_address_element(A5))/binary
+           ,(maybe_format_address_element(A6))/binary>>
+         }
+        ,{[<<"billing_address">>,<<"line3">>]
+         ,<<(maybe_format_address_element(A7))/binary
+           ,(maybe_format_address_element(A8))/binary
+           ,(maybe_format_address_element(A9))/binary
+           ,(maybe_format_address_element(A10))/binary>>
+         }
         ,{[<<"agrm">>,<<"onnet">>,<<"number">>], AgrmOnNetNumber}
         ,{[<<"agrm">>,<<"onnet">>,<<"date">>], AgrmOnNetDate}
         ,{[<<"agrm">>,<<"beeline_spb">>,<<"number">>], AgrmBeelineSPBNumber}
@@ -407,3 +421,9 @@ send_email(Context) ->
           ],
     kapps_notify_publisher:cast(Req, fun kapi_notifications:publish_new_user/1).
 
+maybe_format_address_element(<<>>) ->
+    <<>>;
+maybe_format_address_element(Element) when is_binary(Element) ->
+    <<", ", Element/binary>>;
+maybe_format_address_element(_) ->
+    <<>>.
