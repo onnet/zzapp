@@ -241,11 +241,13 @@ import_onbill_data1(#{account_id := _ResellerId
       ,_Args=#{<<"account_id">> := AccountId
               ,<<"account_name">> := AccountName
               ,<<"account_inn">> := AccountINN
-              ,<<"account_inn">> := AccountKPP
+              ,<<"account_kpp">> := AccountKPP
               ,<<"prepaid">> := _Prepaid
               ,<<"billing_address_line1">> := BillingAddressLine1
               ,<<"billing_address_line2">> := BillingAddressLine2
               ,<<"billing_address_line3">> := BillingAddressLine3
+              ,<<"agrm_number">> := AgrmNumber
+              ,<<"agrm_date">> := AgrmDate
               ,<<"agrm_onnet_number">> := AgrmOnNetNumber
               ,<<"agrm_onnet_date">> := AgrmOnNetDate
               ,<<"agrm_beeline_spb_number">> := AgrmBeelineSPBNumber
@@ -254,6 +256,9 @@ import_onbill_data1(#{account_id := _ResellerId
               ,<<"agrm_beeline_msk_date">> := AgrmBeelineMSKDate
               }
       ) ->
+lager:info("IAM BillingAddressLine1: ~p",[BillingAddressLine1]),
+lager:info("IAM AgrmNumber: ~p",[AgrmNumber]),
+lager:info("IAM AgrmDate: ~p",[AgrmDate]),
     Values = props:filter_empty(
         [{<<"_id">>, ?ONBILL_DOC}
         ,{<<"pvt_type">>, ?ONBILL_DOC}
