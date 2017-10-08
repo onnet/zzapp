@@ -257,8 +257,10 @@ import_onbill_data1(#{account_id := _ResellerId
 lager:info("IAM BillingAddress: ~p",[BillingAddress]),
 lager:info("IAM AgrmNumber: ~p",[AgrmNumber]),
 lager:info("IAM AgrmDate: ~p",[AgrmDate]),
-    [A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11] =
-        binary:split(BillingAddress, [<<"^*^">>], [global]),
+    case binary:split(BillingAddress, [<<"^*^">>], [global]) of
+        [A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11] -> ok;
+        [A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, _, A11] -> ok
+    end,
 lager:info("IAM A1: ~p",[A1]),
 lager:info("IAM A2: ~p",[A2]),
 lager:info("IAM A3: ~p",[A3]),
