@@ -243,9 +243,7 @@ import_onbill_data1(#{account_id := _ResellerId
               ,<<"account_inn">> := AccountINN
               ,<<"account_kpp">> := AccountKPP
               ,<<"prepaid">> := _Prepaid
-              ,<<"billing_address_line1">> := BillingAddressLine1
-              ,<<"billing_address_line2">> := BillingAddressLine2
-              ,<<"billing_address_line3">> := BillingAddressLine3
+              ,<<"billing_address">> := BillingAddress
               ,<<"agrm_number">> := AgrmNumber
               ,<<"agrm_date">> := AgrmDate
               ,<<"agrm_onnet_number">> := AgrmOnNetNumber
@@ -256,9 +254,22 @@ import_onbill_data1(#{account_id := _ResellerId
               ,<<"agrm_beeline_msk_date">> := AgrmBeelineMSKDate
               }
       ) ->
-lager:info("IAM BillingAddressLine1: ~p",[BillingAddressLine1]),
+lager:info("IAM BillingAddress: ~p",[BillingAddress]),
 lager:info("IAM AgrmNumber: ~p",[AgrmNumber]),
 lager:info("IAM AgrmDate: ~p",[AgrmDate]),
+    [A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11] =
+        binary:split(BillingAddress, [<<":">>], [global]),
+lager:info("IAM A1: ~p",[A1]),
+lager:info("IAM A2: ~p",[A2]),
+lager:info("IAM A3: ~p",[A3]),
+lager:info("IAM A4: ~p",[A4]),
+lager:info("IAM A5: ~p",[A5]),
+lager:info("IAM A6: ~p",[A6]),
+lager:info("IAM A7: ~p",[A7]),
+lager:info("IAM A8: ~p",[A8]),
+lager:info("IAM A9: ~p",[A9]),
+lager:info("IAM A10: ~p",[A10]),
+lager:info("IAM A11: ~p",[A11]),
     Values = props:filter_empty(
         [{<<"_id">>, ?ONBILL_DOC}
         ,{<<"pvt_type">>, ?ONBILL_DOC}
@@ -266,9 +277,9 @@ lager:info("IAM AgrmDate: ~p",[AgrmDate]),
         ,{<<"account_name">>, AccountName}
         ,{<<"account_inn">>, AccountINN}
         ,{<<"account_kpp">>, AccountKPP}
-        ,{[<<"billing_address">>,<<"line1">>], BillingAddressLine1}
-        ,{[<<"billing_address">>,<<"line2">>], BillingAddressLine2}
-        ,{[<<"billing_address">>,<<"line3">>], BillingAddressLine3}
+        ,{[<<"billing_address">>,<<"line1">>], <<A11/binary, ", ", A1/binary, ", ", A2/binary, ", ", A3/binary>>}
+        ,{[<<"billing_address">>,<<"line2">>], <<A4/binary, ", ", A5/binary, ", ", A6/binary>>}
+        ,{[<<"billing_address">>,<<"line3">>], <<A7/binary, ", ", A8/binary, ", ", A9/binary>>}
         ,{[<<"agrm">>,<<"onnet">>,<<"number">>], AgrmOnNetNumber}
         ,{[<<"agrm">>,<<"onnet">>,<<"date">>], AgrmOnNetDate}
         ,{[<<"agrm">>,<<"beeline_spb">>,<<"number">>], AgrmBeelineSPBNumber}
