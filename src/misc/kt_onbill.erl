@@ -13,17 +13,18 @@
 %% Appliers
 -export([current_state/2
         ,import_accounts/3
-        ,add_users/3
+        ,import_onbill_data1/3
         ,is_allowed/1
         ]).
 
 -include_lib("tasks/src/tasks.hrl").
 -include_lib("kazoo_services/include/kz_service.hrl").
 
+-define(ONBILL_DOC, <<"onbill">>).
 -define(CATEGORY, "onbill").
 -define(ACTIONS, [<<"current_state">>
                  ,<<"import_accounts">>
-                 ,<<"add_users">>
+                 ,<<"import_onbill_data1">>
                  ]).
 
 -define(IMPORT_ACCOUNTS_DOC_FIELDS
@@ -36,9 +37,25 @@
        ,[<<"account_name">>
         ]).
 
--define(ADD_USERS_DOC_FIELDS
+-define(IMPORT_ONBILL_DATA1
        ,[<<"account_id">>
-        ,<<"users">>
+        ,<<"account_name">>
+        ,<<"account_inn">>
+        ,<<"account_kpp">>
+        ,<<"prepaid">>
+        ,<<"billing_address_line1">>
+        ,<<"billing_address_line2">>
+        ,<<"billing_address_line3">>
+        ,<<"agrm_onnet_number">>
+        ,<<"agrm_onnet_date">>
+        ,<<"agrm_beeline_spb_number">>
+        ,<<"agrm_beeline_spb_date">>
+        ,<<"agrm_beeline_msk_number">>
+        ,<<"agrm_beeline_msk_date">>
+        ]).
+
+-define(IMPORT_MANDATORY_ONBILL_DATA1
+       ,[<<"account_id">>
         ]).
 
 -define(ACCOUNT_REALM_SUFFIX
@@ -120,12 +137,15 @@ action(<<"import_accounts">>) ->
     ,{<<"optional">>, Optional}
     ];
 
-action(<<"add_users">>) ->
-    [{<<"description">>, <<"Bulk create users using account_id,emails list">>}
-    ,{<<"doc">>, <<"Creates users for accounts from file">>}
+action(<<"import_onbill_data1">>) ->
+    Mandatory = ?IMPORT_MANDATORY_ONBILL_DATA1,
+    Optional = ?IMPORT_ONBILL_DATA1 -- Mandatory,
+
+    [{<<"description">>, <<"Bulk-import accounts company data for invoice generating">>}
+    ,{<<"doc">>, <<"Imports onbill data from file">>}
     ,{<<"expected_content">>, <<"text/csv">>}
-    ,{<<"mandatory">>, ?ADD_USERS_DOC_FIELDS}
-    ,{<<"optional">>, []}
+    ,{<<"mandatory">>, Mandatory}
+    ,{<<"optional">>, Optional}
     ].
 
 %%% Verifiers
@@ -197,31 +217,72 @@ import_accounts(#{account_id := ResellerId
             'account_not_created'
     end.
 
--spec add_users(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) ->
+-spec import_onbill_data1(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) ->
                     {kz_tasks:return(), sets:set()}.
-add_users(ExtraArgs, init, Args) ->
-    kz_datamgr:suppress_change_notice(),
-    IterValue = sets:new(),
-    add_users(ExtraArgs, IterValue, Args);
-add_users(#{account_id := _ResellerId
+import_onbill_data1(ExtraArgs, init, Args) ->
+    case is_allowed(ExtraArgs) of
+        'true' ->
+            lager:info("import_onbill_data1 is allowed, continuing"),
+            kz_datamgr:suppress_change_notice(),
+            IterValue = sets:new(),
+            import_onbill_data1(ExtraArgs, IterValue, Args);
+        'false' ->
+            lager:warning("import_onbill_data1 is forbidden for account ~s, auth account ~s"
+                         ,[maps:get('account_id', ExtraArgs)
+                          ,maps:get('auth_account_id', ExtraArgs)
+                          ]
+                         ),
+            {<<"task execution is forbidden">>, 'stop'}
+    end;
+import_onbill_data1(#{account_id := _ResellerId
         ,auth_account_id := _AuthAccountId
         }
       ,_AccountIds
       ,_Args=#{<<"account_id">> := AccountId
-             ,<<"users">> := UserString
-             }
+              ,<<"account_name">> := AccountName
+              ,<<"account_inn">> := AccountINN
+              ,<<"account_inn">> := AccountKPP
+              ,<<"prepaid">> := _Prepaid
+              ,<<"billing_address_line1">> := BillingAddressLine1
+              ,<<"billing_address_line2">> := BillingAddressLine2
+              ,<<"billing_address_line3">> := BillingAddressLine3
+              ,<<"agrm_onnet_number">> := AgrmOnNetNumber
+              ,<<"agrm_onnet_date">> := AgrmOnNetDate
+              ,<<"agrm_beeline_spb_number">> := AgrmBeelineSPBNumber
+              ,<<"agrm_beeline_spb_date">> := AgrmBeelineSPBDate
+              ,<<"agrm_beeline_msk_number">> := AgrmBeelineMSKNumber
+              ,<<"agrm_beeline_msk_date">> := AgrmBeelineMSKDate
+              }
       ) ->
-  %  Context = cb_context:set_account_id(cb_context:new(), ResellerId),
-    Context0 = cb_context:set_account_id(cb_context:new(), AccountId),
-    Context = cb_context:set_account_db(Context0, kz_util:format_account_id(AccountId, 'encoded')),
-    case UserString of
-        'undefined' ->
+    Values = props:filter_empty(
+        [{<<"_id">>, ?ONBILL_DOC}
+        ,{<<"pvt_type">>, ?ONBILL_DOC}
+        ,{<<"pvt_account_id">>, AccountId}
+        ,{<<"account_name">>, AccountName}
+        ,{<<"account_inn">>, AccountINN}
+        ,{<<"account_kpp">>, AccountKPP}
+        ,{[<<"billing_address">>,<<"line1">>], BillingAddressLine1}
+        ,{[<<"billing_address">>,<<"line2">>], BillingAddressLine2}
+        ,{[<<"billing_address">>,<<"line3">>], BillingAddressLine3}
+        ,{[<<"agrm">>,<<"onnet">>,<<"number">>], AgrmOnNetNumber}
+        ,{[<<"agrm">>,<<"onnet">>,<<"date">>], AgrmOnNetDate}
+        ,{[<<"agrm">>,<<"beeline_spb">>,<<"number">>], AgrmBeelineSPBNumber}
+        ,{[<<"agrm">>,<<"beeline_spb">>,<<"date">>], AgrmBeelineSPBDate}
+        ,{[<<"agrm">>,<<"beeline_msk">>,<<"number">>], AgrmBeelineMSKNumber}
+        ,{[<<"agrm">>,<<"beeline_msk">>,<<"date">>], AgrmBeelineMSKDate}
+        ]),
+    DbName = kz_util:format_account_id(AccountId,'encoded'),
+    case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
+        {ok, Doc} ->
+            NewDoc = kz_json:set_values(Values, Doc),
+            kz_datamgr:ensure_saved(DbName, NewDoc),
+            AccountId;
+        {'error', 'not_found'} ->
+            NewDoc = kz_json:set_values(Values ,kz_json:new()),
+            kz_datamgr:ensure_saved(DbName, NewDoc),
             AccountId;
         _ ->
-            Users = binary:split(re:replace(UserString, "\\s+", "", [global,{return,binary}])
-                                ,[<<",">>,<<";">>]),
-            create_users(AccountId, Users, Context),
-            AccountId
+            'onbill_data_not_added'
     end.
 
 %%%===================================================================
@@ -299,11 +360,8 @@ create_account(ResellerId, AccountName, Realm) ->
 create_users(_AccountId, [], _Context) -> 'ok';
 create_users(AccountId, [UserName|Users], Context) -> 
     UserPassword = kz_binary:rand_hex(10),
- %   UUID = kz_datamgr:get_uuid(),
     Props = props:filter_empty([
          {[<<"username">>], UserName}
-     %   ,{[<<"id">>], UUID}
-     %   ,{[<<"_id">>], UUID}
         ,{[<<"first_name">>], <<"Firstname">>}
         ,{[<<"last_name">>], <<"Surname">>}
         ,{[<<"email">>], UserName}
@@ -312,13 +370,10 @@ create_users(AccountId, [UserName|Users], Context) ->
         ,{[<<"priv_level">>], <<"admin">>}
         ]),
     UserData = kz_json:set_values(Props, ?MK_USER),
-lager:info("IAM kt_onbill create_users UserData: ~p",[UserData]),
     Ctx1 = cb_context:set_account_id(Context, AccountId),
     Ctx2 = cb_context:set_doc(Ctx1, UserData),
     Ctx3 = cb_context:set_req_data(Ctx2, UserData),
     Ctx4 = cb_users_v1:put(Ctx3),
-lager:info("IAM kt_onbill create_users RespStatus: ~p",[cb_context:resp_status(Ctx4)]),
-lager:info("IAM kt_onbill create_users RespData: ~p",[cb_context:resp_data(Ctx4)]),
     send_email(Ctx4),
     timer:sleep(1000),
     create_users(AccountId, Users, Context).
