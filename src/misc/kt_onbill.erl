@@ -272,6 +272,10 @@ lager:info("IAM A8: ~p",[A8]),
 lager:info("IAM A9: ~p",[A9]),
 lager:info("IAM A10: ~p",[A10]),
 lager:info("IAM A11: ~p",[A11]),
+    AA4 = case A4 == A3 of
+              'true' -> <<>>;
+              'false' -> A4
+          end,
     Values = props:filter_empty(
         [{<<"_id">>, ?ONBILL_DOC}
         ,{<<"pvt_type">>, ?ONBILL_DOC}
@@ -280,21 +284,13 @@ lager:info("IAM A11: ~p",[A11]),
         ,{<<"account_inn">>, AccountINN}
         ,{<<"account_kpp">>, AccountKPP}
         ,{[<<"billing_address">>,<<"line1">>]
-         ,<<A11/binary
-           ,(maybe_format_address_element(A1))/binary
-           ,(maybe_format_address_element(A2))/binary
-           ,(maybe_format_address_element(A3))/binary>>
+         ,<<A11/binary, (maybe_format_address_element([A1, A2, A3], <<>>))/binary>>
          }
         ,{[<<"billing_address">>,<<"line2">>]
-         ,<<(maybe_format_address_element(A4))/binary
-           ,(maybe_format_address_element(A5))/binary
-           ,(maybe_format_address_element(A6))/binary>>
+         ,<<(maybe_format_address_element([AA4, A5, A6], <<>>))/binary>>
          }
         ,{[<<"billing_address">>,<<"line3">>]
-         ,<<(maybe_format_address_element(A7))/binary
-           ,(maybe_format_address_element(A8))/binary
-           ,(maybe_format_address_element(A9))/binary
-           ,(maybe_format_address_element(A10))/binary>>
+         ,<<(maybe_format_address_element([A7, A8, A9, A10], <<>>))/binary>>
          }
         ,{[<<"agrm">>,<<"onnet">>,<<"number">>], AgrmOnNetNumber}
         ,{[<<"agrm">>,<<"onnet">>,<<"date">>], AgrmOnNetDate}
@@ -421,9 +417,13 @@ send_email(Context) ->
           ],
     kapps_notify_publisher:cast(Req, fun kapi_notifications:publish_new_user/1).
 
-maybe_format_address_element(<<>>) ->
-    <<>>;
-maybe_format_address_element(Element) when is_binary(Element) ->
-    <<", ", Element/binary>>;
-maybe_format_address_element(_) ->
-    <<>>.
+maybe_format_address_element([], Acc) ->
+    Acc;
+maybe_format_address_element([H], Acc) ->
+    <<Acc/binary, H/binary>>;
+maybe_format_address_element([<<>>|T], Acc) ->
+    maybe_format_address_element(T, Acc);
+maybe_format_address_element([H|T], Acc) when Acc == <<>> ->
+    maybe_format_address_element(T, <<H/binary>>);
+maybe_format_address_element([H|T], Acc) ->
+    maybe_format_address_element(T, <<Acc/binary, H/binary, ", ">>).
