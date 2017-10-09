@@ -291,10 +291,10 @@ lager:info("IAM A11: ~p",[A11]),
         ,{<<"account_inn">>, AccountINN}
         ,{<<"account_kpp">>, AccountKPP}
         ,{[<<"billing_address">>,<<"line1">>]
-         ,maybe_format_address_element([A1, A2, A3], A11)
+         ,maybe_format_address_element([A1, A2], A11)
          }
         ,{[<<"billing_address">>,<<"line2">>]
-         ,maybe_format_address_element([A5, A6], AA4)
+         ,maybe_format_address_element([AA4, A5, A6], A3)
          }
         ,{[<<"billing_address">>,<<"line3">>]
          ,maybe_format_address_element([A8, A9, A10], A7)
