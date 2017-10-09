@@ -423,6 +423,8 @@ maybe_format_address_element([], Acc) ->
     Acc;
 maybe_format_address_element([<<>>], Acc) ->
     Acc;
+maybe_format_address_element([H], <<>>) ->
+    H;
 maybe_format_address_element([H], Acc) ->
     <<Acc/binary, ", ", H/binary>>;
 maybe_format_address_element([<<>>|T], Acc) ->
