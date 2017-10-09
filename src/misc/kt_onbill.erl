@@ -15,6 +15,7 @@
         ,import_accounts/3
         ,import_onbill_data1/3
         ,is_allowed/1
+        ,maybe_format_address_element/2
         ]).
 
 -include_lib("tasks/src/tasks.hrl").
@@ -290,13 +291,13 @@ lager:info("IAM A11: ~p",[A11]),
         ,{<<"account_inn">>, AccountINN}
         ,{<<"account_kpp">>, AccountKPP}
         ,{[<<"billing_address">>,<<"line1">>]
-         ,<<A11/binary, (maybe_format_address_element([A1, A2, A3], <<>>))/binary>>
+         ,maybe_format_address_element([A1, A2, A3], A11)
          }
         ,{[<<"billing_address">>,<<"line2">>]
-         ,<<(maybe_format_address_element([AA4, A5, A6], <<>>))/binary>>
+         ,maybe_format_address_element([A5, A6], AA4)
          }
         ,{[<<"billing_address">>,<<"line3">>]
-         ,<<(maybe_format_address_element([A7, A8, A9, A10], <<>>))/binary>>
+         ,maybe_format_address_element([A8, A9, A10], A7)
          }
         ] ++ AgrmVals),
     DbName = kz_util:format_account_id(AccountId,'encoded'),
@@ -417,16 +418,19 @@ send_email(Context) ->
           ],
     kapps_notify_publisher:cast(Req, fun kapi_notifications:publish_new_user/1).
 
+-spec maybe_format_address_element(any(), any()) -> 'ok'.
 maybe_format_address_element([], Acc) ->
     Acc;
+maybe_format_address_element([<<>>], Acc) ->
+    Acc;
 maybe_format_address_element([H], Acc) ->
-    <<Acc/binary, H/binary>>;
+    <<Acc/binary, ", ", H/binary>>;
 maybe_format_address_element([<<>>|T], Acc) ->
     maybe_format_address_element(T, Acc);
 maybe_format_address_element([H|T], Acc) when Acc == <<>> ->
     maybe_format_address_element(T, <<H/binary>>);
 maybe_format_address_element([H|T], Acc) ->
-    maybe_format_address_element(T, <<Acc/binary, H/binary, ", ">>).
+    maybe_format_address_element(T, <<Acc/binary, ", ", H/binary>>).
 
 format_agrm_date(<<YYYY:4/binary, "-", MM:2/binary, "-", DD:2/binary>>) ->
     <<DD/binary, ".", MM/binary, ".", YYYY/binary>>;
