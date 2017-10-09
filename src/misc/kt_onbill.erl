@@ -431,12 +431,12 @@ agrm_vals(<<"I0#", AgrmNumber/binary>>, AgrmDate, AgrmTypeId) ->
     agrm_vals(AgrmNumber, AgrmDate, AgrmTypeId);
 agrm_vals(<<"0WG#", AgrmNumber/binary>>, AgrmDate, AgrmTypeId) ->
     agrm_vals(AgrmNumber, AgrmDate, AgrmTypeId);
-agrm_vals(AgrmNumber, AgrmDate, 1) ->
+agrm_vals(AgrmNumber, AgrmDate, <<"1">>) ->
     [{[<<"agrm">>,<<"onnet">>,<<"number">>], AgrmNumber}
     ,{[<<"agrm">>,<<"onnet">>,<<"date">>], format_agrm_date(AgrmDate)}];
-agrm_vals(AgrmNumber, AgrmDate, 2) ->
+agrm_vals(AgrmNumber, AgrmDate, <<"2">>) ->
     [{[<<"agrm">>,<<"beeline_spb">>,<<"number">>], <<"I0#", AgrmNumber/binary>>}
     ,{[<<"agrm">>,<<"beeline_spb">>,<<"date">>], format_agrm_date(AgrmDate)}];
-agrm_vals(AgrmNumber, AgrmDate, 3) ->
+agrm_vals(AgrmNumber, AgrmDate, <<"3">>) ->
     [{[<<"agrm">>,<<"beeline_msk">>,<<"number">>], <<"0WG#", AgrmNumber/binary>>}
     ,{[<<"agrm">>,<<"beeline_msk">>,<<"date">>], format_agrm_date(AgrmDate)}].
