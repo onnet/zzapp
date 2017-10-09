@@ -246,12 +246,6 @@ import_onbill_data1(#{account_id := _ResellerId
               ,<<"billing_address">> := BillingAddress
               ,<<"agrm_number">> := AgrmNumber
               ,<<"agrm_date">> := AgrmDate
-              ,<<"agrm_onnet_number">> := AgrmOnNetNumber
-              ,<<"agrm_onnet_date">> := AgrmOnNetDate
-              ,<<"agrm_beeline_spb_number">> := AgrmBeelineSPBNumber
-              ,<<"agrm_beeline_spb_date">> := AgrmBeelineSPBDate
-              ,<<"agrm_beeline_msk_number">> := AgrmBeelineMSKNumber
-              ,<<"agrm_beeline_msk_date">> := AgrmBeelineMSKDate
               }
       ) ->
 lager:info("IAM BillingAddress: ~p",[BillingAddress]),
@@ -276,6 +270,18 @@ lager:info("IAM A11: ~p",[A11]),
               'true' -> <<>>;
               'false' -> A4
           end,
+    AgrmVals =
+        case AgrmNumber of
+            <<"I0#", _/binary>> ->
+                [{[<<"agrm">>,<<"beeline_spb">>,<<"number">>], AgrmNumber}
+                ,{[<<"agrm">>,<<"beeline_spb">>,<<"date">>], format_agrm_date(AgrmDate)}];
+            <<"0WG#", _/binary>> ->
+                [{[<<"agrm">>,<<"beeline_msk">>,<<"number">>], AgrmNumber}
+                ,{[<<"agrm">>,<<"beeline_msk">>,<<"date">>], format_agrm_date(AgrmDate)}];
+            _ ->
+                [{[<<"agrm">>,<<"onnet">>,<<"number">>], AgrmNumber}
+                ,{[<<"agrm">>,<<"onnet">>,<<"date">>], format_agrm_date(AgrmDate)}]
+        end,
     Values = props:filter_empty(
         [{<<"_id">>, ?ONBILL_DOC}
         ,{<<"pvt_type">>, ?ONBILL_DOC}
@@ -292,13 +298,7 @@ lager:info("IAM A11: ~p",[A11]),
         ,{[<<"billing_address">>,<<"line3">>]
          ,<<(maybe_format_address_element([A7, A8, A9, A10], <<>>))/binary>>
          }
-        ,{[<<"agrm">>,<<"onnet">>,<<"number">>], AgrmOnNetNumber}
-        ,{[<<"agrm">>,<<"onnet">>,<<"date">>], AgrmOnNetDate}
-        ,{[<<"agrm">>,<<"beeline_spb">>,<<"number">>], AgrmBeelineSPBNumber}
-        ,{[<<"agrm">>,<<"beeline_spb">>,<<"date">>], AgrmBeelineSPBDate}
-        ,{[<<"agrm">>,<<"beeline_msk">>,<<"number">>], AgrmBeelineMSKNumber}
-        ,{[<<"agrm">>,<<"beeline_msk">>,<<"date">>], AgrmBeelineMSKDate}
-        ]),
+        ] ++ AgrmVals),
     DbName = kz_util:format_account_id(AccountId,'encoded'),
     case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
         {ok, Doc} ->
@@ -427,3 +427,8 @@ maybe_format_address_element([H|T], Acc) when Acc == <<>> ->
     maybe_format_address_element(T, <<H/binary>>);
 maybe_format_address_element([H|T], Acc) ->
     maybe_format_address_element(T, <<Acc/binary, H/binary, ", ">>).
+
+format_agrm_date(<<YYYY:4/binary, "-", MM:2/binary, "-", DD:2/binary>>) ->
+    <<DD/binary, ".", MM/binary, ".", YYYY/binary>>;
+format_agrm_date(AgrmDate) ->
+    AgrmDate.
