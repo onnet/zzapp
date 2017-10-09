@@ -47,12 +47,9 @@
         ,<<"billing_address_line1">>
         ,<<"billing_address_line2">>
         ,<<"billing_address_line3">>
-        ,<<"agrm_onnet_number">>
-        ,<<"agrm_onnet_date">>
-        ,<<"agrm_beeline_spb_number">>
-        ,<<"agrm_beeline_spb_date">>
-        ,<<"agrm_beeline_msk_number">>
-        ,<<"agrm_beeline_msk_date">>
+        ,<<"agrm_number">>
+        ,<<"agrm_date">>
+        ,<<"agrm_type_id">>
         ]).
 
 -define(IMPORT_MANDATORY_ONBILL_DATA1
@@ -247,6 +244,7 @@ import_onbill_data1(#{account_id := _ResellerId
               ,<<"billing_address">> := BillingAddress
               ,<<"agrm_number">> := AgrmNumber
               ,<<"agrm_date">> := AgrmDate
+              ,<<"agrm_type_id">> := AgrmTypeId
               }
       ) ->
 lager:info("IAM BillingAddress: ~p",[BillingAddress]),
@@ -271,18 +269,6 @@ lager:info("IAM A11: ~p",[A11]),
               'true' -> <<>>;
               'false' -> A4
           end,
-    AgrmVals =
-        case AgrmNumber of
-            <<"I0#", _/binary>> ->
-                [{[<<"agrm">>,<<"beeline_spb">>,<<"number">>], AgrmNumber}
-                ,{[<<"agrm">>,<<"beeline_spb">>,<<"date">>], format_agrm_date(AgrmDate)}];
-            <<"0WG#", _/binary>> ->
-                [{[<<"agrm">>,<<"beeline_msk">>,<<"number">>], AgrmNumber}
-                ,{[<<"agrm">>,<<"beeline_msk">>,<<"date">>], format_agrm_date(AgrmDate)}];
-            _ ->
-                [{[<<"agrm">>,<<"onnet">>,<<"number">>], AgrmNumber}
-                ,{[<<"agrm">>,<<"onnet">>,<<"date">>], format_agrm_date(AgrmDate)}]
-        end,
     Values = props:filter_empty(
         [{<<"_id">>, ?ONBILL_DOC}
         ,{<<"pvt_type">>, ?ONBILL_DOC}
@@ -299,7 +285,7 @@ lager:info("IAM A11: ~p",[A11]),
         ,{[<<"billing_address">>,<<"line3">>]
          ,maybe_format_address_element([A8, A9, A10], A7)
          }
-        ] ++ AgrmVals),
+        ] ++ agrm_vals(AgrmNumber, AgrmDate, AgrmTypeId)),
     DbName = kz_util:format_account_id(AccountId,'encoded'),
     case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
         {ok, Doc} ->
@@ -438,3 +424,19 @@ format_agrm_date(<<YYYY:4/binary, "-", MM:2/binary, "-", DD:2/binary>>) ->
     <<DD/binary, ".", MM/binary, ".", YYYY/binary>>;
 format_agrm_date(AgrmDate) ->
     AgrmDate.
+
+agrm_vals(_, _, 'undefined') ->
+    [];
+agrm_vals(<<"I0#", AgrmNumber/binary>>, AgrmDate, AgrmTypeId) ->
+    agrm_vals(AgrmNumber, AgrmDate, AgrmTypeId);
+agrm_vals(<<"0WG#", AgrmNumber/binary>>, AgrmDate, AgrmTypeId) ->
+    agrm_vals(AgrmNumber, AgrmDate, AgrmTypeId);
+agrm_vals(AgrmNumber, AgrmDate, 1) ->
+    [{[<<"agrm">>,<<"onnet">>,<<"number">>], AgrmNumber}
+    ,{[<<"agrm">>,<<"onnet">>,<<"date">>], format_agrm_date(AgrmDate)}];
+agrm_vals(AgrmNumber, AgrmDate, 2) ->
+    [{[<<"agrm">>,<<"beeline_spb">>,<<"number">>], <<"I0#", AgrmNumber/binary>>}
+    ,{[<<"agrm">>,<<"beeline_spb">>,<<"date">>], format_agrm_date(AgrmDate)}];
+agrm_vals(AgrmNumber, AgrmDate, 3) ->
+    [{[<<"agrm">>,<<"beeline_msk">>,<<"number">>], <<"0WG#", AgrmNumber/binary>>}
+    ,{[<<"agrm">>,<<"beeline_msk">>,<<"date">>], format_agrm_date(AgrmDate)}].
