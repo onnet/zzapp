@@ -267,7 +267,7 @@ lager:info("IAM A8: ~p",[A8]),
 lager:info("IAM A9: ~p",[A9]),
 lager:info("IAM A10: ~p",[A10]),
 lager:info("IAM A11: ~p",[A11]),
-    AA4 = case A4 == A3 of
+    AA4 = case A2 == A4 of
               'true' -> <<>>;
               'false' -> A4
           end,
