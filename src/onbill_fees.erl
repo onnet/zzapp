@@ -240,8 +240,10 @@ maybe_count_call(Regexes, JObj, {JObjs, AccSec, AccAmount}) ->
     case maybe_interesting_call(Regexes, JObj) of
         'true' ->
             CallCost = wht_util:units_to_dollars(kz_json:get_integer_value([<<"value">>,<<"cost">>], JObj, 0)),
+            CallDuration = kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0),
             Values = [{[<<"value">>,<<"cost">>], CallCost}
-                      ,{[<<"value">>,<<"start_datetime">>], onbill_util:format_datetime(kz_json:get_integer_value([<<"value">>,<<"start">>], JObj))}
+                     ,{[<<"value">>,<<"duration_min">>], CallDuration/60}
+                     ,{[<<"value">>,<<"start_datetime">>], onbill_util:format_datetime(kz_json:get_integer_value([<<"value">>,<<"start">>], JObj))}
                      ],
             {[kz_json:set_values(Values, JObj)] ++ JObjs
              ,AccSec + kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0)
