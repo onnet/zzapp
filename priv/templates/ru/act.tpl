@@ -12,7 +12,7 @@
   <h1 align=center>АКТ оказания услуг </h1>
   <h4 align=center>
     по Договору №
-    {{ carrier_vars.doc_pref }}{{ agrm_num }} от {{ agrm_date }}
+    {{ agrm_num }} от {{ agrm_date }}
     <br />
     за оказанные услуги электросвязи за период: {{ start_date }} - {{ end_date }}
   </h4>
@@ -66,17 +66,21 @@
       </td>
       <td style="border: 1px solid black;">{{ fee_line.code_name }}</td>
       <td style="border: 1px solid black;">{{ fee_line.quantity|floatformat:2 }}</td>
-      <td style="border: 1px solid black;">{{ fee_line.rate_brutto|floatformat:2 }}</td>
-      <td style="border: 1px solid black;">{{ fee_line.cost_brutto|floatformat:2 }}</td>
+      <td style="border: 1px solid black; text-align: right;">{{ fee_line.rate_brutto|floatformat:2 }}</td>
+      <td style="border: 1px solid black; text-align: right;">{{ fee_line.cost_brutto|floatformat:2 }}</td>
     </tr>
   {% endfor %}
     <tr>
-      <td colspan="5" align="right" width="85%">Итого:</td>
-      <td width="14%"  style="text-align: center;">{{ total_brutto|floatformat:2 }}</td>
+      <td colspan="5" style="text-align: right; width: 85%;">Итого:</td>
+      <td style="text-align: right; width: 14%;">{{ total_brutto|floatformat:2 }}</td>
     </tr>
     <tr>
-      <td colspan="5" align="right" width="85%">В том числе НДС({{ vat_rate }}%):</td>
-      <td width="14%"  style="text-align: center;">{{ total_vat|floatformat:2 }}</td>
+      <td colspan="5" style="text-align: right; width: 85%;">
+        В том числе НДС({{ vat_rate }}%):
+      </td>
+      <td style="text-align: right; width: 14%;">
+        {{ total_vat|floatformat:2 }}
+      </td>
     </tr>
   </table>
   <br />
