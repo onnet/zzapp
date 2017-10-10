@@ -25,13 +25,21 @@
     </tr>
   </table>
   <h4 align=justify>
-    {{ carrier_vars.oper_name }} (далее — «{{ carrier_vars.oper_name_further }}»), организованное по законам
-    Российской Федерации и имеющее местонахождение {{ carrier_vars.oper_addr }} в лице генерального директора
-    {{ carrier_vars.oper_agent }} {{ carrier_vars.in_person_of }}, действующего по доверенности
-    {{carrier_vars.oper_power }}, с одной стороны,
-    и {{ account_vars.account_name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том,
-    что в соответствии с Договором об оказании услуг связи № {{ carrier_vars.doc_pref }}{{ agrm_num }} от {{ agrm_date }},
-    заключенным между Сторонами (далее — «Договор»), {{ carrier_vars.oper_name_further }} в указанный период оказал Клиенту Услуги:
+    {% if carrier_vars.oper_agent %}
+      {{ carrier_vars.oper_name }} (далее — «{{ carrier_vars.oper_name_further }}»), организованное по законам
+      Российской Федерации и имеющее местонахождение {{ carrier_vars.oper_addr }} в лице генерального директора
+      {{ carrier_vars.oper_agent_short }} {{ carrier_vars.in_person_of }}, действующего по доверенности
+      {{carrier_vars.oper_power }}, с одной стороны,
+      и {{ account_vars.account_name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том,
+      что в соответствии с Договором об оказании услуг связи № {{ agrm_num }} от {{ agrm_date }},
+      заключенным между Сторонами (далее — «Договор»), {{ carrier_vars.oper_name_further }} в указанный период оказал Клиенту Услуги:
+    {% else %}
+      {{ carrier_vars.oper_name }} (далее — «{{ carrier_vars.oper_name_further }}»), с одной стороны,
+      и {{ account_vars.account_name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том,
+      что в соответствии с Договором об оказании услуг связи № {{ agrm_num }} от {{ agrm_date }},
+      заключенным между Сторонами (далее — «Договор»),
+      {{ carrier_vars.oper_name_further }} в указанный период оказал Клиенту Услуги:
+    {% endif %}
   </h4>
   <table style="border-collapse: collapse;" width="100%">
     <tr style="border: 1px solid black;">
