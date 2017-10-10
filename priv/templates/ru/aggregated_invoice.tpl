@@ -49,7 +49,7 @@
   Счет № {{ doc_number }} от {{ end_date }}
 </p>
 <h4 align="center">
-  за оказанные услуги электросвязи за период: {{ start_date }} — {{ end_date }}
+  за оказанные услуги электросвязи за период: {{ start_date }} - {{ end_date }}
 </h4>
 <br />
 Плательщик: {{ account_vars.account_name }}<br />
