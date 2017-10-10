@@ -153,11 +153,13 @@
           ({{ carrier_vars.oper_dir }})
           <p>МП</p>
         </h4>
-        <p align="center">
-          Агент {{ carrier_vars.oper_agent_short }}
-          <br />
-          (на основании доверенности {{ carrier_vars.oper_power }})
-        </p>
+        {% if carrier_vars.oper_agent %}
+          <p align="center">
+            Агент {{ carrier_vars.oper_agent_short }}
+            <br />
+            (на основании доверенности {{ carrier_vars.oper_power }})
+          </p>
+        {% endif %}
       </td>
     </tr>
   </table>
