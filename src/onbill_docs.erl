@@ -276,6 +276,7 @@ aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
            ,{<<"carrier_vars">>, pack_vars(MainCarrierDoc)}
            ,{<<"account_vars">>, pack_vars(AccountOnbillDoc)}
            ],
+lager:info("IAM AggregatedVars: ~p",[AggregatedVars]),
     save_pdf(Vars, DocType, MainCarrier, AccountId, Year, Month).
 
 aggregate_data(AccountId, {SYear, SMonth, _}, {SYear, SMonth, _}) ->
