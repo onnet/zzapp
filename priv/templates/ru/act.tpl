@@ -4,12 +4,14 @@
   <style>
     * {
       font-family: 'PT Sans Narrow';
-      font-size: 13;
+      font-size: 15;
     }
   </style>
 </head>
 <body>
-  <h1 align=center>АКТ оказания услуг </h1>
+  <p style="text-align: center; font-size: 2em;">
+    АКТ оказания услуг № {{ carrier_vars.doc_pref }}{{ doc_number }}{{ carrier_vars.doc_ind }} от {{ doc_date }}
+  </p>
   <h4 align=center>
     по Договору №
     {{ agrm_num }} от {{ agrm_date }}
