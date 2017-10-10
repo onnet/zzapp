@@ -1,26 +1,49 @@
 <head>
   <meta charset="UTF-8">
+  <link href='http://fonts.googleapis.com/css?family=PT+Sans+Narrow&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+  <style>
+
+    * {
+      font-family: 'PT Sans Narrow';
+      font-size: 13;
+    }
+
+    table {
+        width: 100%;
+    }
+
+    .bordered_table {
+      border-collapse: collapse;
+    }
+
+    .bordered_table tr,
+    .bordered_table td {
+      border: 1px solid black;
+      text-align: center;
+    }
+
+  </style>
 </head>
 
 <br />
 <table border="0"><tr>
 	<td width="60%">
-		Поставщик: {{ oper_name }}<br />
-		Адрес: {{ oper_addr }}<br />
-		ИНН/КПП: {{ inn }} / {{ kpp }}<br />
+		Поставщик: {{ carrier_vars.oper_name }}<br />
+		Адрес: {{ carrier_vars.oper_addr }}<br />
+		ИНН/КПП: {{ carrier_vars.inn }} / {{ carrier_vars.kpp }}<br />
 		
 	</td>
 	<td width="40%">
-		Счет №: {{ oper_account_number }}<br />
-		Банк получателя: {{ oper_bank_name }}<br />
-		БИК: {{ oper_bank_bik }}<br />
-		Кор. Счет №: {{ oper_corr_number }}
+		Счет №: {{ carrier_vars.oper_account_number }}<br />
+		Банк получателя: {{ carrier_vars.oper_bank_name }}<br />
+		БИК: {{ carrier_vars.oper_bank_bik }}<br />
+		Кор. Счет №: {{ carrier_vars.oper_corr_number }}
 	</td></tr></table>
 
 <h1 align="center">Счет № {{ doc_number }} от {{ end_date }}</h1>
 <h4 align="center">за оказанные услуги электросвязи за период: {{ start_date }} — {{ end_date }}</h4><br />
-Плательщик: {{ account_name }}<br />
-ИНН/КПП: {{ account_inn }} / {{ account_kpp }}<br />
+Плательщик: {{ account_vars.account_name }}<br />
+ИНН/КПП: {{ account_vars.account_inn }} / {{ account_vars.account_kpp }}<br />
 <br />
 
 <table border="1" cellpadding="2">
@@ -52,9 +75,9 @@
 {% if total_brutto_div %}{{ total_brutto_div }}{% else %}00{% endif %} руб. {% if total_brutto_rem %}{{ total_brutto_rem }}{% else %}00{% endif %} коп.
 <br />
 Счет действителен в течение 14 календарных дней<br /><br />
-<h4>Генеральный директор____________________________________{{ oper_dir }}</h4>
+<h4>Генеральный директор____________________________________{{ carrier_vars.oper_dir }}</h4>
 <br /><h5 align="center"></h5>
 <br /><br />
-<h4>Главный бухгалтер_______________________________________{{ oper_buh }}</h4>
+<h4>Главный бухгалтер_______________________________________{{ carrier_vars.oper_buh }}</h4>
 <br /><h5 align="center"></h5>
 <h4 align="center">МП</h4>
