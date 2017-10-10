@@ -22,6 +22,10 @@
       text-align: center;
     }
 
+    .cell_padding {
+      padding: 3px;
+    }
+
   </style>
 </head>
 <body>
@@ -194,7 +198,7 @@
     <!-- begin_item -->
     {% for fee_line in monthly_fees %}
       <tr>
-        <td style="text-align: left; width: 23%;">
+        <td class="cell_padding" style="text-align: left; width: 23%;">
           {{ fee_line.name }}
           {% if fee_line.period %}
             {% for period in fee_line.period %}
@@ -204,15 +208,15 @@
             {% endfor %}
           {% endif %}
         </td>
-        <td style="width: 3%;">{{ fee_line.code_number }}</td>
-        <td style="width: 8%;">{{ fee_line.code_name }}</td>
-        <td style="text-align: right; width: 5%;">{{ fee_line.quantity|floatformat:2 }}</td>
-        <td style="text-align: right; width: 7%;">{{ fee_line.rate_netto|floatformat:2 }}</td>
-        <td style="text-align: right; width: 10%;">{{ fee_line.cost_netto|floatformat:2 }}</td>
+        <td class="cell_padding" style="width: 3%;">{{ fee_line.code_number }}</td>
+        <td class="cell_padding" style="width: 8%;">{{ fee_line.code_name }}</td>
+        <td class="cell_padding" style="text-align: right; width: 5%;">{{ fee_line.quantity|floatformat:2 }}</td>
+        <td class="cell_padding" style="text-align: right; width: 7%;">{{ fee_line.rate_netto|floatformat:2 }}</td>
+        <td class="cell_padding" style="text-align: right; width: 10%;">{{ fee_line.cost_netto|floatformat:2 }}</td>
         <td style="width: 5%;">Без акциза</td>
-        <td style="text-align: right; width: 6%;">{{ vat_rate }}%</td>
-        <td style="text-align: right; width: 7%;">{{ fee_line.vat_line_total|floatformat:2 }}</td>
-        <td style="text-align: right; width: 10%;">{{ fee_line.cost_brutto|floatformat:2 }}</td>
+        <td class="cell_padding" style="text-align: right; width: 6%;">{{ vat_rate }}%</td>
+        <td class="cell_padding" style="text-align: right; width: 7%;">{{ fee_line.vat_line_total|floatformat:2 }}</td>
+        <td class="cell_padding" style="text-align: right; width: 10%;">{{ fee_line.cost_brutto|floatformat:2 }}</td>
         <td style="width: 4%;">--</td>
         <td style="width: 8%;">--</td>
         <td style="width: 7%;">--</td>
@@ -221,11 +225,11 @@
     <!-- end_item -->
     <!-- end_services -->
     <tr>
-      <td style="text-align: left; width: 46%;" colspan=5>Всего к оплате:</td>		
-      <td style="text-align: right; width: 10%;">{{ total_netto|floatformat:2 }}</td>
+      <td class="cell_padding" style="text-align: left; width: 46%;" colspan=5>Всего к оплате:</td>		
+      <td class="cell_padding" style="text-align: right; width: 10%;">{{ total_netto|floatformat:2 }}</td>
       <td colspan="2" style="width: 11%;">X</td>
-      <td style="text-align: right; width: 7%;">{{ total_vat|floatformat:2 }}</td>
-      <td style="text-align: right; width: 10%;">{{ total_brutto|floatformat:2 }}</td>
+      <td class="cell_padding" style="text-align: right; width: 7%;">{{ total_vat|floatformat:2 }}</td>
+      <td class="cell_padding" style="text-align: right; width: 10%;">{{ total_brutto|floatformat:2 }}</td>
     </tr>	
   </table>
   <br />
