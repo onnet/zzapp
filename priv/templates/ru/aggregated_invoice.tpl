@@ -55,29 +55,39 @@
 
 <table class="bordered_table" style="width: 100%;">
   <tr>
-    <td width="5%">№</td>
-    <td width="80%">Наименование товара</td>
-    <td width="15%">Сумма (руб)</td>
+    <td style="text-align: center; width: 5%">№</td>
+    <td style="text-align: center; width: 80%">Наименование товара</td>
+    <td style="text-align: center; width: 15%">Сумма (руб)</td>
   </tr>
   {% for carrier_line in aggregated_vars %}
     <tr>
-      <td width="5%">{{ forloop.counter }}</td>
+      <td style="text-align: center; width: 5%">
+        {{ forloop.counter }}
+      </td>
       <td width="80%">
         Услуги {{ carrier_line.oper_name_short }}.
         Договор № {{ carrier_line.agrm_num }} от {{ carrier_line.agrm_date }}
       </td>
-      <td width="15%">{{ carrier_line.total_brutto }}</td>
+      <td style="text-align: right; width: 15%">
+        {{ carrier_line.total_brutto }}
+      </td>
     </tr>
   {% endfor %}
   <tr>
-    <td colspan="2" align="right" width="85%">Всего к оплате:</td>
-    <td width="15%">{{ total_brutto }}</td>		
+    <td colspan="2" style="text-align: right; width: 85%">
+      Всего к оплате:
+    </td>
+    <td style="text-align: right; width: 15%">
+      {{ total_brutto }}
+    </td>		
   </tr>
   <tr>
-    <td colspan="2" align="right" width="85%">
+    <td colspan="2" style="text-align: right; width: 85%">
       В том числе НДС ({{ vat_rate }}%)
     </td>
-    <td width="15%">{{ total_vat }}</td>		
+    <td style="text-align: right; width: 15%">
+      {{ total_vat }}
+    </td>		
   </tr>
 </table> 
 <br />
