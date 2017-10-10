@@ -1,15 +1,38 @@
 <head>
   <meta charset="UTF-8">
+  <link href='http://fonts.googleapis.com/css?family=PT+Sans+Narrow&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+  <style>
+
+    * {
+      font-family: 'PT Sans Narrow';
+      font-size: 13;
+    }
+
+    table {
+        width: 100%;
+    }
+
+    .bordered_table {
+      border-collapse: collapse;
+    }
+
+    .bordered_table tr,
+    .bordered_table td {
+      border: 1px solid black;
+      text-align: center;
+    }
+
+  </style>
 </head>
 
 <TABLE style="width: 197mm;" BORDER="0" CELLPADDING="0" CELLSPACING="0">
 <TR>
 <TD>Поставщик:</TD>
-<TD>{{ oper_name_short }} ИНН: {{ inn }} КПП: {{ kpp }}</TD>
+<TD>{{ carrier_vars.oper_agent_short }} ИНН: {{ carrier_vars.inn }} КПП: {{ carrier_vars.kpp }}</TD>
 </TR>
 <TR>
 <TD>Адрес:</TD>
-<TD>{{ oper_addr }}</TD>
+<TD>{{ carrier_vars.oper_addr }}</TD>
 </TR>
 </TABLE>
 <br />
