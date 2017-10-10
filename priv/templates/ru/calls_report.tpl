@@ -20,6 +20,7 @@
     .bordered_table td {
       border: 1px solid black;
       text-align: center;
+      page-break-after:avoid;
     }
 
   </style>
