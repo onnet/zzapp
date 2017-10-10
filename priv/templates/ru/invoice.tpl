@@ -67,7 +67,7 @@
   <font size="9">
     Дополнительные (условия оплаты по договору (контракту), способ отправления и т.д.)
   </font>
-  Договор № {{ carrier_vars.doc_pref }}{{ agrm_num }} от {{ agrm_date }}
+  Договор № {{ agrm_num }} от {{ agrm_date }}
   <br />
   <table class="bordered_table" style="width: 100%;">
     <tr>
