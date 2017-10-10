@@ -55,7 +55,7 @@
 <TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.from }}</TD>
 <TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.to }}</TD>
 <TD style="width: 22%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.start_datetime }}</TD>
-<TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.duration_min }}</TD>
+<TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.duration_min|floatformat:0 }}</TD>
 <TD style="width: 43%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.rate_description }}</TD>
 <TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.cost|floatformat:2 }}</TD>
 </TR>
