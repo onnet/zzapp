@@ -28,7 +28,7 @@
 <TABLE style="width: 197mm;" BORDER="0" CELLPADDING="0" CELLSPACING="0">
 <TR>
 <TD>Поставщик:</TD>
-<TD>{{ carrier_vars.oper_name }} ИНН: {{ carrier_vars.inn }} КПП: {{ carrier_vars.kpp }}</TD>
+<TD>{{ carrier_vars.oper_name_short }} ИНН: {{ carrier_vars.inn }} КПП: {{ carrier_vars.kpp }}</TD>
 </TR>
 <TR>
 <TD>Адрес:</TD>
