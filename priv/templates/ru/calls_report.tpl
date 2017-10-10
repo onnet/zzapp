@@ -12,6 +12,8 @@
         width: 100%;
     }
 
+    tr { page-break-inside: avoid; }
+
     .bordered_table {
       border-collapse: collapse;
     }
@@ -20,7 +22,6 @@
     .bordered_table td {
       border: 1px solid black;
       text-align: center;
-      page-break-after:avoid;
     }
 
     .cell_padding {
