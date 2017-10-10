@@ -28,7 +28,7 @@
 <TABLE style="width: 197mm;" BORDER="0" CELLPADDING="0" CELLSPACING="0">
 <TR>
 <TD>Поставщик:</TD>
-<TD>{{ carrier_vars.oper_agent_short }} ИНН: {{ carrier_vars.inn }} КПП: {{ carrier_vars.kpp }}</TD>
+<TD>{{ carrier_vars.oper_name }} ИНН: {{ carrier_vars.inn }} КПП: {{ carrier_vars.kpp }}</TD>
 </TR>
 <TR>
 <TD>Адрес:</TD>
@@ -55,7 +55,7 @@
 <TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.from }}</TD>
 <TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.to }}</TD>
 <TD style="width: 22%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.start_datetime }}</TD>
-<TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.duration }}</TD>
+<TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.duration/60 }}</TD>
 <TD style="width: 43%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.rate_description }}</TD>
 <TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.cost|floatformat:2 }}</TD>
 </TR>
