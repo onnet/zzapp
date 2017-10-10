@@ -77,19 +77,19 @@
     </tr>
   {% endfor %}
   <tr style="border: 0!important;">
-    <td colspan="2" style="text-align: right; width: 85%">
+    <td colspan="2" style="text-align: right; width: 85%; border: 0!important;">
       Всего к оплате:
     </td>
     <td style="text-align: right; width: 15%">
       {{ total_brutto }}
     </td>		
   </tr>
-  <tr>
+  <tr style="border: 0!important;">
     <td colspan="2"
-        style="text-align: right; width: 85%; pading-right: 3px; border: 0;">
+        style="text-align: right; width: 85%; pading-right: 3px; border: 0!important;">
       В том числе НДС ({{ vat_rate }}%)
     </td>
-    <td style="text-align: right; width: 15%; padding-right: 3px; border: 0!important;">
+    <td style="text-align: right; width: 15%; padding-right: 3px;">
       {{ total_vat }}
     </td>		
   </tr>
