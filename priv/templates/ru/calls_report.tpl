@@ -44,7 +44,7 @@
 <TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">Номер А</TD>
 <TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">Номер Б</TD>
 <TD style="width: 22%; font-size: 9pt; vertical-align: bottom; text-align: center">Начало звонка</TD>
-<TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">Длительность, мин.</TD>
+<TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">Длительность, сек.</TD>
 <TD style="width: 43%; font-size: 9pt; vertical-align: bottom; text-align: center">Направление</TD>
 <TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">Сумма, руб.</TD>
 </TR>
@@ -55,7 +55,7 @@
 <TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.from }}</TD>
 <TD style="width: 9%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.to }}</TD>
 <TD style="width: 22%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.start_datetime }}</TD>
-<TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.duration/60 }}</TD>
+<TD style="width: 8%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.duration }}</TD>
 <TD style="width: 43%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.rate_description }}</TD>
 <TD style="width: 5%; font-size: 9pt; vertical-align: bottom; text-align: center">{{ per_minute_call.value.cost|floatformat:2 }}</TD>
 </TR>
