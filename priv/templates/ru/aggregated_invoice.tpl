@@ -5,7 +5,7 @@
 
     * {
       font-family: 'PT Sans Narrow';
-      font-size: 13;
+      font-size: 15;
     }
 
     table {
@@ -42,6 +42,8 @@
   </tr>
 </table>
 
+<br />
+<br />
 <h1 align="center">
   Счет № {{ doc_number }} от {{ end_date }}
 </h1>
@@ -64,7 +66,7 @@
       <td style="text-align: center; width: 5%">
         {{ forloop.counter }}
       </td>
-      <td width="80%">
+      <td style="text-align: left; width: 80%">
         Услуги {{ carrier_line.oper_name_short }}.
         Договор № {{ carrier_line.agrm_num }} от {{ carrier_line.agrm_date }}
       </td>
@@ -75,7 +77,7 @@
   {% endfor %}
   <tr>
     <td colspan="2" style="text-align: right; width: 85%">
-      Всего к оплате:
+      Всего к оплате:&nbsp
     </td>
     <td style="text-align: right; width: 15%">
       {{ total_brutto }}
@@ -83,7 +85,7 @@
   </tr>
   <tr>
     <td colspan="2" border="0" style="text-align: right; width: 85%; margin-right: 3px;">
-      В том числе НДС ({{ vat_rate }}%)
+      В том числе НДС ({{ vat_rate }}%)&nbsp
     </td>
     <td border="0" style="text-align: right; width: 15%; padding-right: 3px;">
       {{ total_vat }}
