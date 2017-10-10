@@ -53,7 +53,7 @@
 ИНН/КПП: {{ account_vars.account_inn }} / {{ account_vars.account_kpp }}<br />
 <br />
 
-<table border="1" cellpadding="2">
+<table class="bordered_table" style="width: 100%;">
   <tr>
     <td width="5%">№</td>
     <td width="80%">Наименование товара</td>
@@ -85,13 +85,14 @@
 {% if total_brutto_div %}{{ total_brutto_div }}{% else %}00{% endif %} руб.
 {% if total_brutto_rem %}{{ total_brutto_rem }}{% else %}00{% endif %} коп.
 <br />
-Счет действителен в течение 14 календарных дней<br /><br />
-<h4>Генеральный директор____________________________________{{ carrier_vars.oper_dir }}</h4>
-<br />
-<h5 align="center"></h5>
+Счет действителен в течение 14 календарных дней
 <br />
 <br />
-<h4>Главный бухгалтер_______________________________________{{ carrier_vars.oper_buh }}</h4>
 <br />
-<h5 align="center"></h5>
+<h4>Генеральный директор______________________________________________{{ carrier_vars.oper_dir }}</h4>
+<br />
+<br />
+<br />
+<h4>Главный бухгалтер_________________________________________________{{ carrier_vars.oper_buh }}</h4>
+<br />
 <h4 align="center">МП</h4>
