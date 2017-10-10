@@ -20,6 +20,7 @@
     .bordered_table td {
       border: 1px solid black;
       text-align: center;
+      padding: 3px;
     }
 
   </style>
@@ -75,19 +76,20 @@
       </td>
     </tr>
   {% endfor %}
-  <tr>
+  <tr style="border: 0!important;">
     <td colspan="2" style="text-align: right; width: 85%">
-      Всего к оплате:&nbsp
+      Всего к оплате:
     </td>
     <td style="text-align: right; width: 15%">
       {{ total_brutto }}
     </td>		
   </tr>
   <tr>
-    <td colspan="2" border="0" style="text-align: right; width: 85%; margin-right: 3px;">
-      В том числе НДС ({{ vat_rate }}%)&nbsp
+    <td colspan="2"
+        style="text-align: right; width: 85%; pading-right: 3px; border: 0;">
+      В том числе НДС ({{ vat_rate }}%)
     </td>
-    <td border="0" style="text-align: right; width: 15%; padding-right: 3px;">
+    <td style="text-align: right; width: 15%; padding-right: 3px; border: 0!important;">
       {{ total_vat }}
     </td>		
   </tr>
