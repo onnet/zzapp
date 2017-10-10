@@ -29,12 +29,12 @@
 <br />
 <table border="0">
   <tr>
-    <td width="60%">
+    <td style="vertical-align: top; width: 60%;">
       Поставщик: {{ carrier_vars.oper_name_short }}<br />
       Адрес: {{ carrier_vars.oper_addr }}<br />
       ИНН/КПП: {{ carrier_vars.inn }} / {{ carrier_vars.kpp }}<br />
     </td>
-    <td width="40%">
+    <td style="vertical-align: top; width: 40%;">
       Счет №: {{ carrier_vars.oper_account_number }}<br />
       Банк получателя: {{ carrier_vars.oper_bank_name }}<br />
       БИК: {{ carrier_vars.oper_bank_bik }}<br />
@@ -45,9 +45,9 @@
 
 <br />
 <br />
-<h1 align="center">
+<p style="text-align: center; font-size: 2em;">
   Счет № {{ doc_number }} от {{ end_date }}
-</h1>
+</p>
 <h4 align="center">
   за оказанные услуги электросвязи за период: {{ start_date }} — {{ end_date }}
 </h4>
@@ -103,9 +103,9 @@
 <br />
 <br />
 <br />
+<br />
+<br />
 <h4>Генеральный директор______________________________________________{{ carrier_vars.oper_dir }}</h4>
-<br />
-<br />
 <br />
 <h4>Главный бухгалтер_________________________________________________{{ carrier_vars.oper_buh }}</h4>
 <br />
