@@ -29,7 +29,7 @@
 <table border="0">
   <tr>
     <td width="60%">
-      Поставщик: {{ carrier_vars.oper_name }}<br />
+      Поставщик: {{ carrier_vars.oper_name_short }}<br />
       Адрес: {{ carrier_vars.oper_addr }}<br />
       ИНН/КПП: {{ carrier_vars.inn }} / {{ carrier_vars.kpp }}<br />
     </td>
@@ -82,10 +82,10 @@
     </td>		
   </tr>
   <tr>
-    <td colspan="2" style="text-align: right; width: 85%">
+    <td colspan="2" border="0" style="text-align: right; width: 85%; margin-right: 3px;">
       В том числе НДС ({{ vat_rate }}%)
     </td>
-    <td style="text-align: right; width: 15%">
+    <td border="0" style="text-align: right; width: 15%; padding-right: 3px;">
       {{ total_vat }}
     </td>		
   </tr>
