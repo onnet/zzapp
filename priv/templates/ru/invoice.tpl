@@ -47,9 +47,11 @@
   Продавец: {{ carrier_vars.oper_name }}<br />
   Адрес: {{ carrier_vars.oper_addr }}<br />
   ИНН/КПП продавца: {{ carrier_vars.inn }} / {{ carrier_vars.kpp }} <br />
-  Агент: {{ carrier_vars.oper_agent }} ({{ carrier_vars.oper_agent_short }}) <br />
-  Адрес агента: {{ carrier_vars.oper_agent_addr }} <br />
-  ИНН/КПП агента: {{ carrier_vars.oper_agent_inn }} / {{ carrier_vars.oper_agent_kpp }} <br />
+  {% if carrier_vars.oper_agent %}
+    Агент: {{ carrier_vars.oper_agent }} ({{ carrier_vars.oper_agent_short }}) <br />
+    Адрес агента: {{ carrier_vars.oper_agent_addr }} <br />
+    ИНН/КПП агента: {{ carrier_vars.oper_agent_inn }} / {{ carrier_vars.oper_agent_kpp }} <br />
+  {% endif %}
   Грузоотправитель и его адрес: ----<br />
   Грузополучатель и его адрес: ----<br />
   К платежно-расчетному документу № ______ от ______ <br />
