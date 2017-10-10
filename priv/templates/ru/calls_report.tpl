@@ -5,7 +5,7 @@
 
     * {
       font-family: 'PT Sans Narrow';
-      font-size: 13;
+      font-size: 15;
     }
 
     table {
@@ -23,6 +23,10 @@
       page-break-after:avoid;
     }
 
+    .cell_padding {
+      padding: 3px;
+    }
+
   </style>
 </head>
 
@@ -38,7 +42,7 @@
 </table>
 <br />
 <div style="text-align: center;"><strong>Детализация телефонных вызовов {{ account_name }}</strong></div>
-<div style="text-align: center; font-size: 7pt;">Договор № {{ agrm_num }} от {{ agrm_date }}. Период с {{ start_date }} по {{ end_date }}.</div><br />
+<div style="text-align: center; font-size: 9pt;">Договор № {{ agrm_num }} от {{ agrm_date }}. Период с {{ start_date }} по {{ end_date }}.</div><br />
 <table class="bordered_table">
   <tr>
     <td style="width: 4%; font-size: 9pt;">№</td>
@@ -57,7 +61,7 @@
       <td style="width: 22%; font-size: 9pt;">{{ per_minute_call.value.start_datetime }}</td>
       <td style="width: 8%; font-size: 9pt;">{{ per_minute_call.value.duration_min|floatformat:0 }}</td>
       <td style="width: 43%; font-size: 9pt;">{{ per_minute_call.value.rate_description }}</td>
-      <td style="width: 5%; font-size: 9pt;">{{ per_minute_call.value.cost|floatformat:2 }}</td>
+      <td class="cell_padding" style="width: 5%; font-size: 9pt; text-align: right">{{ per_minute_call.value.cost|floatformat:2 }}</td>
     </tr>
   {% endfor %}
 </table>
