@@ -159,16 +159,44 @@ render_tpl(ErlyMod, Vars) ->
     erlang:iolist_to_binary(IoList).
 
 create_pdf(Vars, TemplateId, Carrier, AccountId) ->
-    WkhtmlOptions = kz_json:get_value([?WKHTMLTOPDF, <<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary>>, <<"options">>]
-                                     ,props:get_value(<<"carrier_vars">>,Vars, kz_json:new())
-                                     ,<<>>),
     Rand = kz_binary:rand_hex(5),
     Prefix = <<AccountId/binary, "-", (?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, "-", Rand/binary>>,
     HTMLFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".html">>]),
     PDFFile = filename:join([<<"/tmp">>, <<Prefix/binary, ".pdf">>]),
     HTMLTpl = prepare_tpl(Vars, TemplateId, Carrier, AccountId),
     file:write_file(HTMLFile, HTMLTpl),
-    Cmd = <<?HTML_TO_PDF(WkhtmlOptions)/binary, " ", HTMLFile/binary, " ", PDFFile/binary>>,
+    WkhtmlOptions = kz_json:get_value([?WKHTMLTOPDF, <<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary>>, <<"options">>]
+                                     ,props:get_value(<<"carrier_vars">>,Vars, kz_json:new())
+                                     ,<<>>),
+    WkhtmlHeaderOption =
+        case kz_json:get_value([?WKHTMLTOPDF, <<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary>>, <<"header_html">>]
+                              ,props:get_value(<<"carrier_vars">>,Vars, kz_json:new())
+                              ,'false')
+        of
+            'true' ->
+                HTMLHeaderFile = filename:join([<<"/tmp">>, <<Prefix/binary, "_header.html">>]),
+                HTMLHeaderTpl = prepare_tpl(Vars, <<"calls_report_header">>, Carrier, AccountId),
+                file:write_file(HTMLHeaderFile, HTMLHeaderTpl),
+                <<" --load-error-handling ignore --footer-html ", HTMLHeaderFile/binary>>;
+            _ -> <<>>
+        end,        
+    WkhtmlFooterOption =
+        case kz_json:get_value([?WKHTMLTOPDF, <<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary>>, <<"footer_html">>]
+                              ,props:get_value(<<"carrier_vars">>,Vars, kz_json:new())
+                              ,'false')
+        of
+            'true' ->
+                HTMLFooterFile = filename:join([<<"/tmp">>, <<Prefix/binary, "_footer.html">>]),
+                HTMLFooterTpl = prepare_tpl(Vars, <<"calls_report_footer">>, Carrier, AccountId),
+                file:write_file(HTMLFooterFile, HTMLFooterTpl),
+                <<" --load-error-handling ignore --footer-html ", HTMLFooterFile/binary>>;
+            _ -> <<>>
+        end,        
+    Cmd = <<?HTML_TO_PDF(<<WkhtmlOptions/binary, WkhtmlHeaderOption/binary, WkhtmlFooterOption/binary>>)/binary
+           ," "
+           ,HTMLFile/binary
+           ," "
+           ,PDFFile/binary>>,
     case os:cmd(kz_term:to_list(Cmd)) of
         [] ->
             file:read_file(PDFFile);
