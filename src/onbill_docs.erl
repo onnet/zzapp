@@ -159,7 +159,7 @@ render_tpl(ErlyMod, Vars) ->
     erlang:iolist_to_binary(IoList).
 
 create_pdf(Vars, TemplateId, Carrier, AccountId) ->
-    WkhtmlOptions = kz_json:get_value([?WKHTML_OPTIONS, <<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary>>]
+    WkhtmlOptions = kz_json:get_value([?WKHTMLTOPDF, <<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary>>, <<"options">>]
                                      ,props:get_value(<<"carrier_vars">>,Vars, kz_json:new())
                                      ,<<>>),
     Rand = kz_binary:rand_hex(5),
