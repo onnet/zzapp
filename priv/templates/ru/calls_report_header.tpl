@@ -49,6 +49,19 @@
     }
   </script>
 </head>
-
 <body id="pdf-header" onload="pagination()">
+  <table class="header_table">
+    <tr>
+      <td style="text-align: left;">
+        {% if carrier_vars.oper_agent_short %}
+          {{ carrier_vars.oper_agent_short }}
+        {% else %}
+          {{ carrier_vars.oper_name_short }}
+        {% endif %}
+      </td>
+      <td style="text-align: right;">
+        Детальный отчет о звонках
+      </td>
+    </tr>
+  </table>
 </body>

@@ -6,7 +6,7 @@
 
     * {
       font-family: 'PT Sans Narrow';
-      font-size: 7pt;
+      font-size: 8pt;
     }
 
     table {
@@ -53,9 +53,14 @@
 <body id="pdf-footer" onload="pagination()">
   <table class="footer_table">
     <tr>
-      <td>
+      <td style="text-align: left;">
         {{ account_vars.account_name }} 
-        Договор № {{ agrm_num }} от {{ agrm_date }}. Период с {{ start_date }} по {{ end_date }}.
+      </td>
+      <td>
+        Договор № {{ agrm_num }} от {{ agrm_date }}.
+      </td>
+      <td>
+        Период с {{ start_date }} по {{ end_date }}.
       </td>
       <td style="text-align: right;">
         <span class="page"></span>
