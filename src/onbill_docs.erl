@@ -177,7 +177,7 @@ create_pdf(Vars, TemplateId, Carrier, AccountId) ->
                 HTMLHeaderFile = filename:join([<<"/tmp">>, <<Prefix/binary, "_header.html">>]),
                 HTMLHeaderTpl = prepare_tpl(Vars, <<"calls_report_header">>, Carrier, AccountId),
                 file:write_file(HTMLHeaderFile, HTMLHeaderTpl),
-                <<" --load-error-handling ignore --footer-html ", HTMLHeaderFile/binary>>;
+                <<" --load-error-handling ignore --header-html ", HTMLHeaderFile/binary>>;
             _ -> <<>>
         end,        
     WkhtmlFooterOption =
