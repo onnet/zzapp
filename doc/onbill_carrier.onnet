@@ -1,5 +1,6 @@
 {
    "_id": "onbill_carrier.onnet",
+   "_rev": "37-13f2ee1a42545621d887e04788253ec6",
    "oper_name": "Закрытое Акционерное Общество «ОнНет комьюникейшнс»",
    "oper_addr": "194156, г. Санкт-Петербург, пр-кт Энгельса, д. 27 лит. З",
    "inn": 7802201145,
@@ -16,20 +17,27 @@
    "doc_ind": "-Б",
    "oper_name_further": "Оператор",
    "carrier_type": "main",
-   "oper_account_number": 40702810702110000000,
-   "oper_bank_name": "Филиал ПАО Банк «ЮГРА» в г. Санкт-Петербурге, г. Санкт-Петербург",
-   "oper_bank_bik": "044030774",
-   "oper_corr_number": 30101810900000002000,
+   "oper_account_number": 40702810303000020000,
+   "oper_bank_name": "Филиал «Северная столица» АО «Райффайзенбанк», г. Санкт-Петербург",
+   "oper_bank_bik": "044030723",
+   "oper_corr_number": 30101810100000002000,
    "pvt_vsn": "1",
    "pvt_account_id": "d2047d303c22e5399c796a93848dcd9f",
    "pvt_account_db": "account%2Fd2%2F04%2F7d303c22e5399c796a93848dcd9f",
    "pvt_created": 63670201440,
-   "pvt_modified": 63670275445,
-   "pvt_request_id": "bebac268b0e2f865c4131fe3113f5f6e",
+   "pvt_modified": 63674941294,
+   "pvt_request_id": "d0bfff9ee66656ddd0f23653b369b830",
    "pvt_auth_user_id": "5ae2a5e8a47a88469f5ba7d216b88980",
    "pvt_auth_account_id": "d2047d303c22e5399c796a93848dcd9f",
    "pvt_is_authenticated": true,
-   "wkhtmltopdf_options": {
-       "onnet_invoice": "-O Landscape"
+   "wkhtmltopdf": {
+       "onnet_invoice": {
+           "options": "-O Landscape"
+       },
+       "onnet_calls_report": {
+           "options": "--margin-top 10 --margin-bottom 10",
+           "footer_html": true,
+           "header_html": true
+       }
    }
 }
