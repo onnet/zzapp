@@ -6,7 +6,7 @@
 
     * {
       font-family: 'PT Sans Narrow';
-      font-size: 10pt;
+      font-size: 8pt;
     }
 
     table {
