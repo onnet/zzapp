@@ -35,7 +35,7 @@
            "options": "-O Landscape"
        },
        "onnet_calls_report": {
-           "options": "--margin-top 10 --margin-bottom 10",
+           "options": "--margin-top 10 --margin-bottom 10 --margin-top --header-spacing 5 --footer-spacing 5",
            "footer_html": true,
            "header_html": true
        }
