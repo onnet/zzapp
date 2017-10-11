@@ -43,7 +43,7 @@
   </tr>
 </table>
 <br />
-<div style="text-align: center;"><strong>Детализация телефонных вызовов {{ account_name }}</strong></div>
+<div style="text-align: center;"><strong>Детализация телефонных вызовов {{ account_vars.account_name }}</strong></div>
 <div style="text-align: center; font-size: 9pt;">Договор № {{ agrm_num }} от {{ agrm_date }}. Период с {{ start_date }} по {{ end_date }}.</div><br />
 <table class="bordered_table">
   <tr>
