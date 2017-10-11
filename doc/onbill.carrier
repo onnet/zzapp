@@ -1,13 +1,14 @@
 {
    "_id": "onbill",
+   "_rev": "14-753df90552f801ff0c80f707f545a1ce",
    "pvt_billing_day": 1,
    "pvt_account_id": "d2047d303c22e5399c796a93848dcd9f",
    "pvt_type": "onbill",
    "force_postpay_billing_day": true,
    "pvt_vsn": "1",
    "pvt_account_db": "account%2Fd2%2F04%2F7d303c22e5399c796a93848dcd9f",
-   "pvt_modified": 63671227619,
-   "pvt_request_id": "32d7151a6810f0da481e7ab6d09010be",
+   "pvt_modified": 63673131505,
+   "pvt_request_id": "640f747931fd74387759238d291c320e",
    "pvt_auth_user_id": "5ae2a5e8a47a88469f5ba7d216b88980",
    "pvt_auth_account_id": "d2047d303c22e5399c796a93848dcd9f",
    "pvt_is_authenticated": true,
@@ -24,7 +25,8 @@
    ],
    "carriers": [
        "onnet",
-       "beeline"
+       "beeline_spb",
+       "beeline_msk"
    ],
    "extra_codes": {
        "phone_numbers": {
