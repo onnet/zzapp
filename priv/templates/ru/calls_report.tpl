@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <link href='http://fonts.googleapis.com/css?family=PT+Sans+Narrow&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
