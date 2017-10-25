@@ -197,30 +197,32 @@
     <!-- begin_services -->
     <!-- begin_item -->
     {% for fee_line in monthly_fees %}
-      <tr>
-        <td class="cell_padding" style="text-align: left; width: 23%;">
-          {{ fee_line.name }}
-          {% if fee_line.period %}
-            {% for period in fee_line.period %}
-               {{ period.day }}
-               {{ period.month_short }}
-               {{ period.year }}{% if forloop.last %}.{% endif %}
-            {% endfor %}
-          {% endif %}
-        </td>
-        <td class="cell_padding" style="width: 3%;">{{ fee_line.code_number }}</td>
-        <td class="cell_padding" style="width: 8%;">{{ fee_line.code_name }}</td>
-        <td class="cell_padding" style="text-align: right; width: 5%;">{{ fee_line.quantity|floatformat:2 }}</td>
-        <td class="cell_padding" style="text-align: right; width: 7%;">{{ fee_line.rate_netto|floatformat:2 }}</td>
-        <td class="cell_padding" style="text-align: right; width: 10%;">{{ fee_line.cost_netto|floatformat:2 }}</td>
-        <td style="width: 5%;">Без акциза</td>
-        <td class="cell_padding" style="text-align: right; width: 6%;">{{ vat_rate }}%</td>
-        <td class="cell_padding" style="text-align: right; width: 7%;">{{ fee_line.vat_line_total|floatformat:2 }}</td>
-        <td class="cell_padding" style="text-align: right; width: 10%;">{{ fee_line.cost_brutto|floatformat:2 }}</td>
-        <td style="width: 4%;">--</td>
-        <td style="width: 8%;">--</td>
-        <td style="width: 7%;">--</td>
-      </tr>
+      {% if fee_line.cost|floatformat:2 != "0.00" %}
+        <tr>
+          <td class="cell_padding" style="text-align: left; width: 23%;">
+            {{ fee_line.name }}
+            {% if fee_line.period %}
+              {% for period in fee_line.period %}
+                 {{ period.day }}
+                 {{ period.month_short }}
+                 {{ period.year }}{% if forloop.last %}.{% endif %}
+              {% endfor %}
+            {% endif %}
+          </td>
+          <td class="cell_padding" style="width: 3%;">{{ fee_line.code_number }}</td>
+          <td class="cell_padding" style="width: 8%;">{{ fee_line.code_name }}</td>
+          <td class="cell_padding" style="text-align: right; width: 5%;">{{ fee_line.quantity|floatformat:2 }}</td>
+          <td class="cell_padding" style="text-align: right; width: 7%;">{{ fee_line.rate_netto|floatformat:2 }}</td>
+          <td class="cell_padding" style="text-align: right; width: 10%;">{{ fee_line.cost_netto|floatformat:2 }}</td>
+          <td style="width: 5%;">Без акциза</td>
+          <td class="cell_padding" style="text-align: right; width: 6%;">{{ vat_rate }}%</td>
+          <td class="cell_padding" style="text-align: right; width: 7%;">{{ fee_line.vat_line_total|floatformat:2 }}</td>
+          <td class="cell_padding" style="text-align: right; width: 10%;">{{ fee_line.cost_brutto|floatformat:2 }}</td>
+          <td style="width: 4%;">--</td>
+          <td style="width: 8%;">--</td>
+          <td style="width: 7%;">--</td>
+        </tr>
+      {% endif %}
     {% endfor %}
     <!-- end_item -->
     <!-- end_services -->
