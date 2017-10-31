@@ -12,6 +12,8 @@
 
 %% Appliers
 -export([current_state/2
+        ,periodic_fees/2
+        ,import_periodic_fees/3
         ,import_accounts/3
         ,import_onbill_data1/3
         ,is_allowed/1
@@ -24,9 +26,24 @@
 -define(ONBILL_DOC, <<"onbill">>).
 -define(CATEGORY, "onbill").
 -define(ACTIONS, [<<"current_state">>
+                 ,<<"periodic_fees">>
+                 ,<<"import_periodic_fees">>
                  ,<<"import_accounts">>
                  ,<<"import_onbill_data1">>
                  ]).
+
+-define(IMPORT_PERIODIC_FEES_DOC_FIELDS
+       ,[<<"account_id">>
+        ,<<"service_id">>
+        ,<<"quantity">>
+        ]).
+
+-define(IMPORT_PERIODIC_FEES_MANDATORY_FIELDS
+       ,[<<"account_id">>
+        ,<<"service_id">>
+        ,<<"quantity">>
+        ]).
+
 
 -define(IMPORT_ACCOUNTS_DOC_FIELDS
        ,[<<"account_name">>
@@ -103,6 +120,11 @@ output_header(<<"current_state">>) ->
     ,<<"users">>
     ,<<"registered_devices">>
     ,<<"devices">>
+    ];
+output_header(<<"periodic_fees">>) ->
+    [<<"service_id">>
+    ,<<"name">>
+    ,<<"rate">>
     ].
 
 -spec help(kz_json:object()) -> kz_json:object().
@@ -122,6 +144,24 @@ action(<<"current_state">>) ->
     ,{<<"doc">>, <<"Just an experimentsl feature.\n"
                    "No additional parametres needed.\n"
                  >>}
+    ];
+
+action(<<"periodic_fees">>) ->
+    [{<<"description">>, <<"List configured periodic fees">>}
+    ,{<<"doc">>, <<"Just an experimentsl feature.\n"
+                   "No additional parametres needed.\n"
+                 >>}
+    ];
+
+action(<<"import_periodic_fees">>) ->
+    Mandatory = ?IMPORT_PERIODIC_FEES_MANDATORY_FIELDS,
+    Optional = ?IMPORT_PERIODIC_FEES_DOC_FIELDS -- Mandatory,
+
+    [{<<"description">>, <<"Bulk-import using periodic fees list">>}
+    ,{<<"doc">>, <<"Assigning periodic fees from file">>}
+    ,{<<"expected_content">>, <<"text/csv">>}
+    ,{<<"mandatory">>, Mandatory}
+    ,{<<"optional">>, Optional}
     ];
 
 action(<<"import_accounts">>) ->
@@ -180,6 +220,47 @@ current_state(_, [SubAccountId | DescendantsIds]) ->
      ,count_registrations(Realm)
      ,kz_services:category_quantity(<<"devices">>, Services)
      ], DescendantsIds}.
+
+-spec periodic_fees(kz_tasks:extra_args(), kz_tasks:iterator()) -> kz_tasks:iterator().
+periodic_fees(#{account_id := AccountId}, init) ->
+    JObj = kz_service_plan:fetch(<<"onnet_periodic_fees">>, AccountId),
+    Keys = kz_json:get_keys([<<"plan">>,<<"periodic_fees">>],JObj),
+    {'ok', Keys};
+periodic_fees(_, []) -> stop;
+periodic_fees(#{account_id := AccountId}, [Key | Keys]) ->
+    JObj = kz_service_plan:fetch(<<"onnet_periodic_fees">>, AccountId),
+    {[Key
+     ,kz_json:get_value([<<"plan">>,<<"periodic_fees">>,Key,<<"name">>],JObj)
+     ,kz_json:get_value([<<"plan">>,<<"periodic_fees">>,Key,<<"rate">>],JObj)
+     ], Keys}.
+
+-spec import_periodic_fees(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) ->
+                    {kz_tasks:return(), sets:set()}.
+import_periodic_fees(ExtraArgs=#{account_id := ResellerId}, init, Args) ->
+    remove_periodic_fees_from_db(get_descendants(ResellerId)),
+    kz_datamgr:suppress_change_notice(),
+    IterValue = sets:new(),
+    import_periodic_fees(ExtraArgs, IterValue, Args);
+import_periodic_fees(_
+                    ,_
+                    ,#{<<"account_id">> := AccountId
+                      ,<<"service_id">> := ServiceId
+                      ,<<"quantity">> := Quantity
+                      }
+      ) ->
+    DbName = kz_util:format_account_id(AccountId, 'encoded'),
+    ServiceStarts = calendar:datetime_to_gregorian_seconds({onbill_util:period_start_date(AccountId), {0,0,0}}),
+    Values =
+        props:filter_undefined(
+            [{<<"_id">>, kz_datamgr:get_uuid()}
+            ,{<<"pvt_type">>, <<"periodic_fee">>}
+            ,{<<"service_id">>, ServiceId}
+            ,{<<"quantity">>, Quantity}
+            ,{<<"service_starts">>, ServiceStarts}
+            ]),
+    JObj = kz_json:from_list(Values),
+    kz_datamgr:save_doc(DbName,kz_json:from_list(Values)),
+    AccountId.
 
 -spec import_accounts(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) ->
                     {kz_tasks:return(), sets:set()}.
@@ -440,3 +521,17 @@ agrm_vals(AgrmNumber, AgrmDate, <<"2">>) ->
 agrm_vals(AgrmNumber, AgrmDate, <<"3">>) ->
     [{[<<"agrm">>,<<"beeline_msk">>,<<"number">>], <<"0WG#", AgrmNumber/binary>>}
     ,{[<<"agrm">>,<<"beeline_msk">>,<<"date">>], format_agrm_date(AgrmDate)}].
+
+remove_periodic_fees_from_db([]) ->
+    'ok';
+remove_periodic_fees_from_db([DescendantId | DescendantsIds]) ->
+    DbName = kz_util:format_account_id(DescendantId, 'encoded'),
+    case kz_datamgr:get_result_ids(DbName, <<"periodic_fees/crossbar_listing">>, []) of
+        {'ok', Ids} ->
+            kz_datamgr:del_docs(DbName, Ids);
+        {'error', _R} ->
+            lager:debug("unable to get periodic_fees docs of ~s: ~p", [DescendantId, _R])
+    end,
+    timer:sleep(100),
+    remove_periodic_fees_from_db(DescendantsIds).
+
