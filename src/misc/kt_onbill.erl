@@ -258,7 +258,6 @@ import_periodic_fees(_
             ,{<<"quantity">>, Quantity}
             ,{<<"service_starts">>, ServiceStarts}
             ]),
-    JObj = kz_json:from_list(Values),
     kz_datamgr:save_doc(DbName,kz_json:from_list(Values)),
     AccountId.
 
@@ -525,6 +524,8 @@ agrm_vals(AgrmNumber, AgrmDate, <<"3">>) ->
 remove_periodic_fees_from_db([]) ->
     'ok';
 remove_periodic_fees_from_db([DescendantId | DescendantsIds]) ->
+    Services = kz_services:delete_service_plan(<<"voip_service_plan">>, kz_services:fetch(DescendantId)),
+    kz_services:save(kz_services:add_service_plan(<<"onnet_periodic_fees">>, Services)),
     DbName = kz_util:format_account_id(DescendantId, 'encoded'),
     case kz_datamgr:get_result_ids(DbName, <<"periodic_fees/crossbar_listing">>, []) of
         {'ok', Ids} ->
