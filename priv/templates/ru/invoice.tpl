@@ -12,6 +12,8 @@
         width: 100%;
     }
 
+    tr { page-break-inside: avoid; }
+
     .bordered_table {
       border-collapse: collapse;
     }

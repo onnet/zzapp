@@ -6,6 +6,8 @@
       font-family: 'PT Sans Narrow';
       font-size: 15;
     }
+
+    tr { page-break-inside: avoid; }
   </style>
 </head>
 <body>
