@@ -12,6 +12,7 @@
         ,maybe_main_carrier/2
         ,get_main_carrier/2
         ,format_datetime/1
+        ,format_datetime_tz/2
         ,is_billable/1
         ,validate_relationship/2
         ,get_children_list/1
@@ -160,6 +161,13 @@ get_main_carrier(AccountId, _) ->
 -spec format_datetime(integer()) -> ne_binary().
 format_datetime(TStamp) ->
     {{Year, Month, Day}, {Hour, Minute, Second}} = calendar:gregorian_seconds_to_datetime(TStamp),
+    StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])),
+    kz_term:to_binary(StrTime).
+
+-spec format_datetime_tz(integer(), ne_binary()) -> ne_binary().
+format_datetime_tz(TStamp, Timezone) ->
+    DateTime = calendar:gregorian_seconds_to_datetime(TStamp),
+    {{Year, Month, Day}, {Hour, Minute, Second}} = localtime:utc_to_local(DateTime, kz_term:to_list(Timezone)),
     StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])),
     kz_term:to_binary(StrTime).
 
