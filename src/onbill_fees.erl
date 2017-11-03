@@ -165,9 +165,11 @@ monthly_fees(AccountId, Year, Month, Day) ->
 process_per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Carrier) ->
     process_per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
 process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
+    ResellerId = kz_services:find_reseller_id(AccountId),
+    Timezone = kz_account:timezone(ResellerId),
     JObjs = get_period_per_minute_jobjs(AccountId, Year, Month, Day),
     Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
-    {_, CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc) end, {[], 0,0}, JObjs),
+    {_, CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc, Timezone) end, {[], 0,0}, JObjs),
     DaysInPeriod = onbill_util:days_in_period(AccountId, Year, Month, Day),
     aggregated_service_to_line({<<"per-minute-voip">>
                                ,<<"description">>
@@ -186,9 +188,11 @@ process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
 per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Carrier) ->
     per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
 per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
+    ResellerId = kz_services:find_reseller_id(AccountId),
+    Timezone = kz_account:timezone(ResellerId),
     JObjs = get_period_per_minute_jobjs(AccountId, Year, Month, Day),
     Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
-    lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc) end, {[], 0,0}, JObjs).
+    lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc, Timezone) end, {[], 0,0}, JObjs).
 
 get_period_per_minute_jobjs(AccountId, Year, Month, Day) ->
     {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
@@ -236,14 +240,16 @@ get_carrier_regexes(CarrierDoc,_) ->
     ,kz_json:get_value(<<"called_number_regex">>, CarrierDoc, <<"^\\d*$">>)
     }.
 
-maybe_count_call(Regexes, JObj, {JObjs, AccSec, AccAmount}) ->
+maybe_count_call(Regexes, JObj, {JObjs, AccSec, AccAmount}, Timezone) ->
     case maybe_interesting_call(Regexes, JObj) of
         'true' ->
             CallCost = wht_util:units_to_dollars(kz_json:get_integer_value([<<"value">>,<<"cost">>], JObj, 0)),
             CallDuration = kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0),
             Values = [{[<<"value">>,<<"cost">>], CallCost}
                      ,{[<<"value">>,<<"duration_min">>], CallDuration/60}
-                     ,{[<<"value">>,<<"start_datetime">>], onbill_util:format_datetime(kz_json:get_integer_value([<<"value">>,<<"start">>], JObj))}
+                     ,{[<<"value">>,<<"start_datetime">>]
+                      ,onbill_util:format_datetime_tz(kz_json:get_integer_value([<<"value">>,<<"start">>], JObj), Timezone)
+                      }
                      ],
             {[kz_json:set_values(Values, JObj)] ++ JObjs
              ,AccSec + kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0)
