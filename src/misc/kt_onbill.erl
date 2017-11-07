@@ -244,6 +244,32 @@ import_periodic_fees(ExtraArgs=#{account_id := ResellerId}, init, Args) ->
 import_periodic_fees(_
                     ,_
                     ,#{<<"account_id">> := AccountId
+                      ,<<"service_id">> := <<"phone_line_649">>
+                      ,<<"quantity">> := Quantity
+                      }
+      ) ->
+    DbName = kz_util:format_account_id(AccountId, 'encoded'),
+    case kz_datamgr:open_doc(DbName, <<"limits">>) of
+        {ok, Doc} ->
+            NewDoc = kz_json:set_value(<<"twoway_trunks">>, Doc, kz_term:to_integer(Quantity)),
+            kz_datamgr:ensure_saved(DbName, NewDoc),
+            AccountId;
+        {'error', 'not_found'} ->
+            Values =
+                props:filter_undefined(
+                    [{<<"_id">>, <<"limits">>}
+                    ,{<<"pvt_type">>, <<"limits">>}
+                    ,{<<"twoway_trunks">>, kz_term:to_integer(Quantity)}
+                    ]),
+            NewDoc = kz_json:set_values(Values ,kz_json:new()),
+            kz_datamgr:ensure_saved(DbName, NewDoc),
+            AccountId;
+        _ ->
+            'onbill_data_not_added'
+    end;
+import_periodic_fees(_
+                    ,_
+                    ,#{<<"account_id">> := AccountId
                       ,<<"service_id">> := ServiceId
                       ,<<"quantity">> := Quantity
                       }
