@@ -251,7 +251,7 @@ import_periodic_fees(_
     DbName = kz_util:format_account_id(AccountId, 'encoded'),
     case kz_datamgr:open_doc(DbName, <<"limits">>) of
         {ok, Doc} ->
-            NewDoc = kz_json:set_value(<<"twoway_trunks">>, Doc, kz_term:to_integer(Quantity)),
+            NewDoc = kz_json:set_value(<<"twoway_trunks">>, kz_term:to_integer(Quantity), Doc),
             kz_datamgr:ensure_saved(DbName, NewDoc),
             AccountId;
         {'error', 'not_found'} ->
