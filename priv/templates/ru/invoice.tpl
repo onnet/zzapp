@@ -45,7 +45,9 @@
           Приложение №1<br />
           к постановлению Правительства<br />
           Российской Федерации<br />
-          от 26.12.2011 г. № 1137
+          от 26.12.2011 г. № 1137<br />
+          <font size="5">
+          (в ред. Постановления Правительства РФ от 19.08.2017 № 981)</font> 
         </span>
       </td>
     </tr>
@@ -69,7 +71,7 @@
     <br />
   ИНН/КПП покупателя: {{ account_vars.account_inn }} / {{ account_vars.account_kpp }} <br />
   Валюта: наименование, код <u>Российский рубль, 643</u><br />
-  Идентификатор государственного контракта, договора (соглашения): ---- <br />
+  Идентификатор государственного контракта, договора (соглашения) (при наличии): ---- <br />
   <font size="9">
     Дополнительные (условия оплаты по договору (контракту), способ отправления и т.д.)
   </font>
@@ -77,123 +79,131 @@
   <br />
   <table class="bordered_table" style="width: 100%;">
     <tr>
-      <td align="center" width="23%" rowspan="2">
-        <font size="9">
+      <td align="center" width="24%" rowspan="2">
+        <font size="8">
   	Наименование товара<br />(описание выполненных работ, оказанных услуг), имущественного права
         </font>
       </td>
-      <td align="center" width="11%" colspan=2>
-        <font size="9">
+      <td align="center" width="4%" rowspan="2">
+        <font size="8">
+                Код вида товара
+        </font>
+      </td>
+      <td align="center" width="8%" colspan=2>
+        <font size="8">
           Единица<br />измерения
         </font>
       </td>
       <td align="center" width="5%" rowspan="2">
-        <font size="9">
-          Коли-<br />чество (объем)<br />
+        <font size="8">
+          Коли-<br />чество (объем)
         </font>
       </td>
       <td align="center" width="7%" rowspan="2">
-        <font size="9">
-          Цена (тариф) за единицу измерения<br />
+        <font size="8">
+          Цена (тариф) за единицу измерения
         </font>
       </td>
-      <td align="center" width="10%" rowspan="2">
-        <font size="9">
-          Стоимость товаров (работ, услуг), имущественных прав без налога — всего<br />
+      <td align="center" width="9%" rowspan="2">
+        <font size="8">
+          Стоимость товаров (работ, услуг), имущественных прав без налога — всего
         </font>
       </td>
       <td align="center" width="5%" rowspan="2">
-        <font size="9">
-          В том числе сумма акциза<br />
+        <font size="8">
+          В том числе сумма акциза
         </font>
       </td>
       <td align="center" width="6%" rowspan="2">
-        <font size="9">
-          Налоговая ставка<br />
+        <font size="8">
+          Налоговая ставка
         </font>
       </td>
       <td align="center" width="7%" rowspan="2">
-        <font size="9">
-          Сумма налога, предъявляе-<br />мая покупателю<br />
+        <font size="8">
+          Сумма налога, предъявляе-<br />мая покупателю
         </font>
       </td>
-      <td align="center" width="10%" rowspan="2">
-        <font size="9">
-          Стоимость товаров (работ, услуг), имущественных прав с налогом — всего<br />
+      <td align="center" width="9%" rowspan="2">
+        <font size="8">
+          Стоимость товаров (работ, услуг), имущественных прав с налогом — всего
         </font>
       </td>
-      <td align="center" width="12%" colspan=2>
-        <font size="9">
-          Страна происхождения товара<br />
+      <td align="center" width="9%" colspan=2>
+        <font size="8">
+          Страна происхождения товара
         </font>
       </td>
       <td align="center" width="7%" rowspan="2">
-        <font size="9">
-          Номер таможенной декларации<br />
+        <font size="8">
+          Регистрацион-<br />ный номер таможенной декларации
         </font>
       </td>
     </tr>
     <tr>
-      <td width="3%" align="center">
-        <font size="8">
+      <td width="2%" align="center">
+        <font size="6">
           к<br />о<br />д<br />
         </font>
       </td>
-      <td width="8%" align="center">
-        <font size="8">
+      <td width="6%" align="center">
+        <font size="6">
           условное обозначение (национальное)<br />
         </font>
       </td>
-      <td width="4%" align="center">
-        <font size="8">
+      <td width="3%" align="center">
+        <font size="6">
           цифро-<br />вой код<br />
         </font>
       </td>
-      <td width="8%" align="center">
-        <font size="8">
+      <td width="6%" align="center">
+        <font size="6">
           краткое наименование<br />
         </font>
       </td>
     </tr>
     <tr>
-      <td width="23%">
-        <font size="8">1</font>
-      </td>
-      <td width="3%">
-        <font size="8">2</font>
-      </td>
-      <td width="8%">
-        <font size="8">2а</font>
-      </td>
-      <td width="5%">
-        <font size="8">3</font>
-      </td>
-      <td width="7%">
-        <font size="8">4</font>
-      </td>
-      <td width="10%">
-        <font size="8">5</font>
-      </td>
-      <td width="5%">
-        <font size="8">6</font>
-      </td>
-      <td width="6%">
-        <font size="8">7</font>
-      </td>
-      <td width="7%">
-        <font size="8">8</font>
-      </td>
-      <td width="10%">
-        <font size="8">9</font>
+      <td width="24%">
+        <font size="7">1</font>
       </td>
       <td width="4%">
-        <font size="8">10</font>
+        <font size="7">1a</font>
       </td>
-      <td width="8%">
-        <font size="8">10а</font>
+      <td width="2%">
+        <font size="7">2</font>
+      </td>
+      <td width="6%">
+        <font size="7">2а</font>
+      </td>
+      <td width="5%">
+        <font size="7">3</font>
       </td>
       <td width="7%">
-        <font size="8">11</font>
+        <font size="7">4</font>
+      </td>
+      <td width="9%">
+        <font size="7">5</font>
+      </td>
+      <td width="5%">
+        <font size="7">6</font>
+      </td>
+      <td width="6%">
+        <font size="7">7</font>
+      </td>
+      <td width="7%">
+        <font size="7">8</font>
+      </td>
+      <td width="9%">
+        <font size="7">9</font>
+      </td>
+      <td width="3%">
+        <font size="7">10</font>
+      </td>
+      <td width="6%">
+        <font size="7">10а</font>
+      </td>
+      <td width="7%">
+        <font size="7">11</font>
       </td>
     </tr>
     <!-- begin_services -->
@@ -201,7 +211,7 @@
     {% for fee_line in monthly_fees %}
       {% if fee_line.cost|floatformat:2 != "0.00" %}
         <tr>
-          <td class="cell_padding" style="text-align: left; width: 23%;">
+          <td class="cell_padding" style="text-align: left; width: 24%;">
             {{ fee_line.name }}
             {% if fee_line.period %}
               {% for period in fee_line.period %}
@@ -211,17 +221,18 @@
               {% endfor %}
             {% endif %}
           </td>
-          <td class="cell_padding" style="width: 3%;">{{ fee_line.code_number }}</td>
-          <td class="cell_padding" style="width: 8%;">{{ fee_line.code_name }}</td>
+          <td class="cell_padding" style="width: 4%;">--</td>
+          <td class="cell_padding" style="width: 2%;">{{ fee_line.code_number }}</td>
+          <td class="cell_padding" style="width: 6%;">{{ fee_line.code_name }}</td>
           <td class="cell_padding" style="text-align: right; width: 5%;">{{ fee_line.quantity|floatformat:2 }}</td>
           <td class="cell_padding" style="text-align: right; width: 7%;">{{ fee_line.rate_netto|floatformat:2 }}</td>
-          <td class="cell_padding" style="text-align: right; width: 10%;">{{ fee_line.cost_netto|floatformat:2 }}</td>
+          <td class="cell_padding" style="text-align: right; width: 9%;">{{ fee_line.cost_netto|floatformat:2 }}</td>
           <td style="width: 5%;">Без акциза</td>
           <td class="cell_padding" style="text-align: right; width: 6%;">{{ vat_rate }}%</td>
           <td class="cell_padding" style="text-align: right; width: 7%;">{{ fee_line.vat_line_total|floatformat:2 }}</td>
-          <td class="cell_padding" style="text-align: right; width: 10%;">{{ fee_line.cost_brutto|floatformat:2 }}</td>
-          <td style="width: 4%;">--</td>
-          <td style="width: 8%;">--</td>
+          <td class="cell_padding" style="text-align: right; width: 9%;">{{ fee_line.cost_brutto|floatformat:2 }}</td>
+          <td style="width: 3%;">--</td>
+          <td style="width: 6%;">--</td>
           <td style="width: 7%;">--</td>
         </tr>
       {% endif %}
@@ -229,11 +240,11 @@
     <!-- end_item -->
     <!-- end_services -->
     <tr>
-      <td class="cell_padding" style="text-align: left; width: 46%;" colspan=5>Всего к оплате:</td>		
-      <td class="cell_padding" style="text-align: right; width: 10%;">{{ total_netto|floatformat:2 }}</td>
+      <td class="cell_padding" style="text-align: left; width: 48%;" colspan=5>Всего к оплате:</td>		
+      <td class="cell_padding" style="text-align: right; width: 9%;">{{ total_netto|floatformat:2 }}</td>
       <td colspan="2" style="width: 11%;">X</td>
       <td class="cell_padding" style="text-align: right; width: 7%;">{{ total_vat|floatformat:2 }}</td>
-      <td class="cell_padding" style="text-align: right; width: 10%;">{{ total_brutto|floatformat:2 }}</td>
+      <td class="cell_padding" style="text-align: right; width: 9%;">{{ total_brutto|floatformat:2 }}</td>
     </tr>	
   </table>
   <br />
@@ -305,6 +316,25 @@
             </tr>
           {% endif %}
         </table>	
+      </td>
+    </tr>
+    <tr>
+      <td width="100%">
+        <font size=8>
+          Индивидуальный предприниматель или иное уполномоченное лицо ________________ (__________________________) ______________________________________________________
+        </font>
+        <br />
+        <table border="0">
+          <tr>
+            <td width="20%" align="right"><font size=4>(подпись)</font></td>
+            <td width="20%" align="center"><font size=4>(ф.и.о.)</font></td>
+            <td width="25%" align="center">
+              <font size=4>
+                (реквизиты свидетельства о государственной регистрации<br />индивидуального предпринимателя)
+              </font>
+            </td>
+          </tr>
+        </table>
       </td>
     </tr>
   </table>
