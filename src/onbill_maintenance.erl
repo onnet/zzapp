@@ -3,11 +3,11 @@
 -export([populate_modb_day_with_fee/4
         ,populate_modb_with_fees/3
         ,refresh/0
-        ,reconcile_and_sync/0
         ,correct_billing_id/0
         ,set_billing_day/1
         ,set_billing_day/2
-        ,set_rate_option/4
+        ,set_rate_value/5
+        ,set_rate_list_value/5
         ]).
 
 -include("onbill.hrl").
@@ -54,30 +54,6 @@ refresh([], _) -> 'no_return';
 refresh([Database|Databases], Total) ->
     _ = refresh(Database, length(Databases) + 1, Total),
     refresh(Databases, Total).
-
--spec reconcile_and_sync() -> 'no_return'.
--spec reconcile_and_sync(ne_binaries(), non_neg_integer()) -> 'no_return'.
--spec reconcile_and_sync(ne_binary(), non_neg_integer(), non_neg_integer()) -> 'ok'.
-reconcile_and_sync() ->
-    Databases = get_databases(),
-    reconcile_and_sync(Databases, length(Databases) + 1).
-
-reconcile_and_sync(DbName, DbLeft, Total) when is_binary(DbName) ->
-    case kz_datamgr:db_classification(DbName) of
-        'account' ->
-            AccountId = kz_util:format_account_id(DbName, 'raw'),
-            io:format("(~p/~p) syncing database '~s'~n",[DbLeft, Total, AccountId]),
-            onbill_util:reconcile_and_sync(AccountId),
-            timer:sleep(?PAUSE);
-        _Else ->
-            io:format("(~p/~p) skipping database '~s'~n",[DbLeft, Total, DbName]),
-            'ok'
-    end.
-
-reconcile_and_sync([], _) -> 'no_return';
-reconcile_and_sync([Database|Databases], Total) ->
-    _ = reconcile_and_sync(Database, length(Databases) + 1, Total),
-    reconcile_and_sync(Databases, Total).
 
 -spec get_databases() -> ne_binaries().
 get_databases() ->
@@ -153,12 +129,22 @@ set_billing_day(Day, [Database|Databases], Total) ->
 %%%%%%%%%%%%%%%%%%%%%%%  Set option to ratedeck  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--spec set_rate_option(ne_binary(), ne_binary(), ne_binary(), ne_binary()) -> 'ok'.
-set_rate_option(RatedeckDb, Option, K, V) ->
+-spec set_rate_value(ne_binary(), ne_binary(), ne_binary(), ne_binary(), ne_binary()) -> 'ok'.
+set_rate_value(RatedeckDb, SetKey, SetValue, LookupKey, LookupValue) ->
     case kz_datamgr:get_result_ids(RatedeckDb, <<"rates/crossbar_listing">>) of
         {ok,DocIds} ->
-            Opts = binary:split(Option, <<",">>),
-            onbill_util:process_documents_case([], [{<<"options">>, Opts}], RatedeckDb, DocIds, {K,V});
+            onbill_util:process_documents_case([], [{SetKey, SetValue}], RatedeckDb, DocIds, {LookupKey, LookupValue});
+        _ ->
+            io:format("No rates found ~n"),
+            'ok'
+    end.
+
+-spec set_rate_list_value(ne_binary(), ne_binary(), ne_binary(), ne_binary(), ne_binary()) -> 'ok'.
+set_rate_list_value(RatedeckDb, SetKey, SetCommaSeparatedValues, LookupKey, LookupValue) ->
+    case kz_datamgr:get_result_ids(RatedeckDb, <<"rates/crossbar_listing">>) of
+        {ok,DocIds} ->
+            Opts = binary:split(SetCommaSeparatedValues, <<",">>),
+            onbill_util:process_documents_case([], [{SetKey, Opts}], RatedeckDb, DocIds, {LookupKey, LookupValue});
         _ ->
             io:format("No rates found ~n"),
             'ok'
