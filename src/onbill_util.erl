@@ -56,6 +56,7 @@
         ,replicate_account_doc/1
         ,transit_to_full_suscription_state/1
         ,reconcile_and_maybe_sync/1
+        ,reconcile_and_sync/1
         ,maybe_save_as_dirty/1
         ,current_balance/1
         ,current_account_dollars/1
