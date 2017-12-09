@@ -116,8 +116,6 @@ account_carriers_list(AccountId) ->
 carrier_doc(Carrier, AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     DbName = kz_util:format_account_id(ResellerId,'encoded'),
-            lager:info("IAMTASKS carrier_doc/2 Carrier: ~p",[Carrier]),
-            lager:info("IAMTASKS carrier_doc/2 AccountId: ~p",[AccountId]),
     {'ok', CarrierDoc} =  kz_datamgr:open_doc(DbName, ?CARRIER_DOC(Carrier)),
     CarrierDoc.
 

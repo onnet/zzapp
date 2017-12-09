@@ -366,24 +366,10 @@ import_onbill_data1(#{account_id := _ResellerId
               ,<<"agrm_type_id">> := AgrmTypeId
               }
       ) ->
-lager:info("IAM BillingAddress: ~p",[BillingAddress]),
-lager:info("IAM AgrmNumber: ~p",[AgrmNumber]),
-lager:info("IAM AgrmDate: ~p",[AgrmDate]),
     case binary:split(BillingAddress, [<<"^*^">>], [global]) of
         [A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11] -> ok;
         [A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, _, A11] -> ok
     end,
-lager:info("IAM A1: ~p",[A1]),
-lager:info("IAM A2: ~p",[A2]),
-lager:info("IAM A3: ~p",[A3]),
-lager:info("IAM A4: ~p",[A4]),
-lager:info("IAM A5: ~p",[A5]),
-lager:info("IAM A6: ~p",[A6]),
-lager:info("IAM A7: ~p",[A7]),
-lager:info("IAM A8: ~p",[A8]),
-lager:info("IAM A9: ~p",[A9]),
-lager:info("IAM A10: ~p",[A10]),
-lager:info("IAM A11: ~p",[A11]),
     AA4 = case A2 == A4 of
               'true' -> <<>>;
               'false' -> A4
@@ -424,15 +410,11 @@ generate_docs(#{account_id := AccountId}, init) ->
     {'ok', get_children(AccountId)};
 generate_docs(_, []) -> stop;
 generate_docs(_, [SubAccountId | DescendantsIds]) ->
-  lager:info("IAMTASKS generate_docs SubAccountId: ~p",[SubAccountId]),
-  lager:info("IAMTASKS generate_docs DescendantsIds: ~p",[DescendantsIds]),
     {'ok', JObj} = kz_account:fetch(SubAccountId),
-  lager:info("IAMTASKS generate_docs fetch JObj: ~p",[JObj]),
     {{Year,Month,Day},{_,_,_}} = calendar:universal_time(),
     {PSYear,PSMonth,PSDay} = onbill_util:previous_period_start_date(SubAccountId, Year, Month, Day),
     {PEYear,PEMonth,PEDay} = onbill_util:period_end_date(SubAccountId, PSYear, PSMonth, PSDay),
     onbill_docs:generate_docs(SubAccountId, PEYear, PEMonth, PEDay),
-  lager:info("IAMTASKS generate_docs kz_account:name JObj: ~p",[kz_account:name(JObj)]),
     {[SubAccountId
      ,kz_account:name(JObj)
      ]

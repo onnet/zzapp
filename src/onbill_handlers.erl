@@ -17,7 +17,6 @@
 
 -spec handle_doc_created(kz_json:object(), kz_proplist()) -> any().
 handle_doc_created(JObj, _Props) ->
-  lager:info("IAM Created: ~p",[JObj]),
     AccountId = kz_json:get_value(<<"Account-ID">>, JObj),
     case (AccountId /= 'undefined')
          andalso kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded'))

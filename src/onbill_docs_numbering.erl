@@ -81,7 +81,6 @@ number_lookup(AccountId, Carrier, DocType0, Year, Month) ->
     case kz_datamgr:get_results(DbName, ?NUMBER_LOOKUP_VIEW, Opts) of
         {'ok', []} -> {'error', 'not_found'};
         {'ok', ResultList} ->
-            lager:info("IAMResultList: ~p",[ResultList]),
             {'ok', lists:max([kz_json:get_value(<<"value">>, R) || R <- ResultList])};
         E -> E
     end.

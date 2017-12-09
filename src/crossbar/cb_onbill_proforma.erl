@@ -79,7 +79,6 @@ summary(Context) ->
 create(Context) ->
     {Year, Month, _} = erlang:date(),
     ReqData = cb_context:req_data(Context),
-    lager:info("IAM proforma ReqData: ~p",[ReqData]),
     AccountId = cb_context:account_id(Context),
     Amount = kz_json:get_number_value(<<"amount">>, ReqData),
     case onbill_docs:create_doc(Amount, AccountId, {[{<<"document_type">>,<<"proforma_invoice">>}]}) of
