@@ -75,6 +75,17 @@ onbill doc account's example
        "invoice",
        "act"
    ],
+   "docs_numbering": {
+       "invoice": {
+           "start_number": 3081
+       },
+       "act": {
+           "follow_type": "invoice"
+       },
+       "aggregated_invoice": {
+           "follow_type": "invoice"
+       }
+   },
    "oper_name_further": "«Оператор»",
    "carrier_type": "main",
    "oper_account_number": 40702810702110000000,

@@ -126,7 +126,8 @@ get_new_number(AccountId, Carrier, DocType, Year, Month) ->
         E -> E
     end.
 
-reserve_number(AccountId, Carrier, DocType, Year, Month, NumberToReserve, Attempt) when Attempt < 3 ->
+reserve_number(AccountId, Carrier, DocType, Year, Month, ReserveCandidate, Attempt) when Attempt < 3 ->
+    NumberToReserve = maybe__start_number(AccountId, Carrier, DocType, ReserveCandidate),
     ResellerId = kz_services:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
     Values = [{<<"_id">>, ?NUMBER_DOC_ID(Carrier, DocType, NumberToReserve)}
@@ -207,4 +208,12 @@ alert_doc_numbering_problem(AccountId, Carrier, DocType, Year, Month, Reason) ->
 
 maybe_doc_number_follows(AccountId, Carrier, DocType) ->
     CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
-    kz_json:get_binary_value([<<"onbill_doc_number_follow">>, DocType], CarrierDoc, DocType).
+    kz_json:get_binary_value([<<"docs_numbering">>, DocType, <<"follow_type">>], CarrierDoc, DocType).
+
+maybe__start_number(AccountId, Carrier, DocType, ReserveCandidate) ->
+    CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
+    MinNumber = kz_json:get_integer_value([<<"docs_numbering">>, DocType, <<"start_number">>], CarrierDoc, 1),
+    case kz_term:to_integer(ReserveCandidate) > MinNumber of
+        'true' -> ReserveCandidate;
+        'false' -> MinNumber
+    end.

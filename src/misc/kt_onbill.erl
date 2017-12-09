@@ -421,14 +421,18 @@ lager:info("IAM A11: ~p",[A11]),
 
 -spec generate_docs(kz_tasks:extra_args(), kz_tasks:iterator()) -> kz_tasks:iterator().
 generate_docs(#{account_id := AccountId}, init) ->
-    {'ok', get_descendants(AccountId)};
+    {'ok', get_children(AccountId)};
 generate_docs(_, []) -> stop;
 generate_docs(_, [SubAccountId | DescendantsIds]) ->
+  lager:info("IAMTASKS generate_docs SubAccountId: ~p",[SubAccountId]),
+  lager:info("IAMTASKS generate_docs DescendantsIds: ~p",[DescendantsIds]),
     {'ok', JObj} = kz_account:fetch(SubAccountId),
+  lager:info("IAMTASKS generate_docs fetch JObj: ~p",[JObj]),
     {{Year,Month,Day},{_,_,_}} = calendar:universal_time(),
     {PSYear,PSMonth,PSDay} = onbill_util:previous_period_start_date(SubAccountId, Year, Month, Day),
     {PEYear,PEMonth,PEDay} = onbill_util:period_end_date(SubAccountId, PSYear, PSMonth, PSDay),
     onbill_docs:generate_docs(SubAccountId, PEYear, PEMonth, PEDay),
+  lager:info("IAMTASKS generate_docs kz_account:name JObj: ~p",[kz_account:name(JObj)]),
     {[SubAccountId
      ,kz_account:name(JObj)
      ]
@@ -445,6 +449,18 @@ get_descendants(AccountId) ->
                   ,{'endkey', [AccountId, kz_json:new()]}
                   ],
     case kz_datamgr:get_results(?KZ_ACCOUNTS_DB, <<"accounts/listing_by_descendants">>, ViewOptions) of
+        {'ok', JObjs} -> [kz_doc:id(JObj) || JObj <- JObjs];
+        {'error', _R} ->
+            lager:debug("unable to get descendants of ~s: ~p", [AccountId, _R]),
+            []
+    end.
+
+-spec get_children(ne_binary()) -> ne_binaries().
+get_children(AccountId) ->
+    ViewOptions = [{'startkey', [AccountId]}
+                  ,{'endkey', [AccountId, kz_json:new()]}
+                  ],
+    case kz_datamgr:get_results(?KZ_ACCOUNTS_DB, <<"accounts/listing_by_children">>, ViewOptions) of
         {'ok', JObjs} -> [kz_doc:id(JObj) || JObj <- JObjs];
         {'error', _R} ->
             lager:debug("unable to get descendants of ~s: ~p", [AccountId, _R]),
