@@ -469,7 +469,7 @@ today_dailyfee_absent(AccountId) ->
 
 -spec maybe_issue_previous_billing_period_docs(ne_binary(), kz_year(), kz_month(), kz_day()) -> any().
 maybe_issue_previous_billing_period_docs(AccountId, Year, Month, Day) ->
-    {PYear, PMonth, PDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
+    {PYear, PMonth, PDay} = onbill_util:previous_period_start_date(AccountId, Year, Month, Day),
     _ = kz_util:spawn(fun onbill_docs:generate_docs/4, [AccountId, PYear, PMonth, PDay]).
 
 -spec maybe_prorate_new_period(ne_binary(), gregorian_seconds()) -> boolean().

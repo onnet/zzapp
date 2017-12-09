@@ -3,6 +3,7 @@
 -export([get_binary_number/5
         ,get_new_binary_number/3
         ,maybe_get_new_number/4
+        ,maybe_get_new_number/5
         ,number_lookup/5
         ]).
 
@@ -16,7 +17,8 @@
 
 
 -spec get_binary_number(ne_binary(), ne_binary(), ne_binary(), integer(), integer()) -> ne_binary().
-get_binary_number(AccountId, Carrier, DocType, Year, Month) ->
+get_binary_number(AccountId, Carrier, DocType0, Year, Month) ->
+    DocType = maybe_doc_number_follows(AccountId, Carrier, DocType0),
     {YNow, MNow, _} = erlang:date(),
     TReq = ?TO_INT(Year) * 100 + ?TO_INT(Month),
     TNow = ?TO_INT(YNow) * 100 + ?TO_INT(MNow),
@@ -47,7 +49,8 @@ binary_number(AccountId, Carrier, DocType, Year, Month) ->
     end.
 
 -spec get_new_binary_number(ne_binary(), ne_binary(), ne_binary()) -> ne_binary().
-get_new_binary_number(AccountId, Carrier, DocType) ->
+get_new_binary_number(AccountId, Carrier, DocType0) ->
+    DocType = maybe_doc_number_follows(AccountId, Carrier, DocType0),
     {Year, Month, _} = erlang:date(),
     case get_new_number(AccountId, Carrier, DocType, Year, Month) of
         {'ok', Number} -> ?TO_BIN(Number);
@@ -66,7 +69,8 @@ get_number(AccountId, Carrier, DocType, Year, Month) ->
     end.
 
 -spec number_lookup(ne_binary(), ne_binary(), ne_binary(), integer(), integer()) -> {'ok', integer()}|{'error', atom()}.
-number_lookup(AccountId, Carrier, DocType, Year, Month) ->
+number_lookup(AccountId, Carrier, DocType0, Year, Month) ->
+    DocType = maybe_doc_number_follows(AccountId, Carrier, DocType0),
     ResellerId = kz_services:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
     _ = onbill_util:check_db(DbName),
@@ -92,7 +96,9 @@ maybe_get_new_number(AccountId, DocType, Year, Month) ->
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
     maybe_get_new_number(AccountId, MainCarrier, DocType, Year, Month).
 
-maybe_get_new_number(AccountId, Carrier, DocType, Year, Month) ->
+-spec maybe_get_new_number(ne_binary(), ne_binary(), ne_binary(), kz_year(), kz_month()) -> {'ok', integer()}|{'error', atom()}.
+maybe_get_new_number(AccountId, Carrier, DocType0, Year, Month) ->
+    DocType = maybe_doc_number_follows(AccountId, Carrier, DocType0),
     {NextMonthYear,NextMonth} = onbill_util:next_month(Year, Month),
     case no_docs_in_year_since_month(AccountId, Carrier, DocType, NextMonthYear, NextMonth)
            andalso no_docs_in_year_since_month(AccountId, Carrier, DocType, NextMonthYear+1, 1)
@@ -198,3 +204,7 @@ alert_doc_numbering_problem(AccountId, Carrier, DocType, Year, Month, Reason) ->
                          Month: ~p"
                        ,[Reason, AccountId, Carrier, DocType, Year, Month]),
     kz_notify:system_alert(Subj, Msg, []).
+
+maybe_doc_number_follows(AccountId, Carrier, DocType) ->
+    CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
+    kz_json:get_binary_value([<<"onbill_doc_number_follow">>, DocType], CarrierDoc, DocType).

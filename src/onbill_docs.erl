@@ -265,10 +265,30 @@ address_join([Head|Tail], Sep) ->
   lists:foldl(fun (Value, Acc) -> <<Acc/binary, Sep/binary, Value/binary>> end, Head, Tail).
 
 maybe_aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
+    ResellerVars = onbill_util:reseller_vars(AccountId),
+    case kz_json:get_value(<<"postpay_aggregate_invoice">>, ResellerVars) of
+        'true' ->
+            case onbill_util:maybe_allow_postpay(AccountId) of
+                'true' ->
+                    aggregate_invoice(AccountId, Year, Month, Day, Carriers);
+                _ ->
+                    maybe_account_aggregate_invoice(AccountId, Year, Month, Day, Carriers)
+            end;
+        _ ->
+            maybe_account_aggregate_invoice(AccountId, Year, Month, Day, Carriers)
+    end.
+
+maybe_account_aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
     case kz_json:get_value(<<"aggregate_invoice">>, AccountOnbillDoc) of
         'true' -> aggregate_invoice(AccountId, Year, Month, Day, Carriers);
-        _ -> 'ok'
+        _ ->
+            %% here is a dirty hack just for old to new billing transition
+            OnNetDocNumber = kz_json:get_binary_value([<<"agrm">>,<<"onnet">>,<<"number">>], AccountOnbillDoc, <<>>),
+            case re:run(OnNetDocNumber, <<"PRE">>) of
+                'nomatch' -> aggregate_invoice(AccountId, Year, Month, Day, Carriers);
+                _ -> 'ok'
+            end
     end.
 
 aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
@@ -281,31 +301,36 @@ aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
     AccountOnbillDoc = onbill_util:account_vars(AccountId),
     {AggregatedVars, TotalNetto, TotalVAT, TotalBrutto} =
         aggregate_data(AccountId, {SYear, SMonth, SDay}, {EYear, EMonth, EDay}),
-    {TotalBruttoDiv, TotalBruttoRem} = total_to_words(TotalBrutto),
-    {TotalVatDiv, TotalVatRem} = total_to_words(TotalVAT),
-    Vars = [{<<"aggregated_vars">>, AggregatedVars}
-           ,{<<"start_date">>, ?DATE_STRING(SYear, SMonth, SDay)}
-           ,{<<"end_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
-           ,{<<"doc_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
-           ,{<<"doc_date_json">>, onbill_util:date_json(EYear, EMonth, EDay)}
-           ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
-           ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
-           ,{<<"total_netto">>, onbill_util:price_round(TotalNetto)}
-           ,{<<"total_vat">>, onbill_util:price_round(TotalVAT)}
-           ,{<<"total_brutto">>, onbill_util:price_round(TotalBrutto)}
-           ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, ResellerVars, 0.0)}
-           ,{<<"total_vat_div">>, TotalVatDiv}
-           ,{<<"total_vat_rem">>, TotalVatRem}
-           ,{<<"total_brutto_div">>, TotalBruttoDiv}
-           ,{<<"total_brutto_rem">>, TotalBruttoRem}
-           ,{<<"onbill_doc_type">>, DocType}
-           ,{<<"doc_number">>, onbill_docs_numbering:get_binary_number(AccountId, MainCarrier, DocType, Year, Month)}
-           ,{<<"reseller_vars">>, pack_vars(ResellerVars)}
-           ,{<<"carrier_vars">>, pack_vars(MainCarrierDoc)}
-           ,{<<"account_vars">>, pack_vars(AccountOnbillDoc)}
-           ],
-lager:info("IAM AggregatedVars: ~p",[AggregatedVars]),
-    save_pdf(Vars, DocType, MainCarrier, AccountId, Year, Month).
+    case TotalNetto > 0 of
+        'true' ->
+            {TotalBruttoDiv, TotalBruttoRem} = total_to_words(TotalBrutto),
+            {TotalVatDiv, TotalVatRem} = total_to_words(TotalVAT),
+            Vars = [{<<"aggregated_vars">>, AggregatedVars}
+                   ,{<<"start_date">>, ?DATE_STRING(SYear, SMonth, SDay)}
+                   ,{<<"end_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
+                   ,{<<"doc_date">>, ?DATE_STRING(EYear, EMonth, EDay)}
+                   ,{<<"doc_date_json">>, onbill_util:date_json(EYear, EMonth, EDay)}
+                   ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
+                   ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
+                   ,{<<"total_netto">>, onbill_util:price_round(TotalNetto)}
+                   ,{<<"total_vat">>, onbill_util:price_round(TotalVAT)}
+                   ,{<<"total_brutto">>, onbill_util:price_round(TotalBrutto)}
+                   ,{<<"vat_rate">>, kz_json:get_value(<<"vat_rate">>, ResellerVars, 0.0)}
+                   ,{<<"total_vat_div">>, TotalVatDiv}
+                   ,{<<"total_vat_rem">>, TotalVatRem}
+                   ,{<<"total_brutto_div">>, TotalBruttoDiv}
+                   ,{<<"total_brutto_rem">>, TotalBruttoRem}
+                   ,{<<"onbill_doc_type">>, DocType}
+                   ,{<<"doc_number">>, onbill_docs_numbering:get_binary_number(AccountId, MainCarrier, DocType, Year, Month)}
+                   ,{<<"reseller_vars">>, pack_vars(ResellerVars)}
+                   ,{<<"carrier_vars">>, pack_vars(MainCarrierDoc)}
+                   ,{<<"account_vars">>, pack_vars(AccountOnbillDoc)}
+                   ],
+  lager:info("IAM AggregatedVars: ~p",[AggregatedVars]),
+            save_pdf(Vars, DocType, MainCarrier, AccountId, Year, Month);
+        'false' ->
+            'ok'
+    end.
 
 aggregate_data(AccountId, {SYear, SMonth, _}, {SYear, SMonth, _}) ->
     Modb = kazoo_modb:get_modb(AccountId, SYear, SMonth),

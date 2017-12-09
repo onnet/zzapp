@@ -16,6 +16,7 @@
         ,import_periodic_fees/3
         ,import_accounts/3
         ,import_onbill_data1/3
+        ,generate_docs/2
         ,is_allowed/1
         ,maybe_format_address_element/2
         ]).
@@ -30,6 +31,7 @@
                  ,<<"import_periodic_fees">>
                  ,<<"import_accounts">>
                  ,<<"import_onbill_data1">>
+                 ,<<"generate_docs">>
                  ]).
 
 -define(IMPORT_PERIODIC_FEES_DOC_FIELDS
@@ -125,6 +127,10 @@ output_header(<<"periodic_fees">>) ->
     [<<"service_id">>
     ,<<"name">>
     ,<<"rate">>
+    ];
+output_header(<<"generate_docs">>) ->
+    [<<"account_id">>
+    ,<<"name">>
     ].
 
 -spec help(kz_json:object()) -> kz_json:object().
@@ -184,6 +190,13 @@ action(<<"import_onbill_data1">>) ->
     ,{<<"expected_content">>, <<"text/csv">>}
     ,{<<"mandatory">>, Mandatory}
     ,{<<"optional">>, Optional}
+    ];
+
+action(<<"generate_docs">>) ->
+    [{<<"description">>, <<"Generate invoices for children">>}
+    ,{<<"doc">>, <<"Just an experimentsl feature.\n"
+                   "Month/Year of the end of billing period needed.\n"
+                 >>}
     ].
 
 %%% Verifiers
@@ -405,6 +418,22 @@ lager:info("IAM A11: ~p",[A11]),
         _ ->
             'onbill_data_not_added'
     end.
+
+-spec generate_docs(kz_tasks:extra_args(), kz_tasks:iterator()) -> kz_tasks:iterator().
+generate_docs(#{account_id := AccountId}, init) ->
+    {'ok', get_descendants(AccountId)};
+generate_docs(_, []) -> stop;
+generate_docs(_, [SubAccountId | DescendantsIds]) ->
+    {'ok', JObj} = kz_account:fetch(SubAccountId),
+    {{Year,Month,Day},{_,_,_}} = calendar:universal_time(),
+    {PSYear,PSMonth,PSDay} = onbill_util:previous_period_start_date(SubAccountId, Year, Month, Day),
+    {PEYear,PEMonth,PEDay} = onbill_util:period_end_date(SubAccountId, PSYear, PSMonth, PSDay),
+    onbill_docs:generate_docs(SubAccountId, PEYear, PEMonth, PEDay),
+    {[SubAccountId
+     ,kz_account:name(JObj)
+     ]
+    ,DescendantsIds
+    }.
 
 %%%===================================================================
 %%% Internal functions
