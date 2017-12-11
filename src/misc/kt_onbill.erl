@@ -414,7 +414,14 @@ generate_docs(_, [SubAccountId | DescendantsIds]) ->
     {{Year,Month,Day},{_,_,_}} = calendar:universal_time(),
     {PSYear,PSMonth,PSDay} = onbill_util:previous_period_start_date(SubAccountId, Year, Month, Day),
     {PEYear,PEMonth,PEDay} = onbill_util:period_end_date(SubAccountId, PSYear, PSMonth, PSDay),
-    onbill_docs:generate_docs(SubAccountId, PEYear, PEMonth, PEDay),
+    try 
+        onbill_docs:generate_docs(SubAccountId, PEYear, PEMonth, PEDay)
+    catch
+        E ->
+            lager:info("IAMTASKS generate_docs E: ~p", [E]),
+            timer:sleep(50000),
+            onbill_docs:generate_docs(SubAccountId, PEYear, PEMonth, PEDay)
+    end,
     {[SubAccountId
      ,kz_account:name(JObj)
      ]
