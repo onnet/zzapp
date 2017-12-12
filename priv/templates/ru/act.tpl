@@ -60,10 +60,36 @@
       <td style="border: 1px solid black; text-align: left;">
         &nbsp
         {{ fee_line.name }}
-        {% if fee_line.period %}
+        {% if fee_line.period and fee_line.days_quantity != fee_line.days_in_period %}
           {% for period in fee_line.period %}
-             {{ period.day }}
-             {{ period.month_short }}
+            {{ period.day }}
+            {% if period.month_short == "Jan" %}
+               янв.
+             {% elif period.month_short == "Feb" %}
+               февр.
+             {% elif period.month_short == "Mar" %}
+               март
+             {% elif period.month_short == "Apr" %}
+               апр.
+             {% elif period.month_short == "May" %}
+               май
+             {% elif period.month_short == "Jun" %}
+               июнь
+             {% elif period.month_short == "Jul" %}
+               июль
+             {% elif period.month_short == "Aug" %}
+               авг.
+             {% elif period.month_short == "Sep" %}
+               сент.
+             {% elif period.month_short == "Oct" %}
+               откт.
+             {% elif period.month_short == "Nov" %}
+               нояб.
+             {% elif period.month_short == "Dec" %}
+               дек.
+             {% else %}
+               {{ period.month_pad }}
+             {% endif %}
              {{ period.year }}{% if forloop.last %}.{% endif %}
           {% endfor %}
         {% endif %}
