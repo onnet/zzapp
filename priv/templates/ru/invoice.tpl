@@ -212,7 +212,7 @@
         <tr>
           <td class="cell_padding" style="text-align: left; width: 24%;">
             {{ fee_line.name }}
-            {% if fee_line.period %}
+            {% if fee_line.period and fee_line.days_quantity != fee_line.days_in_period %}
               {% for period in fee_line.period %}
                  {{ period.day }}
                  {{ period.month_short }}
