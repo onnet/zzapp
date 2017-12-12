@@ -18,6 +18,7 @@
 -define(BILLING_PERIODS, <<"billing_periods">>).
 -define(PERIOD_BALANCE, <<"period_balance">>).
 -define(CURRENCY_SIGN, <<"currency_sign">>).
+-define(VARIABLES, <<"variables">>).
 -define(BILLING_STATUS, <<"billing_status">>).
 -define(NOTIFICATION_MIME_TYPES, [{<<"text">>, <<"html">>}
                                %   ,{<<"text">>, <<"plain">>}
