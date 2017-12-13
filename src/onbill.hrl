@@ -10,7 +10,6 @@
 -define(OB_APP_VERSION, <<"4.0.0">> ).
 
 -define(SERVICES_DB, <<"services">>).
--define(ONBILL_DB, <<"onbill">>).
 -define(ONBILL_DOC, <<"onbill">>).
 -define(MRC_DOC, <<"monthly_recurring">>).
 -define(TO_BIN(Var), kz_term:to_binary(Var)).
@@ -18,6 +17,7 @@
 -define(TO_FLT(Var), kz_term:to_float(Var)).
 -define(CARRIER_DOC(CarrierName), <<"onbill_carrier.", CarrierName/binary>>).
 -define(MOD_CONFIG_CRAWLER, <<(?OB_APP_NAME)/binary, ".account_crawler">>).
+-define(ONBILL_DB(ResellerId), <<(?OB_APP_NAME)/binary, "-", ResellerId/binary>>).
 -define(DOCS_NUMBER_DB(ResellerId, Year)
        ,<<(?OB_APP_NAME)/binary
          ,"-"

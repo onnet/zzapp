@@ -49,7 +49,6 @@ start_link() ->
 %%--------------------------------------------------------------------
 -spec init(any()) -> sup_init_ret().
 init([]) ->
-  %  onbill_util:check_db(?ONBILL_DB),
     onbill_notifications:init(),
     kt_onbill:init(),
     kz_util:set_startup(),

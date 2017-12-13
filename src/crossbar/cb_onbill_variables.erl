@@ -18,6 +18,7 @@
         ]).
 
 -include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
+-include("onbill.hrl").
 
 -define(VARIABLES_DOC_TYPE, <<"onbill">>).
 -define(TEMPLATE_NAME, <<"company_logo">>).
@@ -99,7 +100,12 @@ save(Id, Context) ->
           end,
     NewDoc = kz_json:merge_recursive(Doc, ReqData),
     Context1 = crossbar_doc:save(cb_context:set_doc(Context, NewDoc)),
-    cb_context:set_resp_data(Context1, ReqData).
+    case cb_context:resp_status(Context1) of
+        'success' ->
+            _ = replicate_onbill_doc_definition(Context1),
+            cb_context:set_resp_data(Context1, ReqData);
+        _Status -> Context1
+    end.
 
 save_variables_attachment(Context, DocId, AName) ->
     case cb_context:req_files(Context) of
@@ -117,3 +123,20 @@ save_variables_attachment(Context, DocId, AName) ->
             lager:debug("No file uploaded"),
             cb_context:add_system_error('no file uploaded', Context)
     end.
+
+-spec replicate_onbill_doc_definition(kz_json:object()) ->
+                                          {'ok', kz_json:object()} |
+                                          {'error', any()}.
+replicate_onbill_doc_definition(Context) ->
+    AccountId = cb_context:account_id(Context),
+    ResellerId = kz_services:find_reseller_id(AccountId),
+    JObj = kz_json:set_value(<<"_id">>, AccountId, cb_context:doc(Context)),
+    DbName = ?ONBILL_DB(ResellerId),
+    onbill_util:check_db(DbName),
+    case kz_datamgr:lookup_doc_rev(DbName, AccountId) of
+        {'ok', Rev} ->
+            kz_datamgr:ensure_saved(DbName, kz_doc:set_revision(JObj, Rev));
+        _Else ->
+            kz_datamgr:ensure_saved(DbName, kz_doc:delete_revision(JObj))
+    end.
+
