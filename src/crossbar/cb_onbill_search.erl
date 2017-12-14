@@ -23,9 +23,8 @@
 -define(QUERY_TPL, <<"search/search_by_">>).
 -define(MULTI, <<"multi">>).
 
--define(SEARCHABLE, [<<"account">>, <<"user">>, <<"callflow">>, <<"devices">>]).
--define(ACCOUNT_QUERY_OPTIONS, [<<"name">>, <<"number">>, <<"name_and_number">>]).
--define(ACCOUNTS_QUERY_OPTIONS, [<<"name">>, <<"realm">>, <<"id">>]).
+-define(SEARCHABLE, [<<"onbill">>]).
+-define(ONBILL_QUERY_OPTIONS, [<<"name">>, <<"inn">>, <<"kpp">>, <<"agrm_number">>, <<"billing_address">>]).
 
 %%%===================================================================
 %%% API
@@ -128,11 +127,6 @@ validate_search(Context, 'undefined') ->
                                    ,kz_json:from_list([{<<"message">>, <<"Search needs a document type to search on">>}])
                                    ,Context
                                    );
-validate_search(Context, <<"account">>=Type) ->
-    validate_search(cb_context:set_account_db(Context, ?KZ_ACCOUNTS_DB)
-                   ,Type
-                   ,cb_context:req_value(Context, <<"q">>)
-                   );
 validate_search(Context, Type) ->
     validate_search(Context, Type, cb_context:req_value(Context, <<"q">>)).
 
@@ -254,14 +248,12 @@ validate_query(Context, Available, Query) when is_binary(Query) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec query_options(ne_binary()) -> ne_binaries().
-query_options(AccountDb) ->
-    case kz_datamgr:open_cache_doc(AccountDb, <<"_design/search">>) of
+query_options(Db) ->
+    case kz_datamgr:open_cache_doc(Db, <<"_design/search">>) of
         {'ok', JObj} ->
             format_query_options(kz_json:get_keys(<<"views">>, JObj));
-        {'error', _E} when AccountDb =:= ?KZ_ACCOUNTS_DB ->
-            ?ACCOUNTS_QUERY_OPTIONS;
         {'error', _E} ->
-            ?ACCOUNT_QUERY_OPTIONS
+            ?ONBILL_QUERY_OPTIONS
     end.
 
 %%--------------------------------------------------------------------
