@@ -418,7 +418,7 @@ generate_docs(_, [SubAccountId | DescendantsIds]) ->
         onbill_docs:generate_docs(SubAccountId, PEYear, PEMonth, PEDay)
     catch
         E ->
-            lager:info("IAMTASKS generate_docs E: ~p", [E]),
+            lager:info("try/catch generate_docs Error: ~p", [E]),
             timer:sleep(50000),
             onbill_docs:generate_docs(SubAccountId, PEYear, PEMonth, PEDay)
     end,

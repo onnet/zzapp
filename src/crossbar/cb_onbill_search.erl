@@ -318,10 +318,7 @@ multi_search(Context, Type, [{<<"by_name">>, Val}|Props], Acc) ->
     case cb_context:resp_status(Context1) of
         'success' ->
             RespData = cb_context:resp_data(Context1),
-lager:info("IAM multi_search search_by_name Val: ~p",[Val]),
-lager:info("IAM multi_search search_by_name RespData: ~p",[RespData]),
-    SelectedJObjs = [JObj || JObj <- RespData, maybe_name_candidate(Val, JObj)],
-lager:info("IAM multi_search search_by_name SelectedJObjs: ~p",[SelectedJObjs]),
+            SelectedJObjs = [JObj || JObj <- RespData, maybe_name_candidate(Val, JObj)],
             Acc1 = kz_json:set_value(<<"name">>, SelectedJObjs, Acc),
             multi_search(Context1, Type, Props, Acc1);
         _ -> Context1
@@ -502,8 +499,6 @@ maybe_name_candidate(String, JObj) ->
                           ,""
                           ,[global, {return, binary}]
                           ),
-lager:info("IAM maybe_name_candidate search_by_name Name: ~p",[Name]),
-lager:info("IAM maybe_name_candidate search_by_name SearchTpl: ~p",[SearchTpl]),
     case re:run(Name, SearchTpl) of
         'nomatch' -> 'false';
         _ -> 'true'
