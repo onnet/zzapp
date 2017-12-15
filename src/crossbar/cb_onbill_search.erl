@@ -308,6 +308,24 @@ multi_search(Context, Type, Props) ->
 
 multi_search(Context, _Type, [], Acc) ->
     cb_context:set_resp_data(Context, Acc);
+multi_search(Context, Type, [{<<"by_name">>, Val}|Props], Acc) ->
+    Context1 =
+        crossbar_doc:load_view(<<"search/search_by_name">>
+                              ,[]
+                              ,Context
+                              ,fun normalize_view_results/2
+                              ),
+    case cb_context:resp_status(Context1) of
+        'success' ->
+            RespData = cb_context:resp_data(Context1),
+lager:info("IAM multi_search search_by_name Val: ~p",[Val]),
+lager:info("IAM multi_search search_by_name RespData: ~p",[RespData]),
+    SelectedJObjs = [JObj || JObj <- RespData, maybe_name_candidate(Val, JObj)],
+lager:info("IAM multi_search search_by_name SelectedJObjs: ~p",[SelectedJObjs]),
+            Acc1 = kz_json:set_value(<<"name">>, SelectedJObjs, Acc),
+            multi_search(Context1, Type, Props, Acc1);
+        _ -> Context1
+    end;
 multi_search(Context, Type, [{<<"by_", Query/binary>>, Val}|Props], Acc) ->
     ViewName = <<?QUERY_TPL/binary, Query/binary>>,
     Value = maybe_normalize_value(Type, Val),
@@ -473,3 +491,20 @@ search_db(Context) ->
         AccountId -> ?ONBILL_DB(AccountId)
     end.
 
+maybe_name_candidate(String, JObj) ->
+    Name = re:replace(kz_term:to_lower_binary(onbill_misc:translit(kz_json:get_value(<<"name">>, JObj)))
+                     ,"[^A-Za-z0-9]"
+                     ,""
+                     ,[global, {return, binary}]
+                     ),
+    SearchTpl = re:replace(kz_term:to_lower_binary(onbill_misc:translit(String))
+                          ,"[^A-Za-z0-9]"
+                          ,""
+                          ,[global, {return, binary}]
+                          ),
+lager:info("IAM maybe_name_candidate search_by_name Name: ~p",[Name]),
+lager:info("IAM maybe_name_candidate search_by_name SearchTpl: ~p",[SearchTpl]),
+    case re:run(Name, SearchTpl) of
+        'nomatch' -> 'false';
+        _ -> 'true'
+    end.
