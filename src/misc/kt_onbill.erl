@@ -17,14 +17,15 @@
         ,import_accounts/3
         ,import_onbill_data1/3
         ,generate_docs/2
+        ,sync_onbills/2
         ,is_allowed/1
         ,maybe_format_address_element/2
         ]).
 
 -include_lib("tasks/src/tasks.hrl").
 -include_lib("kazoo_services/include/kz_service.hrl").
+-include("onbill.hrl").
 
--define(ONBILL_DOC, <<"onbill">>).
 -define(CATEGORY, "onbill").
 -define(ACTIONS, [<<"current_state">>
                  ,<<"periodic_fees">>
@@ -32,6 +33,7 @@
                  ,<<"import_accounts">>
                  ,<<"import_onbill_data1">>
                  ,<<"generate_docs">>
+                 ,<<"sync_onbills">>
                  ]).
 
 -define(IMPORT_PERIODIC_FEES_DOC_FIELDS
@@ -131,6 +133,11 @@ output_header(<<"periodic_fees">>) ->
 output_header(<<"generate_docs">>) ->
     [<<"account_id">>
     ,<<"name">>
+    ];
+output_header(<<"sync_onbills">>) ->
+    [<<"account_id">>
+    ,<<"name">>
+    ,<<"state">>
     ].
 
 -spec help(kz_json:object()) -> kz_json:object().
@@ -194,9 +201,12 @@ action(<<"import_onbill_data1">>) ->
 
 action(<<"generate_docs">>) ->
     [{<<"description">>, <<"Generate invoices for children">>}
-    ,{<<"doc">>, <<"Just an experimentsl feature.\n"
-                   "Month/Year of the end of billing period needed.\n"
-                 >>}
+    ,{<<"doc">>, <<"Just an experimentsl feature." >>}
+    ];
+
+action(<<"sync_onbills">>) ->
+    [{<<"description">>, <<"Syncronize account's onbill docs with onbill database">>}
+    ,{<<"doc">>, <<"Just an experimentsl feature.">>}
     ].
 
 %%% Verifiers
@@ -428,6 +438,20 @@ generate_docs(_, [SubAccountId | DescendantsIds]) ->
     ,DescendantsIds
     }.
 
+-spec sync_onbills(kz_tasks:extra_args(), kz_tasks:iterator()) -> kz_tasks:iterator().
+sync_onbills(#{account_id := AccountId}, init) ->
+    {'ok', get_children(AccountId)};
+sync_onbills(_, []) -> stop;
+sync_onbills(_, [SubAccountId | DescendantsIds]) ->
+    {'ok', JObj} = kz_account:fetch(SubAccountId),
+    case replicate_onbill_doc(SubAccountId) of
+        {'ok', _} ->
+            {[SubAccountId ,kz_account:name(JObj), <<"exists">>] ,DescendantsIds };
+        _ ->
+            {[SubAccountId ,kz_account:name(JObj), <<"absent">>] ,DescendantsIds }
+    end.
+
+
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
@@ -596,3 +620,23 @@ remove_periodic_fees_from_db([DescendantId | DescendantsIds]) ->
     timer:sleep(100),
     remove_periodic_fees_from_db(DescendantsIds).
 
+-spec replicate_onbill_doc(ne_binary()) ->
+                                          {'ok', kz_json:object()} |
+                                          {'error', any()}.
+replicate_onbill_doc(AccountId) ->
+    AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
+    case kz_datamgr:open_doc(AccountDb, ?ONBILL_DOC) of
+        {ok, Doc} ->
+            ResellerId = kz_services:find_reseller_id(AccountId),
+            DbName = ?ONBILL_DB(ResellerId),
+            JObj = kz_json:set_value(<<"_id">>, AccountId, Doc),
+            onbill_util:check_db(DbName),
+            case kz_datamgr:lookup_doc_rev(DbName, AccountId) of
+                {'ok', Rev} ->
+                    kz_datamgr:ensure_saved(DbName, kz_doc:set_revision(JObj, Rev));
+                _Else ->
+                    kz_datamgr:ensure_saved(DbName, kz_doc:delete_revision(JObj))
+            end;
+        E ->
+            E
+    end.

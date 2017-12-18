@@ -5,7 +5,7 @@
 -include_lib("kazoo_stdlib/include/kz_databases.hrl").
 -include_lib("kazoo_documents/include/kazoo_documents.hrl").
 
--define(APP, 'onbill').
+%%-define(APP, 'onbill').
 -define(OB_APP_NAME, <<"onbill">>).
 -define(OB_APP_VERSION, <<"4.0.0">> ).
 
