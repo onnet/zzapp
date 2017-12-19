@@ -484,8 +484,14 @@ maybe_valid_relationship(Context) ->
 search_db(Context) ->
     AuthAccountId = cb_context:auth_account_id(Context),
     case cb_context:account_id(Context) of
-        'undefined' -> ?ONBILL_DB(AuthAccountId);
-        AccountId -> ?ONBILL_DB(AccountId)
+        'undefined' ->
+            DbName = ?ONBILL_DB(AuthAccountId),
+            _ = onbill_util:maybe_add_design_doc(DbName, <<"search">>),
+            DbName;
+        AccountId ->
+            DbName = ?ONBILL_DB(AccountId),
+            _ = onbill_util:maybe_add_design_doc(DbName, <<"search">>),
+            DbName
     end.
 
 maybe_name_candidate(String, JObj) ->
