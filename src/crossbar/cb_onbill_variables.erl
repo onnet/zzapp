@@ -92,19 +92,22 @@ validate_onbill(Context, AttachmentId, ?HTTP_POST) ->
 save(Id, Context) ->
     ReqData = cb_context:req_data(Context),
     DbName = kz_util:format_account_id(cb_context:account_id(Context),'encoded'),
-    Doc = case kz_datamgr:open_doc(DbName, Id) of
+    NewDoc = case kz_datamgr:open_doc(DbName, Id) of
               {'ok', JObj} ->
-                  JObj;
+                 Values = props:filter_undefined([{<<"_id">>, Id}
+                                                 ,{<<"_attachments">>, kz_doc:attachments(JObj)}
+                                                 ,{<<"_rev">>, kz_doc:revision(JObj)}
+                                                 ]),
+                 kz_json:set_values(Values, ReqData);
               {error,not_found} ->
                   kz_json:set_value(<<"_id">>, Id, kz_json:new())
           end,
-    NewDoc = kz_json:merge_recursive(Doc, ReqData),
-    Context1 = crossbar_doc:save(cb_context:set_doc(Context, NewDoc)),
+    Context1 = crossbar_doc:save(cb_context:set_doc(Context, NewDoc), ?TYPE_CHECK_OPTION(<<"onbill">>)),
     case cb_context:resp_status(Context1) of
         'success' ->
             _ = replicate_onbill_doc_definition(Context1),
-            cb_context:set_resp_data(Context1, ReqData);
-        _Status -> Context1
+            Context1;
+        _ -> Context1
     end.
 
 save_variables_attachment(Context, DocId, AName) ->
