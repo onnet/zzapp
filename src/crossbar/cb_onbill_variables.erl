@@ -133,11 +133,14 @@ save_variables_attachment(Context, DocId, AName) ->
 replicate_onbill_doc_definition(Context) ->
     AccountId = cb_context:account_id(Context),
     ResellerId = kz_services:find_reseller_id(AccountId),
-    JObj = kz_json:set_value(<<"_id">>, AccountId, cb_context:doc(Context)),
+    JObj0 = kz_json:set_value(<<"_id">>, AccountId, cb_context:doc(Context)),
+    JObj = kz_json:delete_key(<<"_attachments">>, JObj0),
+lager:info("IAM replicate_onbill_doc_definition JObj: ~p",[JObj]),
     DbName = ?ONBILL_DB(ResellerId),
     onbill_util:check_db(DbName),
     case kz_datamgr:lookup_doc_rev(DbName, AccountId) of
         {'ok', Rev} ->
+lager:info("IAM replicate_onbill_doc_definition Rev: ~p",[Rev]),
             kz_datamgr:ensure_saved(DbName, kz_doc:set_revision(JObj, Rev));
         _Else ->
             kz_datamgr:ensure_saved(DbName, kz_doc:delete_revision(JObj))
