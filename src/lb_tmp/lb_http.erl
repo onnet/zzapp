@@ -1,7 +1,6 @@
 -module(lb_http).
 -author("Kirill Sysoev <kirill.sysoev@gmail.com>").
 
-%% interface functions
 -export([
      lb_login/1
     ,lb_logout/1
