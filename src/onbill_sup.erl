@@ -53,10 +53,9 @@ init([]) ->
     kt_onbill:init(),
     kz_util:set_startup(),
     _ = code:ensure_loaded(kz_service_periodic_fees),
+    Children = ?CHILDREN ++ onbill_lb:maybe_mysql_child(),
     RestartStrategy = 'one_for_one',
     MaxRestarts = 5,
     MaxSecondsBetweenRestarts = 10,
-
     SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
-
-    {'ok', {SupFlags, ?CHILDREN}}.
+    {'ok', {SupFlags, Children}}.
