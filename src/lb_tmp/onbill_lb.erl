@@ -3,6 +3,8 @@
 
 -export([maybe_mysql_child/0
         ,lbuid_by_uuid/1
+        ,account_balance/1
+        ,get_main_agrm_id/1
         ]).
 
 -include_lib("onbill.hrl").
@@ -31,5 +33,27 @@ lbuid_by_uuid(AccountId) ->
                             ,[AccountId])
     of
         {ok,_,[[Uid]]} -> Uid;
+        _ -> 'undefined'
+    end.
+
+-spec account_balance(ne_binary()) -> any().
+account_balance(AccountId) ->
+    UUID = lbuid_by_uuid(AccountId),
+    case mysql_poolboy:query(?LB_MYSQL_POOL
+                            ,<<"SELECT COALESCE(sum(balance),0) FROM agreements  where uid = ? and agreements.archive = 0">>
+                            ,[UUID])
+    of
+        {ok,_,[[Amount]]} -> Amount;
+        _ -> 'undefined'
+    end.
+
+-spec get_main_agrm_id(ne_binary()) -> any().
+get_main_agrm_id(AccountId) ->
+    UUID = lbuid_by_uuid(AccountId),
+    case mysql_poolboy:query(?LB_MYSQL_POOL
+                            ,<<"SELECT agrm_id from agreements where uid  = ? and oper_id = 1 limit 1">>
+                            ,[UUID])
+    of
+        {ok,_,[[AgrmId]]} -> AgrmId;
         _ -> 'undefined'
     end.
