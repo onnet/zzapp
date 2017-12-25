@@ -64,8 +64,13 @@ add_payment(AccountId, JObj) ->
     EncodedDb = kz_json:get_value(<<"Database">>, JObj),
     DocId = kz_json:get_value(<<"ID">>, JObj),
     {'ok', Doc} = kz_datamgr:open_doc(EncodedDb, DocId),
-    AgrmId = get_main_agrm_id(AccountId),
-    Summ = wht_util:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, Doc, 0)),
-    Receipt = kz_json:get_binary_value(<<"_id">>, Doc, <<>>),
-    Comment = kz_json:get_binary_value(<<"description">>, Doc, <<>>),
-    lb_http:add_payment(AgrmId, Summ, Receipt, Comment, AccountId).
+    case kz_json:get_binary_value(<<"pvt_reason">>, Doc) of
+        <<"wire_transfer">> ->
+            AgrmId = get_main_agrm_id(AccountId),
+            Summ = wht_util:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, Doc, 0)),
+            Receipt = kz_json:get_binary_value(<<"_id">>, Doc, <<>>),
+            Comment = kz_json:get_binary_value(<<"description">>, Doc, <<>>),
+            lb_http:add_payment(AgrmId, Summ, Receipt, Comment, AccountId);
+        _ ->
+            'ok'
+    end.
