@@ -6,6 +6,7 @@
         ,account_balance/1
         ,get_main_agrm_id/1
         ,add_payment/2
+        ,sync_onbill_lb_info/2
         ]).
 
 -include_lib("onbill.hrl").
@@ -74,3 +75,34 @@ add_payment(AccountId, JObj) ->
         _ ->
             'ok'
     end.
+
+-spec sync_onbill_lb_info(ne_binary(), kz_json:object()) -> any().
+sync_onbill_lb_info(AccountId, JObj) ->
+    EncodedDb = kz_json:get_value(<<"Database">>, JObj),
+    {'ok', Doc} = kz_datamgr:open_doc(EncodedDb, <<"onbill">>),
+    case lbuid_by_uuid(AccountId) of
+        'undefined' ->
+            create_lb_account(AccountId, Doc),
+            timer:sleep(1000),
+            update_lb_account(lbuid_by_uuid(AccountId), AccountId, Doc);
+        UID ->
+            update_lb_account(UID, AccountId, Doc)
+    end.
+
+-spec create_lb_account(ne_binary(), kz_json:object()) -> any().
+create_lb_account(AccountId, _Doc) ->
+    {'ok', AccountJObj} = kz_account:fetch(AccountId),
+    [Login|_] = binary:split(kz_account:realm(AccountJObj), <<".">>),
+    mysql_poolboy:query(?LB_MYSQL_POOL
+                       ,<<"INSERT INTO billing.accounts (uuid, login, pass, type) VALUES (?, ?, ?, 1)">>
+                       ,[AccountId, Login, kz_binary:rand_hex(7)]).
+
+-spec update_lb_account(integer(), ne_binary(), kz_json:object()) -> any().
+update_lb_account(UID, _AccountId, Doc) ->
+    AccountName = kz_json:get_binary_value(<<"account_name">>, Doc, <<>>),
+    INN = kz_json:get_binary_value(<<"account_inn">>, Doc, <<>>),
+    KPP = kz_json:get_binary_value(<<"account_kpp">>, Doc, <<>>),
+    mysql_poolboy:query(?LB_MYSQL_POOL
+                       ,<<"UPDATE `billing`.`accounts` SET name = ?, inn = ?, kpp = ? WHERE accounts.uid = ?">>
+                       ,[AccountName, INN, KPP, UID]).
+    
