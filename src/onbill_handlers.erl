@@ -44,9 +44,13 @@ handle_doc_created(<<"limits">>, AccountId, _JObj) ->
     _ = kz_services:reconcile(AccountId),
     _ = kz_service_sync:sync(AccountId);
 handle_doc_created(<<"credit">>, AccountId, _JObj) ->
+  lager:info("IAMCREDIT handle_doc_created AccountId: ~p",[AccountId]),
+  lager:info("IAMCREDIT handle_doc_created _JObj: ~p",[_JObj]),
     _ = onbill_util:ensure_service_plan(AccountId),
     _ = kz_services:reconcile(AccountId),
-    _ = kz_service_sync:sync(AccountId);
+    _ = kz_service_sync:sync(AccountId),
+    %% Temporary for migration from LB
+    _ = kz_util:spawn(fun onbill_lb:add_payment/2, [AccountId, _JObj]);
 handle_doc_created(_, _, _) ->
     'ok'.
 

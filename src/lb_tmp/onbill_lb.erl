@@ -5,6 +5,7 @@
         ,lbuid_by_uuid/1
         ,account_balance/1
         ,get_main_agrm_id/1
+        ,add_payment/2
         ]).
 
 -include_lib("onbill.hrl").
@@ -57,3 +58,14 @@ get_main_agrm_id(AccountId) ->
         {ok,_,[[AgrmId]]} -> AgrmId;
         _ -> 'undefined'
     end.
+
+-spec add_payment(ne_binary(), kz_json:object()) -> any().
+add_payment(AccountId, JObj) ->
+    EncodedDb = kz_json:get_value(<<"Database">>, JObj),
+    DocId = kz_json:get_value(<<"ID">>, JObj),
+    {'ok', Doc} = kz_datamgr:open_doc(EncodedDb, DocId),
+    AgrmId = get_main_agrm_id(AccountId),
+    Summ = wht_util:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, Doc, 0)),
+    Receipt = kz_json:get_binary_value(<<"_id">>, Doc, <<>>),
+    Comment = kz_json:get_binary_value(<<"description">>, Doc, <<>>),
+    lb_http:add_payment(AgrmId, Summ, Receipt, Comment, AccountId).

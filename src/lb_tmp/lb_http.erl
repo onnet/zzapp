@@ -17,7 +17,7 @@
 -define(BODY_C, "</soapenv:Body>").
 -define(ENCTYPE_XML, "text/xml").
 -define(LB_CONF(Var, AccountId)
-       ,kz_term:to_list(kz_json:get_binary_value([<<"mod_lb">>, Var], onbill_util:account_vars(AccountId), <<"not_found">>))
+       ,kz_term:to_list(kz_json:get_binary_value([<<"mod_lb">>, Var], onbill_util:reseller_vars(AccountId), <<"not_found">>))
        ).
 
 -spec lb_login(ne_binary()) -> any().
@@ -118,7 +118,7 @@ lb_get_balance_by_agrmid(AgrmId, AccountId) ->
 -spec add_payment(any(), any(), any(), any(), any()) -> any().
 add_payment(Agrm_Id, Summ, Receipt, Comment, AccountId) ->
     Url = ?LB_CONF(<<"lb_url">>, AccountId),
-    QueryString = io_lib:format("async_call=1&devision=199&commit_payment=~s&payment_sum=~s&payment_number=~s&classid=0&_paymentType=zonnet_add_payment&payment_comment=~s", [Agrm_Id, Summ, Receipt, Comment]),
+    QueryString = io_lib:format("async_call=1&devision=199&commit_payment=~s&payment_sum=~s&payment_number=~s&classid=0&_paymentType=zonnet_add_payment&payment_comment=~s", [kz_term:to_list(Agrm_Id), kz_term:to_list(Summ), kz_term:to_list(Receipt), kz_term:to_list(Comment)]),
     EncType = "application/x-www-form-urlencoded",
     lb_login(AccountId),
     _ = httpc:request(post, {Url, [], EncType, lists:flatten(QueryString)}, [], []),
