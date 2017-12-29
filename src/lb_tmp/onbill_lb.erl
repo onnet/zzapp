@@ -93,9 +93,7 @@ sync_onbill_lb_info(AccountId, JObj) ->
 create_lb_account(AccountId, _Doc) ->
     {'ok', AccountJObj} = kz_account:fetch(AccountId),
     [Login|_] = binary:split(kz_account:realm(AccountJObj), <<".">>),
-    mysql_poolboy:query(?LB_MYSQL_POOL
-                       ,<<"INSERT INTO billing.accounts (uuid, login, pass, type) VALUES (?, ?, ?, 1)">>
-                       ,[AccountId, Login, kz_binary:rand_hex(7)]).
+    lb_http:soap_create_account(AccountId, Login, kz_binary:rand_hex(7), 1).
 
 -spec update_lb_account(integer(), ne_binary(), kz_json:object()) -> any().
 update_lb_account(UID, _AccountId, Doc) ->

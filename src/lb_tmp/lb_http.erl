@@ -5,6 +5,7 @@
      lb_login/1
     ,lb_logout/1
     ,add_payment/5
+    ,soap_create_account/4
     ,maybe_unblock_agreement/2
     ,lb_soap_get_uid_by_number/2
 ]).
@@ -82,7 +83,7 @@ lb_soap_get_uid_by_number(PhoneNumber, AccountId) ->
     try
       Url = ?LB_CONF(<<"lb_soap_url">>, AccountId),
       lb_soap_auth('login', AccountId),
-      {ok, {{_, 200, _}, _, Body}} = httpc:request(post, {Url, [], ?ENCTYPE_XML, lb_getVgroups_filter("<phone>"++z_convert:to_list(PhoneNumber)++"</phone>")}, [], []),
+      {ok, {{_, 200, _}, _, Body}} = httpc:request(post, {Url, [], ?ENCTYPE_XML, lb_getVgroups_filter("<phone>"++kz_term:to_list(PhoneNumber)++"</phone>")}, [], []),
       lb_soap_auth('logout', AccountId),
       {Xml, _} = xmerl_scan:string(Body),
       L = xmerl_xpath:string("//SOAP-ENV:Envelope/SOAP-ENV:Body/lbapi:getVgroupsResponse/ret/uid/text()", Xml),
@@ -116,21 +117,129 @@ lb_get_balance_by_agrmid(AgrmId, AccountId) ->
     H#xmlText.value.
 
 -spec add_payment(any(), any(), any(), any(), any()) -> any().
-add_payment(Agrm_Id, Summ, Receipt, Comment, AccountId) ->
+add_payment(AgrmId, Summ, Receipt, Comment, AccountId) ->
     Url = ?LB_CONF(<<"lb_url">>, AccountId),
-    QueryString = io_lib:format("async_call=1&devision=199&commit_payment=~s&payment_sum=~s&payment_number=~s&classid=0&_paymentType=zonnet_add_payment&payment_comment=~s", [kz_term:to_list(Agrm_Id), kz_term:to_list(Summ), kz_term:to_list(Receipt), kz_term:to_list(Comment)]),
+    QueryString = "async_call=1"
+               ++ "&devision=199"
+               ++ "&commit_payment=" ++ kz_term:to_list(AgrmId)
+               ++ "&payment_sum=" ++ kz_term:to_list(Summ)
+               ++ "&payment_number=" ++ kz_term:to_list(Receipt)
+               ++ "&classid=0"
+               ++ "&_paymentType=zonnet_add_payment"
+               ++ "&payment_comment=" ++ kz_term:to_list(Comment),
     EncType = "application/x-www-form-urlencoded",
     lb_login(AccountId),
     _ = httpc:request(post, {Url, [], EncType, lists:flatten(QueryString)}, [], []),
-    _ = spawn(?MODULE, 'maybe_unblock_agreement', [Agrm_Id, AccountId]),
+    _ = spawn(?MODULE, 'maybe_unblock_agreement', [AgrmId, AccountId]),
     lb_logout(AccountId).
+
+-spec soap_create_account(any(), any(), any(), any()) -> any().
+soap_create_account(AccountId, Login, Passwd, Type) ->
+    XML_Data = 
+    ?SOAPENV_O
+      ++ ?BODY_O
+      ++ "<urn:insupdAccount>"
+      ++  "<isInsert>1</isInsert>"
+        ++ "<val>"
+            ++ "<account>"
+                ++ "<uid></uid>"
+                ++ "<uuid>"++kz_term:to_list(AccountId)++"</uuid>"
+                ++ "<ipaccess>0</ipaccess>"
+                ++ "<billdelivery>0</billdelivery>"
+                ++ "<category>0</category>"
+                ++ "<type>"++kz_term:to_integer(Type)++"</type>"
+                ++ "<oksm>0</oksm>"
+                ++ "<templ>0</templ>"
+                ++ "<wrongactive>0</wrongactive>"
+                ++ "<archive>0</archive>"
+                ++ "<login>"++kz_term:to_list(Login)++"</login>"
+                ++ "<pass>"++kz_term:to_list(Passwd)++"</pass>"
+                ++ "<descr></descr>"
+                ++ "<name>"++kz_term:to_list(Login)++"</name>"
+                ++ "<phone></phone>"
+                ++ "<fax></fax>"
+                ++ "<email></email>"
+                ++ "<bankname></bankname>"
+                ++ "<branchbankname></branchbankname>"
+                ++ "<treasuryname></treasuryname>"
+                ++ "<treasuryaccount></treasuryaccount>"
+                ++ "<bik></bik>"
+                ++ "<settl></settl>"
+                ++ "<corr></corr>"
+                ++ "<kpp></kpp>"
+                ++ "<inn></inn>"
+                ++ "<ogrn></ogrn>"
+                ++ "<okpo></okpo>"
+                ++ "<okved></okved>"
+                ++ "<gendiru></gendiru>"
+                ++ "<glbuhgu></glbuhgu>"
+                ++ "<kontperson></kontperson>"
+                ++ "<actonwhat></actonwhat>"
+                ++ "<passsernum></passsernum>"
+                ++ "<passno></passno>"
+                ++ "<passissuedate></passissuedate>"
+                ++ "<passissuedep></passissuedep>"
+                ++ "<passissueplace></passissueplace>"
+                ++ "<birthdate></birthdate>"
+                ++ "<birthplace></birthplace>"
+                ++ "<lastmoddate></lastmoddate>"
+                ++ "<wrongdate></wrongdate>"
+                ++ "<okato></okato>"
+            ++ "</account>"
+            ++ "<usergroups>"
+                ++ "<usergroup>"
+                    ++ "<groupid>0</groupid>"
+                    ++ "<promiseallow>0</promiseallow>"
+                    ++ "<promiserent>0</promiserent>"
+                    ++ "<promisetill>0</promisetill>"
+                    ++ "<promisemax>0.0</promisemax>"
+                    ++ "<promisemin>0.0</promisemin>"
+                    ++ "<promiselimit>0.0</promiselimit>"
+                    ++ "<name></name>"
+                    ++ "<description></description>"
+                ++ "</usergroup>"
+                ++ "<usercnt>0</usercnt>"
+                ++ "<fread>0</fread>"
+                ++ "<fwrite>0</fwrite>"
+            ++ "</usergroups>"
+            ++ "<addresses>"
+                ++ "<type>0</type>"
+                ++ "<code></code>"
+                ++ "<address></address>"
+            ++ "</addresses>"
+            ++ "<agreements>"
+                ++ "<agrmid></agrmid>"
+                ++ "<uid>0</uid>"
+                ++ "<operid>0</operid>"
+                ++ "<curid>1</curid>"
+                ++ "<bnotify>0</bnotify>"
+                ++ "<archive>0</archive>"
+                ++ "<vgroups>0</vgroups>"
+                ++ "<balance>0.0</balance>"
+                ++ "<balancecurr>0.0</balancecurr>"
+                ++ "<credit>0.0</credit>"
+                ++ "<blimit>0.0</blimit>"
+                ++ "<number></number>"
+                ++ "<code></code>"
+                ++ "<date></date>"
+                ++ "<bcheck></bcheck>"
+                ++ "<symbol></symbol>"
+            ++ "</agreements>"
+        ++ "</val>"
+      ++ "</urn:insupdAccount>"
+      ++ ?BODY_C
+    ++ ?SOAPENV_C,
+    lb_soap_auth('login', AccountId),
+    Url = ?LB_CONF(<<"lb_soap_url">>, AccountId),
+    _ = httpc:request(post, {Url, [], ?ENCTYPE_XML, XML_Data}, [], []),
+    lb_soap_auth('logout', AccountId).
 
 lb_login_data(Login, Password) ->
     ?SOAPENV_O
       ++ ?BODY_O
         ++ "<urn:Login>"
-          ++ "<login>"++z_convert:to_list(Login)++"</login>"
-          ++ "<pass>"++z_convert:to_list(Password)++"</pass>"
+          ++ "<login>"++kz_term:to_list(Login)++"</login>"
+          ++ "<pass>"++kz_term:to_list(Password)++"</pass>"
         ++ "</urn:Login>"
       ++ ?BODY_C
     ++ ?SOAPENV_C.
@@ -139,9 +248,9 @@ lb_blkVgroup_data(Id, Blk, State) ->
     ?SOAPENV_O
       ++ ?BODY_O
         ++ "<urn:blkVgroup>"
-          ++ "<id>"++z_convert:to_list(Id)++"</id>"
-          ++ "<blk>"++z_convert:to_list(Blk)++"</blk>"
-          ++ "<state>"++z_convert:to_list(State)++"</state>"
+          ++ "<id>"++kz_term:to_list(Id)++"</id>"
+          ++ "<blk>"++kz_term:to_list(Blk)++"</blk>"
+          ++ "<state>"++kz_term:to_list(State)++"</state>"
         ++ "</urn:blkVgroup>"
       ++ ?BODY_C
     ++ ?SOAPENV_C.
@@ -158,8 +267,8 @@ lb_getVgroups_data(AgrmId, BlockedId) ->
       ++ ?BODY_O
         ++ "<urn:getVgroups>"
           ++ "<flt>"
-            ++ "<agrmid>"++z_convert:to_list(AgrmId)++"</agrmid>"
-            ++ "<blocked>"++z_convert:to_list(BlockedId)++"</blocked>"
+            ++ "<agrmid>"++kz_term:to_list(AgrmId)++"</agrmid>"
+            ++ "<blocked>"++kz_term:to_list(BlockedId)++"</blocked>"
           ++ "</flt>"
         ++ "</urn:getVgroups>"
       ++ ?BODY_C
@@ -181,7 +290,7 @@ lb_getAgreements_data(AgrmId) ->
       ++ ?BODY_O
         ++ "<urn:getAgreements>"
           ++ "<flt>"
-            ++ "<agrmid>"++z_convert:to_list(AgrmId)++"</agrmid>"
+            ++ "<agrmid>"++kz_term:to_list(AgrmId)++"</agrmid>"
           ++ "</flt>"
         ++ "</urn:getAgreements>"
       ++ ?BODY_C
