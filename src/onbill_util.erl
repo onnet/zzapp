@@ -19,6 +19,7 @@
         ,normalize_view_results/2
         ,normalize_view_active_results/2
         ,maybe_fee_active/2
+        ,prev_month/2
         ,next_month/2
         ,adjust_period_first_day/1
         ,adjust_period_first_day/3
