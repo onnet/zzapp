@@ -55,7 +55,7 @@
         ,is_service_plan_assigned/1
         ,ensure_service_plan/1
         ,replicate_account_doc/1
-        ,transit_to_full_suscription_state/1
+        ,transit_to_full_subscription_state/1
         ,reconcile_and_maybe_sync/1
         ,reconcile_and_sync/1
         ,maybe_save_as_dirty/1
@@ -70,6 +70,7 @@
         ,get_range/3
         ,process_documents/4
         ,process_documents_case/5
+        ,replicate_onbill_doc/1
         ]).
 
 -include("onbill.hrl").
@@ -570,8 +571,8 @@ default_service_plan(AccountId) ->
                      ,kz_json:get_value(<<"default_service_plan">>,reseller_vars(MasterAccount))
                      ).
 
--spec transit_to_full_suscription_state(ne_binary()) -> 'ok'.
-transit_to_full_suscription_state(AccountId) ->
+-spec transit_to_full_subscription_state(ne_binary()) -> 'ok'.
+transit_to_full_subscription_state(AccountId) ->
     _ = ensure_service_plan(AccountId),
     set_billing_day(AccountId),
     {'ok', Doc} = kz_account:fetch(AccountId),
@@ -766,3 +767,23 @@ process_documents_case(DelKeys, SetValues, EncodedDb, [DocId|T], {K,V}) ->
     end,
     process_documents_case(DelKeys, SetValues, EncodedDb, T, {K,V}).
 
+-spec replicate_onbill_doc(ne_binary()) ->
+                                          {'ok', kz_json:object()} |
+                                          {'error', any()}.
+replicate_onbill_doc(AccountId) ->
+    AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
+    case kz_datamgr:open_doc(AccountDb, ?ONBILL_DOC) of
+        {ok, Doc} ->
+            ResellerId = kz_services:find_reseller_id(AccountId),
+            DbName = ?ONBILL_DB(ResellerId),
+            JObj = kz_json:set_value(<<"_id">>, AccountId, Doc),
+            onbill_util:check_db(DbName),
+            case kz_datamgr:lookup_doc_rev(DbName, AccountId) of
+                {'ok', Rev} ->
+                    kz_datamgr:ensure_saved(DbName, kz_doc:set_revision(JObj, Rev));
+                _Else ->
+                    kz_datamgr:ensure_saved(DbName, kz_doc:delete_revision(JObj))
+            end;
+        E ->
+            E
+    end.

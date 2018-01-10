@@ -189,7 +189,7 @@ sync_onbills(#{account_id := AccountId}, init) ->
 sync_onbills(_, []) -> stop;
 sync_onbills(_, [SubAccountId | DescendantsIds]) ->
     {'ok', JObj} = kz_account:fetch(SubAccountId),
-    case replicate_onbill_doc(SubAccountId) of
+    case onbill_util:replicate_onbill_doc(SubAccountId) of
         {'ok', _} ->
             {[SubAccountId ,kz_account:name(JObj), <<"exists">>] ,DescendantsIds };
         _ ->
@@ -267,24 +267,3 @@ is_allowed(ExtraArgs) ->
     kz_util:is_in_account_hierarchy(AuthAccountId, AccountId, 'true')
         andalso kz_account:is_reseller(AccountDoc)
         orelse kz_account:is_superduper_admin(AuthAccountDoc).
-
--spec replicate_onbill_doc(ne_binary()) ->
-                                          {'ok', kz_json:object()} |
-                                          {'error', any()}.
-replicate_onbill_doc(AccountId) ->
-    AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
-    case kz_datamgr:open_doc(AccountDb, ?ONBILL_DOC) of
-        {ok, Doc} ->
-            ResellerId = kz_services:find_reseller_id(AccountId),
-            DbName = ?ONBILL_DB(ResellerId),
-            JObj = kz_json:set_value(<<"_id">>, AccountId, Doc),
-            onbill_util:check_db(DbName),
-            case kz_datamgr:lookup_doc_rev(DbName, AccountId) of
-                {'ok', Rev} ->
-                    kz_datamgr:ensure_saved(DbName, kz_doc:set_revision(JObj, Rev));
-                _Else ->
-                    kz_datamgr:ensure_saved(DbName, kz_doc:delete_revision(JObj))
-            end;
-        E ->
-            E
-    end.

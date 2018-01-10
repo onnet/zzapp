@@ -39,7 +39,7 @@ validate_trial(Context, ?HTTP_DELETE) ->
     AccountId = cb_context:account_id(Context),
     case onbill_util:validate_relationship(AccountId, ResellerId) of
         'true' ->
-            {'ok', NewDoc} = onbill_util:transit_to_full_suscription_state(AccountId),
+            {'ok', NewDoc} = onbill_util:transit_to_full_subscription_state(AccountId),
             Context1 = cb_context:set_doc(Context, NewDoc),
             cb_context:set_resp_status(crossbar_doc:save(Context1), 'success');
         'false' ->

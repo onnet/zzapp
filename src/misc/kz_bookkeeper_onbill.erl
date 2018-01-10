@@ -38,7 +38,7 @@ maybe_sync(Items, AccountId) ->
                       ,[CurrentBalance, CurrentUsage]), 
             case CurrentBalance > CurrentUsage of
                 'true' ->
-                    case onbill_util:transit_to_full_suscription_state(AccountId) of
+                    case onbill_util:transit_to_full_subscription_state(AccountId) of
                         {'ok', _} ->
                             lager:info("onbill_trace:maybe_sync moved to full_suscription_state"),
                             sync(Items, AccountId);

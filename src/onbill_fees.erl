@@ -195,6 +195,7 @@ per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
     Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
     lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc, Timezone) end, {[], 0,0}, JObjs).
 
+-spec get_period_per_minute_jobjs(ne_binary(), kz_year(), kz_month(), kz_day()) -> kz_json:objects().
 get_period_per_minute_jobjs(AccountId, Year, Month, Day) ->
     {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
     {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
