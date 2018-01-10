@@ -3,6 +3,7 @@
 -export([shape_fees/4
         ,shape_fees/5
         ,per_minute_calls/5
+        ,get_period_per_minute_jobjs/4
         ,vatify_amount/3
         ,dates_sequence_reduce/1
         ,days_sequence_reduce/1
