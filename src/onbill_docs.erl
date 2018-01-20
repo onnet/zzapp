@@ -3,6 +3,7 @@
 -export([generate_docs/2
         ,generate_docs/3
         ,generate_docs/4
+        ,save_pdf/6
         ,per_minute_reports/2
         ,per_minute_reports/3
         ,create_doc/3
@@ -207,6 +208,28 @@ create_pdf(Vars, TemplateId, Carrier, AccountId) ->
             {'error', _R}
     end.
 
+-spec save_pdf(ne_binary(), ne_binary(), kz_proplist(), ne_binary(), ne_binary(), ne_binary()) -> ok.
+save_pdf(DocId, DbName, Vars, TemplateId, Carrier, AccountId) when is_binary(DocId) ->
+    {'ok', PDF_Data} = create_pdf(Vars, TemplateId, Carrier, AccountId),
+    NewDoc = case kz_datamgr:open_doc(DbName, DocId) of
+        {ok, Doc} ->
+            kz_json:set_values(Vars, Doc);
+        {'error', 'not_found'} ->
+            kz_json:set_values(Vars ++ [{<<"_id">>, DocId}
+                                       ,{<<"pvt_type">>, ?ONBILL_DOC}
+                                       ]
+                              ,kz_json:new()) 
+    end,
+    kz_datamgr:ensure_saved(DbName, NewDoc),
+    Result = kz_datamgr:put_attachment(DbName
+                                      ,DocId
+                                      ,<<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".pdf">>
+                                      ,PDF_Data
+                                      ,[{'content_type', <<"application/pdf">>}]
+                                      ),
+    kz_datamgr:flush_cache_doc(DbName, NewDoc),
+    Result;
+
 save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->
     DocId = case props:get_value(<<"doc_number">>, Vars) of
                 'undefined' ->
@@ -217,26 +240,8 @@ save_pdf(Vars, TemplateId, Carrier, AccountId, Year, Month) ->
     save_pdf(DocId, Vars, TemplateId, Carrier, AccountId, Year, Month).
 
 save_pdf(DocId, Vars, TemplateId, Carrier, AccountId, Year, Month) ->
-    {'ok', PDF_Data} = create_pdf(Vars, TemplateId, Carrier, AccountId),
     Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-    NewDoc = case kz_datamgr:open_doc(Modb, DocId) of
-        {ok, Doc} ->
-            kz_json:set_values(Vars, Doc);
-        {'error', 'not_found'} ->
-            kz_json:set_values(Vars ++ [{<<"_id">>, DocId}
-                                       ,{<<"pvt_type">>, ?ONBILL_DOC}
-                                       ]
-                              ,kz_json:new()) 
-    end,
-    kz_datamgr:ensure_saved(Modb, NewDoc),
-    Result = kz_datamgr:put_attachment(Modb
-                                      ,DocId
-                                      ,<<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".pdf">>
-                                      ,PDF_Data
-                                      ,[{'content_type', <<"application/pdf">>}]
-                                      ),
-    kz_datamgr:flush_cache_doc(Modb, NewDoc),
-    Result.
+    save_pdf(DocId, Modb, Vars, TemplateId, Carrier, AccountId).
 
 total_to_words(Total) ->
     [TotalDiv, TotalRem] = binary:split(float_to_binary(kz_term:to_float(Total),[{decimals,2}]), <<".">>),
