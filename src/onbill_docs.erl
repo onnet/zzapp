@@ -6,8 +6,9 @@
         ,save_pdf/6
         ,per_minute_reports/2
         ,per_minute_reports/3
-        ,create_doc/3
-        ,create_doc/7
+        ,create_modb_doc/3
+        ,create_modb_doc/7
+        ,add_onbill_pdf/3
         ]).
 
 -include("onbill.hrl").
@@ -411,17 +412,17 @@ per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSe
 per_minute_report(_, _, _, _, _, _, _, _) ->
     'ok'.
 
--spec create_doc(number(), ne_binary(), ne_binary()) -> any().
--spec create_doc(number(), ne_binary(), ne_binary(), ne_binary(), kz_year(), kz_month(), kz_day()) -> any().
-create_doc(Amount, AccountId, DocVars) ->
+-spec create_modb_doc(number(), ne_binary(), ne_binary()) -> any().
+-spec create_modb_doc(number(), ne_binary(), ne_binary(), ne_binary(), kz_year(), kz_month(), kz_day()) -> any().
+create_modb_doc(Amount, AccountId, DocVars) ->
     Carriers = onbill_util:account_carriers_list(AccountId),
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
     DocType = kz_json:get_value(<<"document_type">>, DocVars),
     DocNumber = onbill_docs_numbering:get_new_binary_number(AccountId, MainCarrier, DocType),
     {Year, Month, Day} = erlang:date(),
-    create_doc(Amount, AccountId, DocVars, DocNumber, Year, Month, Day).
+    create_modb_doc(Amount, AccountId, DocVars, DocNumber, Year, Month, Day).
 
-create_doc(Amount, AccountId, DocVars, DocNumber, Year, Month, Day) ->
+create_modb_doc(Amount, AccountId, DocVars, DocNumber, Year, Month, Day) ->
     DocType = kz_json:get_value(<<"document_type">>, DocVars),
     {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
     {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
@@ -453,3 +454,15 @@ create_doc(Amount, AccountId, DocVars, DocNumber, Year, Month, Day) ->
            ]
            ++ VatifiedAmount,
     save_pdf(Vars, DocType, MainCarrier, AccountId, Year, Month).
+
+-spec add_onbill_pdf(ne_binary(), ne_binary(), ne_binary()) -> any().
+add_onbill_pdf(TemplateId, Carrier, AccountId) ->
+    DbName = kz_util:format_account_id(AccountId,'encoded'),
+    ResellerVars = onbill_util:reseller_vars(AccountId),
+    AccountOnbillDoc = onbill_util:account_vars(AccountId),
+    CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
+    Vars = [{<<"reseller_vars">>, pack_vars(ResellerVars)}
+           ,{<<"account_vars">>, pack_vars(AccountOnbillDoc)}
+           ,{<<"carrier_vars">>, pack_vars(CarrierDoc)}
+           ],
+    save_pdf(?ONBILL_DOC, DbName, Vars, TemplateId, Carrier, AccountId).

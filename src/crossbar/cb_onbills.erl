@@ -136,7 +136,7 @@ generate_transaction_based_invoice(Context, AccountId, <<Year:4/binary, Month:2/
                                       ,{<<"document_description">>, InvoiceDescription}
                                       ,{<<"transaction_id">>, TransctionId}]),
     DocVars = kz_json:set_values(DocVarsList,kz_json:new()),
-    case onbill_docs:create_doc(Amount, AccountId, DocVars, DocNumber, InvYear, InvMonth, InvDay) of
+    case onbill_docs:create_modb_doc(Amount, AccountId, DocVars, DocNumber, InvYear, InvMonth, InvDay) of
         {'ok', JObj} ->
             InvoiceId = kz_doc:id(JObj),
             Values = [{[<<"metadata">>,<<"invoice_number">>], DocNumber}

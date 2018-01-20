@@ -81,7 +81,7 @@ create(Context) ->
     ReqData = cb_context:req_data(Context),
     AccountId = cb_context:account_id(Context),
     Amount = kz_json:get_number_value(<<"amount">>, ReqData),
-    case onbill_docs:create_doc(Amount, AccountId, {[{<<"document_type">>,<<"proforma_invoice">>}]}) of
+    case onbill_docs:create_modb_doc(Amount, AccountId, {[{<<"document_type">>,<<"proforma_invoice">>}]}) of
         {'ok', JObj} ->
             cb_context:set_resp_status(crossbar_doc:load(kz_doc:id(JObj)
                                                         ,cb_context:set_account_modb(Context
