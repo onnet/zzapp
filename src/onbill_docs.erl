@@ -464,5 +464,12 @@ add_onbill_pdf(TemplateId, Carrier, AccountId) ->
     Vars = [{<<"reseller_vars">>, pack_vars(ResellerVars)}
            ,{<<"account_vars">>, pack_vars(AccountOnbillDoc)}
            ,{<<"carrier_vars">>, pack_vars(CarrierDoc)}
+           ,{<<"agrm">>, kz_json:get_value([<<"agrm">>, Carrier], AccountOnbillDoc)}
            ],
-    save_pdf(?ONBILL_DOC, DbName, Vars, TemplateId, Carrier, AccountId).
+    {'ok', PDF_Data} = create_pdf(Vars, TemplateId, Carrier, AccountId),
+    kz_datamgr:put_attachment(DbName
+                             ,?ONBILL_DOC
+                             ,<<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".pdf">>
+                             ,PDF_Data
+                             ,[{'content_type', <<"application/pdf">>}]
+                             ).
