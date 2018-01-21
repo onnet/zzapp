@@ -142,7 +142,13 @@ default_template(TemplateId, Carrier, CountryOfResidence) ->
 
 prepare_tpl(Vars, TemplateId, Carrier, AccountId) ->
     ErlyMod = erlang:binary_to_atom(?DOC_NAME_FORMAT(Carrier, TemplateId), 'latin1'),
-    try erlydtl:compile_template(get_template(TemplateId, Carrier, AccountId), ErlyMod, [{'out_dir', 'false'},'return']) of
+    try erlydtl:compile_template(get_template(TemplateId, Carrier, AccountId), ErlyMod
+                                ,[{libraries, [{onbill_dtl, onbill_dtl_lib}]}
+                                 ,{'out_dir', 'false'}
+                                 ,'return'
+                                 ]
+                                )
+    of
         {ok, ErlyMod} -> render_tpl(ErlyMod, Vars);
         {ok, ErlyMod,[]} -> render_tpl(ErlyMod, Vars); 
         {'ok', ErlyMod, Warnings} ->
