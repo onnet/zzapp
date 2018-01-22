@@ -146,57 +146,57 @@
 <table>
 <tr>
 <td width=49%><b>ОПЕРАТОР:</b>
-<br />%oper_name%
-<br />Юридический адрес: %oper_addrur%
-<br />Фактический адрес: %oper_addrfiz%
-<br />ИНН/КПП: %oper_inn%/%oper_kpp%
-<br />ОГРН: %oper_ogrn%
-<br />р/с: %oper_rs%
-<br />в %oper_bank% %oper_branch_bank_name%
-<br />к/с: %oper_ks%
-<br />БИК: %oper_bic%
-<br />ОКАТО: %oper_okato%
-<br />ОКПО: %oper_okpo%
-<br />ОКВЭД: %oper_okved%
-<br />Тел.: %oper_phone%
-<br />E-mail: %oper_email%
+<br />{{ carrier_vars.account_name }}
+<br />Юридический адрес: {{ carrier_vars.address.registered.line1 }}, {{ carrier_vars.address.registered.line2 }}, {{ carrier_vars.address.registered.line3 }}
+<br />Фактический адрес: {{ carrier_vars.address.office.line1 }}, {{ carrier_vars.address.office.line2 }}, {{ carrier_vars.address.office.line3 }}
+<br />ИНН/КПП: {{ carrier_vars.account_inn }}/{{ carrier_vars.account_kpp }}
+<br />ОГРН: {{ carrier_vars.ogrn }}
+<br />р/с: {{ carrier_vars.banking_details.settlement_account }}
+<br />в {{ carrier_vars.banking_details.bank_name }} {{ carrier_vars.banking_details.branch_bank_name }}
+<br />к/с: {{ carrier_vars.banking_details.correspondent_account }}
+<br />БИК: {{ carrier_vars.banking_details.bik }}
+<br />ОКАТО: {{ carrier_vars.okato }}
+<br />ОКПО: {{ carrier_vars.okpo }}
+<br />ОКВЭД: {{ carrier_vars.okved }}
+<br />Тел.: {{ carrier_vars.phone }}
+<br />E-mail: {{ carrier_vars.email }}
 </td>
 <td width=2%></td>
 <td width=49%><b>КЛИЕНТ:</b>
-<br />%user_name%
-<br />Юридический адрес: %user_addrur%
-<br />Фактический адрес: %user_addrfiz%
-<br />ИНН/КПП: %user_inn%/%user_kpp%
-<br />ОГРН: %user_ogrn%
-<br />р/с: %user_rs%
-<br />в %user_bank% %user_branch_bank_name%
-<br />к/с: %user_ks%
-<br />БИК: %user_bic%
-<br />ОКАТО: %user_okato%
-<br />ОКПО: %user_okpo%
-<br />ОКВЭД: %user_okved%
-<br />Тел.: %user_phone%
-<br />E-mail: %user_email%
+<br />{{ account_vars.account_name }}
+<br />Юридический адрес: {{ account_vars.address.registered.line1 }}, {{ account_vars.address.registered.line2 }}, {{ account_vars.address.registered.line3 }}
+<br />Фактический адрес: {{ account_vars.address.office.line1 }}, {{ account_vars.address.office.line2 }}, {{ account_vars.address.office.line3 }}
+<br />ИНН/КПП: {{ account_vars.account_inn }}/{{ account_vars.account_kpp }}
+<br />ОГРН: {{ account_vars.ogrn }}
+<br />р/с: {{ account_vars.banking_details.settlement_account }}
+<br />в {{ account_vars.banking_details.bank_name }} {{ account_vars.banking_details.branch_bank_name }}
+<br />к/с: {{ account_vars.banking_details.correspondent_account }}
+<br />БИК: {{ account_vars.banking_details.bik }}
+<br />ОКАТО: {{ account_vars.okato }}
+<br />ОКПО: {{ account_vars.okpo }}
+<br />ОКВЭД: {{ account_vars.okved }}
+<br />Тел.: {{ account_vars.phone }}
+<br />E-mail: {{ account_vars.email }}
 </td>
 </tr>
 </table>
 <br />
 <table style="width: 100%;">
 <tr><td style="text-align: left; width: 49%;">
-<b>%oper_dir_type%</b>
-<br />%oper_name%
+<b>{{ carrier_vars.dir_type }}</b>
+<br />{{ carrier_vars.account_name }}
 </td><td style="text-align: center; width: 2%;"></td>
 <td style="text-align: left; width: 49%;">
-<b>%user_dir_type%</b>
-<br />%user_name%
+<b>{{ account_vars.dir_type }}</b>
+<br />{{ account_vars.account_name }}
 </td></tr></table>
 <br />
 <br />
 <table style="width: 100%" border="0" cellpadding="0" cellspacing="0">
 <tr>
-<td style="width: 25%; vertical-align: bottom">%oper_gen_dir%</td><td style="width: 24%; vertical-align: bottom; text-align: left">/__________________ /</td>
+<td style="width: 25%; vertical-align: bottom">{{ carrier_vars.gen_dir_u }}</td><td style="width: 24%; vertical-align: bottom; text-align: left">/__________________ /</td>
 <td width=2%></td>
-<td style="width: 25%; vertical-align: bottom">%user_gen_dir%</td><td style="width: 24%; vertical-align: bottom; text-align: left">/__________________ /</td>
+<td style="width: 25%; vertical-align: bottom">{{ account_vars.gen_dir_u }}</td><td style="width: 24%; vertical-align: bottom; text-align: left">/__________________ /</td>
 </tr>
 </table>
 <br />
