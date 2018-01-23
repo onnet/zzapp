@@ -98,6 +98,12 @@ validate_generate(Context, <<"transaction_invoice">>, AccountId, Timestamp) when
                                       ,AccountId
                                       ,kz_json:get_value(<<"transaction_id">>, cb_context:req_data(Context))
                                       ,Timestamp);
+validate_generate(Context, <<"onbill_agrm">>, AccountId, _Timestamp) ->
+    onbill_docs:add_onbill_pdf(<<"dog_pre">>
+                              ,kz_json:get_value(<<"carrier_id">>, cb_context:req_data(Context))
+                              ,AccountId
+                              ),
+    crossbar_doc:load(?VARIABLES_DOC_ID, Context, [{'expected_type', ?VARIABLES_DOC_TYPE}]);
 validate_generate(Context, _, AccountId, Timestamp) when is_integer(Timestamp) ->
     maybe_generate_billing_docs(Context, AccountId, Timestamp, 'generate_docs');
 validate_generate(Context, _, _, _) ->

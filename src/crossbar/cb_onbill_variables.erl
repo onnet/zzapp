@@ -20,9 +20,7 @@
 -include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
 -include("onbill.hrl").
 
--define(VARIABLES_DOC_TYPE, <<"onbill">>).
 -define(TEMPLATE_NAME, <<"company_logo">>).
--define(VARIABLES_DOC_ID, <<"onbill">>).
 -define(MIME_TYPES, [{<<"image">>, <<"*">>},{<<"application">>, <<"pdf">>}]).
 
 -spec init() -> 'ok'.

@@ -11,6 +11,8 @@
 
 -define(SERVICES_DB, <<"services">>).
 -define(ONBILL_DOC, <<"onbill">>).
+-define(VARIABLES_DOC_TYPE, <<"onbill">>).
+-define(VARIABLES_DOC_ID, <<"onbill">>).
 -define(MRC_DOC, <<"monthly_recurring">>).
 -define(TO_BIN(Var), kz_term:to_binary(Var)).
 -define(TO_INT(Var), kz_term:to_integer(Var)).
