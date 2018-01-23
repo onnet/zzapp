@@ -23,8 +23,7 @@
 -define(VARIABLES_DOC_TYPE, <<"onbill">>).
 -define(TEMPLATE_NAME, <<"company_logo">>).
 -define(VARIABLES_DOC_ID, <<"onbill">>).
--define(MIME_TYPES, [{<<"image">>, <<"*">>}]).
--define(POSSIBLE_ATTACHMENTS, [<<"company_logo">>]).
+-define(MIME_TYPES, [{<<"image">>, <<"*">>},{<<"application">>, <<"pdf">>}]).
 
 -spec init() -> 'ok'.
 init() ->
@@ -44,8 +43,7 @@ allowed_methods(_) ->
 -spec resource_exists() -> 'true'.
 -spec resource_exists(path_token()) -> 'true'.
 resource_exists() -> 'true'.
-resource_exists(PathToken) ->
-    lists:member(PathToken, ?POSSIBLE_ATTACHMENTS).
+resource_exists(_) -> 'true'.
 
 -spec content_types_provided(cb_context:context()) -> cb_context:context().
 -spec content_types_provided(cb_context:context(), path_token()) -> cb_context:context().

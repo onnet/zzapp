@@ -473,9 +473,25 @@ add_onbill_pdf(TemplateId, Carrier, AccountId) ->
            ,{<<"agrm">>, kz_json:get_value([<<"agrm">>, Carrier], AccountOnbillDoc)}
            ],
     {'ok', PDF_Data} = create_pdf(Vars, TemplateId, Carrier, AccountId),
+    maybe_add_pdf_info(TemplateId, Carrier, DbName),
     kz_datamgr:put_attachment(DbName
                              ,?ONBILL_DOC
                              ,<<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".pdf">>
                              ,PDF_Data
                              ,[{'content_type', <<"application/pdf">>}]
                              ).
+
+maybe_add_pdf_info(<<"dog_", _/binary>> = TemplateId, Carrier, DbName) ->
+    case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
+        {ok, Doc} ->
+            NewDoc = kz_json:set_value([<<"agrm">>, Carrier, <<"att_name">>]
+                                      ,<<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".pdf">>
+                                      ,Doc
+                                      ),
+            kz_datamgr:ensure_saved(DbName, NewDoc),
+            timer:sleep(1000);
+        {'error', 'not_found'} ->
+            'ok'
+    end;
+maybe_add_pdf_info(_TemplateId, _Carrier, _AccountId) ->
+    'ok'.
