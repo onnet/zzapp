@@ -62,13 +62,13 @@
   Грузоотправитель и его адрес: ----<br />
   Грузополучатель и его адрес: ----<br />
   К платежно-расчетному документу № ______ от ______ <br />
-  Покупатель: {{ account_vars.account_name }}<br />
+  Покупатель: {{ account_vars.name }}<br />
   Адрес:
     {{ account_vars.billing_address.line1 }}
     {{ account_vars.billing_address.line2 }}
     {{ account_vars.billing_address.line3 }}
     <br />
-  ИНН/КПП покупателя: {{ account_vars.account_inn }} / {{ account_vars.account_kpp }} <br />
+  ИНН/КПП покупателя: {{ account_vars.inn }} / {{ account_vars.kpp }} <br />
   Валюта: наименование, код <u>Российский рубль, 643</u><br />
   Идентификатор государственного контракта, договора (соглашения) (при наличии): ---- <br />
   <font size="9">

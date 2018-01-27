@@ -7,9 +7,9 @@
        "line2": "ул. Рентгена д. 5",
        "line3": "Офис 777"
    },
-   "account_name": "ЗАО «Центр МРТФ»",
-   "account_inn": 1234567890,
-   "account_kpp": "098765",
+   "name": "ЗАО «Центр МРТФ»",
+   "inn": 1234567890,
+   "kpp": "098765",
    "aggregate_invoice": true,
    "agrm": {
        "onnet": {

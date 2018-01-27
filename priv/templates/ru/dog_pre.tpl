@@ -146,10 +146,10 @@
 <table>
 <tr>
 <td width=49%><b>ОПЕРАТОР:</b>
-<br />{{ carrier_vars.account_name }}
+<br />{{ carrier_vars.name }}
 <br />Юридический адрес: {{ carrier_vars.address.registered.line1 }}, {{ carrier_vars.address.registered.line2 }}, {{ carrier_vars.address.registered.line3 }}
 <br />Фактический адрес: {{ carrier_vars.address.office.line1 }}, {{ carrier_vars.address.office.line2 }}, {{ carrier_vars.address.office.line3 }}
-<br />ИНН/КПП: {{ carrier_vars.account_inn }}/{{ carrier_vars.account_kpp }}
+<br />ИНН/КПП: {{ carrier_vars.inn }}/{{ carrier_vars.kpp }}
 <br />ОГРН: {{ carrier_vars.ogrn }}
 <br />р/с: {{ carrier_vars.banking_details.settlement_account }}
 <br />в {{ carrier_vars.banking_details.bank_name }} {{ carrier_vars.banking_details.branch_bank_name }}
@@ -163,10 +163,10 @@
 </td>
 <td width=2%></td>
 <td width=49%><b>КЛИЕНТ:</b>
-<br />{{ account_vars.account_name }}
+<br />{{ account_vars.name }}
 <br />Юридический адрес: {{ account_vars.address.registered.line1 }}, {{ account_vars.address.registered.line2 }}, {{ account_vars.address.registered.line3 }}
 <br />Фактический адрес: {{ account_vars.address.office.line1 }}, {{ account_vars.address.office.line2 }}, {{ account_vars.address.office.line3 }}
-<br />ИНН/КПП: {{ account_vars.account_inn }}/{{ account_vars.account_kpp }}
+<br />ИНН/КПП: {{ account_vars.inn }}/{{ account_vars.kpp }}
 <br />ОГРН: {{ account_vars.ogrn }}
 <br />р/с: {{ account_vars.banking_details.settlement_account }}
 <br />в {{ account_vars.banking_details.bank_name }} {{ account_vars.banking_details.branch_bank_name }}

@@ -52,8 +52,8 @@
   за оказанные услуги электросвязи за период: {{ start_date }} - {{ end_date }}
 </h4>
 <br />
-Плательщик: {{ account_vars.account_name }}<br />
-ИНН/КПП: {{ account_vars.account_inn }} / {{ account_vars.account_kpp }}<br />
+Плательщик: {{ account_vars.name }}<br />
+ИНН/КПП: {{ account_vars.inn }} / {{ account_vars.kpp }}<br />
 <br />
 
 <table class="bordered_table" style="width: 100%;">
