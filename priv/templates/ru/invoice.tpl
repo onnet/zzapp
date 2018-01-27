@@ -1,3 +1,4 @@
+{% load onbill_dtl %}
 <head>
   <meta charset="UTF-8">
   <link href='http://fonts.googleapis.com/css?family=PT+Sans+Narrow&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
@@ -64,9 +65,9 @@
   К платежно-расчетному документу № ______ от ______ <br />
   Покупатель: {{ account_vars.name }}<br />
   Адрес:
-    {{ account_vars.billing_address.line1 }}
-    {{ account_vars.billing_address.line2 }}
-    {{ account_vars.billing_address.line3 }}
+    {{ account_vars.address.registered.line1 }}
+    {{ account_vars.address.registered.line2 }}
+    {{ account_vars.address.registered.line3 }}
     <br />
   ИНН/КПП покупателя: {{ account_vars.inn }} / {{ account_vars.kpp }} <br />
   Валюта: наименование, код <u>Российский рубль, 643</u><br />
@@ -74,7 +75,7 @@
   <font size="9">
     Дополнительные (условия оплаты по договору (контракту), способ отправления и т.д.)
   </font>
-  Договор № {{ agrm_num }} от {{ agrm_date }}
+  Договор № {{ agrm_num }} от {{ agrm_date|gregsec_to_date|date:"d.m.Y" }}
   <br />
   <table class="bordered_table" style="width: 100%;">
     <tr>

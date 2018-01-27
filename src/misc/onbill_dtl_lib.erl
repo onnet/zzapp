@@ -4,7 +4,7 @@
 -export([version/0, inventory/1]).
 
 -export([pad_left/1
-        ,iamreverse/1
+        ,gregsec_to_date/1
         ]).
 
 -include_lib("tasks/src/tasks.hrl").
@@ -13,18 +13,21 @@
 version() -> 1.
 
 -spec inventory(atom()) -> kz_proplist().
-inventory(filters) -> [iamreverse, pad_left];
+inventory(filters) -> [pad_left, gregsec_to_date];
 inventory(tags) -> [].
 
 -spec pad_left(any()) -> ne_binary().
 pad_left(Val) ->
     kz_binary:pad_left(kz_term:to_binary(Val), 2, <<"0">>).
 
--spec iamreverse(atom()) -> kz_proplist().
-iamreverse(String) when is_list(String) ->
-    lists:reverse(String);
-iamreverse(String) when is_binary(String) ->
-    iamreverse(binary_to_list(String)).
+-spec gregsec_to_date(any()) -> kz_datetime().
+gregsec_to_date(Seconds) ->
+    try
+        calendar:gregorian_seconds_to_datetime(Seconds)
+    catch
+        _ -> Seconds
+    end.
+
 
 %% good example: http://www.jonasrichard.com/2016/01/templating-with-erlydtl-1.html
 %%{% get_price id=product.id as price %}

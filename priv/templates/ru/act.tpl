@@ -1,3 +1,4 @@
+{% load onbill_dtl %}
 <head>
   <meta charset="UTF-8">
   <link href='http://fonts.googleapis.com/css?family=PT+Sans+Narrow&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
@@ -16,7 +17,7 @@
   </p>
   <h4 align=center>
     по Договору №
-    {{ agrm_num }} от {{ agrm_date }}
+    {{ agrm_num }} от {{ agrm_date|gregsec_to_date|date:"d.m.Y" }}
     <br />
     за оказанные услуги электросвязи за период: {{ start_date }} - {{ end_date }}
   </h4>
@@ -34,13 +35,13 @@
       Российской Федерации и имеющее местонахождение {{ carrier_vars.oper_addr }} в лице генерального директора
       {{ carrier_vars.oper_agent_short }} {{ carrier_vars.in_person_of }}, действующего по доверенности
       {{carrier_vars.oper_power }}, с одной стороны,
-      и {{ account_vars.account_name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том,
-      что в соответствии с Договором об оказании услуг связи № {{ agrm_num }} от {{ agrm_date }},
+      и {{ account_vars.name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том,
+      что в соответствии с Договором об оказании услуг связи № {{ agrm_num }} от {{ agrm_date|gregsec_to_date|date:"d.m.Y" }},
       заключенным между Сторонами (далее — «Договор»), {{ carrier_vars.oper_name_further }} в указанный период оказал Клиенту Услуги:
     {% else %}
       {{ carrier_vars.oper_name }} (далее — «{{ carrier_vars.oper_name_further }}»), с одной стороны,
-      и {{ account_vars.account_name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том,
-      что в соответствии с Договором об оказании услуг связи № {{ agrm_num }} от {{ agrm_date }},
+      и {{ account_vars.name }}, (далее — «Клиент»), с другой (далее — «Стороны»), составили настоящий Акт в том,
+      что в соответствии с Договором об оказании услуг связи № {{ agrm_num }} от {{ agrm_date|gregsec_to_date|date:"d.m.Y" }},
       заключенным между Сторонами (далее — «Договор»),
       {{ carrier_vars.oper_name_further }} в указанный период оказал Клиенту Услуги:
     {% endif %}
