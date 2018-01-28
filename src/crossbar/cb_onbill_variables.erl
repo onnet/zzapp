@@ -80,7 +80,7 @@ validate_onbill(Context, ?HTTP_POST) ->
 
 -spec validate_onbill(cb_context:context(), path_token(), http_method()) -> cb_context:context().
 validate_onbill(Context, AttachmentId, ?HTTP_GET) ->
-    crossbar_doc:load_attachment(?VARIABLES_DOC_ID, AttachmentId, [], Context);
+    crossbar_doc:load_attachment(?VARIABLES_DOC_ID, AttachmentId, [{'expected_type', ?VARIABLES_DOC_TYPE}], Context);
 validate_onbill(Context, AttachmentId, ?HTTP_POST) ->
     save_variables_attachment(Context, ?VARIABLES_DOC_ID, AttachmentId).
 
