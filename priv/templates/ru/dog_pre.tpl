@@ -42,7 +42,7 @@
     г. Санкт-Петербург
   </td>
   <td align=right>
-    {{ agrm.date_json.day|pad_left }}.{{ agrm.date_json.month|pad_left }}.{{ agrm.date_json.year }}
+    {{ agrm.date|gregsec_to_date|date:"d.m.Y" }}
   </td>
 </tr>
 </table>
