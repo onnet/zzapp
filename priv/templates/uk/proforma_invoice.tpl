@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>{{ carrier_vars.oper_name }}</title>
+    <title>{{ carrier_vars.name }}</title>
    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet"> 
     <style>
       @import url(https://fonts.googleapis.com/css?family=Special+Elite);
@@ -19,7 +19,7 @@
       <br />
         <div class="col-xs-7">
           <h1 style="color: #E86110;">
-            {{ carrier_vars.oper_name }}
+            {{ carrier_vars.logo }}
           </h1>
         </div>
         <div class="col-xs-5 text-right">
@@ -30,30 +30,30 @@
       <br />
       <br />
       <div class="row">
-        <div class="col-xs-5">
+        <div class="col-xs-6">
           <div class="panel panel-info">
             <div class="panel-heading">
-              <h4>From: {{ carrier_vars.oper_name }}</h4>
+              <h4>From : {{ carrier_vars.name_short }}</h4>
             </div>
             <div class="panel-body">
               <p>
-                {{ carrier_vars.billing_address.line1 }}<br>
-                {{ carrier_vars.billing_address.line2 }}<br>
-                {{ carrier_vars.billing_address.line3 }}<br>
+                {{ carrier_vars.address.registered.line1 }}<br>
+                {{ carrier_vars.address.registered.line2 }}<br>
+                {{ carrier_vars.address.registered.line3 }}<br>
               </p>
             </div>
           </div>
         </div>
-        <div class="col-xs-5 col-xs-offset-2 text-left">
+        <div class="col-xs-6 text-left">
           <div class="panel panel-info">
             <div class="panel-heading">
-              <h4>To : {{ account_vars.account_name }}</h4>
+              <h4>To : {{ account_vars.name }}</h4>
             </div>
             <div class="panel-body">
               <p>
-                {{ account_vars.billing_address.line1 }}<br>
-                {{ account_vars.billing_address.line2 }}<br>
-                {{ account_vars.billing_address.line3 }}<br>
+                {{ account_vars.address.registered.line1 }}<br>
+                {{ account_vars.address.registered.line2 }}<br>
+                {{ account_vars.address.registered.line3 }}<br>
               </p>
             </div>
           </div>
@@ -124,18 +124,15 @@
               <h4>Bank details</h4>
             </div>
             <div class="panel-body">
-              <p>{{ carrier_vars.oper_name }}</p>
-              <p>{{ carrier_vars.bank_details.line1 }}</p>
-              <p>{{ carrier_vars.bank_details.line2 }}</p>
-              <p>{{ carrier_vars.bank_details.line3 }}</p>
-              {% if carrier_vars.bank_details.line4 %}
-                <p>{{ carrier_vars.bank_details.line4 }}</p>
+              <p>{{ carrier_vars.name }}</p>
+              <p>{{ carrier_vars.banking_details.name }}</p>
+              <p>Sort Code : {{ carrier_vars.banking_details.sort_code }}</p>
+              <p>Account Number : {{ carrier_vars.banking_details.account_number }}</p>
+              {% if carrier_vars.banking_details.iban %}
+                <p>IBAN : {{ carrier_vars.banking_details.iban }}</p>
               {% endif %}
-              {% if carrier_vars.bank_details.line5 %}
-                <p>{{ carrier_vars.bank_details.line5 }}</p>
-              {% endif %}
-              {% if carrier_vars.bank_details.line6 %}
-                <p>{{ carrier_vars.bank_details.line6 }}</p>
+              {% if carrier_vars.banking_details.bic %}
+                <p>BIC : {{ carrier_vars.banking_details.bic }}</p>
               {% endif %}
             </div>
           </div>
@@ -147,17 +144,14 @@
                 <h4>Contact Details</h4>
               </div>
               <div class="panel-body">
-              {% if carrier_vars.contact_details.line1 %}
-                <p>{{ carrier_vars.contact_details.line1 }}</p>
+              {% if carrier_vars.contact_details.email %}
+                <p>{{ carrier_vars.contact_details.email }}</p>
               {% endif %}
-              {% if carrier_vars.contact_details.line2 %}
-                <p>{{ carrier_vars.contact_details.line2 }}</p>
+              {% if carrier_vars.contact_details.phone %}
+                <p>{{ carrier_vars.contact_details.phone }}</p>
               {% endif %}
-              {% if carrier_vars.contact_details.line3 %}
-                <p>{{ carrier_vars.contact_details.line3 }}</p>
-              {% endif %}
-              {% if carrier_vars.contact_details.line4 %}
-                <p>{{ carrier_vars.contact_details.line4 }}</p>
+              {% if carrier_vars.contact_details.url %}
+                <p>{{ carrier_vars.contact_details.url }}</p>
               {% endif %}
               </div>
             </div>
