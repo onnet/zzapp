@@ -295,12 +295,13 @@ maybe_account_aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->
     case kz_json:get_value(<<"aggregate_invoice">>, AccountOnbillDoc) of
         'true' -> aggregate_invoice(AccountId, Year, Month, Day, Carriers);
         _ ->
-            %% here is a dirty hack just for old to new billing transition
-            OnNetDocNumber = kz_json:get_binary_value([<<"agrm">>,<<"onnet">>,<<"number">>], AccountOnbillDoc, <<>>),
-            case re:run(OnNetDocNumber, <<"PRE">>) of
-                'nomatch' -> aggregate_invoice(AccountId, Year, Month, Day, Carriers);
-                _ -> 'ok'
-            end
+          %  %% here is a dirty hack just for old to new billing transition
+          %  OnNetDocNumber = kz_json:get_binary_value([<<"agrm">>,<<"onnet">>,<<"number">>], AccountOnbillDoc, <<>>),
+          %  case re:run(OnNetDocNumber, <<"PRE">>) of
+          %      'nomatch' -> aggregate_invoice(AccountId, Year, Month, Day, Carriers);
+          %      _ -> 'ok'
+          %  end
+            'ok'
     end.
 
 aggregate_invoice(AccountId, Year, Month, Day, Carriers) ->

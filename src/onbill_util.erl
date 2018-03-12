@@ -493,13 +493,17 @@ is_trial_account(AccountJObj) ->
         _ -> 'true'
     end.
 
--spec maybe_convicted(ne_binary()) -> 'ok'|'delinquent'.
+-spec maybe_convicted(ne_binary()) -> boolean().
 maybe_convicted(AccountId) ->
     case maybe_below_waterline(AccountId) of
         'true' -> 'true';
         'false' -> false;
         'even' ->
-            not (account_creation_date(AccountId) == period_start_date(AccountId))
+            {Today, _} = calendar:gregorian_seconds_to_datetime(kz_time:current_tstamp()),
+            not (account_creation_date(AccountId) == period_start_date(AccountId)
+                 orelse
+                 account_creation_date(AccountId) == Today
+                )
     end.
 
 maybe_below_waterline(AccountId) ->
