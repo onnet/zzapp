@@ -19,7 +19,7 @@
         ]).
 
 -include_lib("tasks/src/tasks.hrl").
--include_lib("kazoo_services/include/kz_service.hrl").
+%%-include_lib("kazoo_services/include/kz_service.hrl").
 -include("onbill.hrl").
 
 -define(CATEGORY, "onbill").
@@ -40,7 +40,7 @@ init() ->
     tasks_bindings:bind_actions(<<"tasks."?CATEGORY>>, ?MODULE, ?ACTIONS).
 
 
--spec output_header(ne_binary()) -> kz_csv:row().
+-spec output_header(kz_term:ne_binary()) -> kz_csv:row().
 output_header(<<"current_state">>) ->
     [<<"account_id">>
     ,<<"account_name">>
@@ -76,15 +76,15 @@ output_header(<<"sync_onbills">>) ->
 -spec help(kz_json:object()) -> kz_json:object().
 help(JObj) -> help(JObj, <<?CATEGORY>>).
 
--spec help(kz_json:object(), ne_binary()) -> kz_json:object().
+-spec help(kz_json:object(), kz_term:ne_binary()) -> kz_json:object().
 help(JObj, <<?CATEGORY>>=Category) ->
     lists:foldl(fun(Action, J) -> help(J, Category, Action) end, JObj, ?ACTIONS).
 
--spec help(kz_json:object(), ne_binary(), ne_binary()) -> kz_json:object().
+-spec help(kz_json:object(), kz_term:ne_binary(), kz_term:ne_binary()) -> kz_json:object().
 help(JObj, <<?CATEGORY>>=Category, Action) ->
     kz_json:set_value([Category, Action], kz_json:from_list(action(Action)), JObj).
 
--spec action(ne_binary()) -> kz_proplist().
+-spec action(kz_term:ne_binary()) -> kz_term:proplist().
 action(<<"current_state">>) ->
     [{<<"description">>, <<"List current descendant accounts state">>}
     ,{<<"doc">>, <<"Just an experimentsl feature.\n"
@@ -201,7 +201,7 @@ sync_onbills(_, [SubAccountId | DescendantsIds]) ->
 %%% Internal functions
 %%%===================================================================
 
--spec get_descendants(ne_binary()) -> ne_binaries().
+-spec get_descendants(kz_term:ne_binary()) -> kz_term:ne_binaries().
 get_descendants(AccountId) ->
     ViewOptions = [{'startkey', [AccountId]}
                   ,{'endkey', [AccountId, kz_json:new()]}
@@ -213,7 +213,7 @@ get_descendants(AccountId) ->
             []
     end.
 
--spec get_children(ne_binary()) -> ne_binaries().
+-spec get_children(kz_term:ne_binary()) -> kz_term:ne_binaries().
 get_children(AccountId) ->
     ViewOptions = [{'startkey', [AccountId]}
                   ,{'endkey', [AccountId, kz_json:new()]}
@@ -225,7 +225,7 @@ get_children(AccountId) ->
             []
     end.
 
--spec descendants_count(ne_binary()) -> integer().
+-spec descendants_count(kz_term:ne_binary()) -> integer().
 descendants_count(AccountId) ->
     ViewOptions = [{'group_level', 1}
                    | props:delete('group_level', [{'key', AccountId}])

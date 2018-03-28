@@ -56,7 +56,7 @@ validate_periodic_fees(Context, ?HTTP_GET) ->
 validate_periodic_fees(Context, ?HTTP_PUT) ->
     save_periodic_fees(Context).
 
--spec validate_periodic_fees(cb_context:context(), ne_binary(), path_token()) -> cb_context:context().
+-spec validate_periodic_fees(cb_context:context(), kz_term:ne_binary(), path_token()) -> cb_context:context().
 validate_periodic_fees(Context, Id, ?HTTP_GET) ->
     crossbar_doc:load(Id, Context, [{'expected_type', <<"periodic_fee">>}]);
 validate_periodic_fees(Context, Id, ?HTTP_POST) ->
@@ -65,7 +65,7 @@ validate_periodic_fees(Context, Id, ?HTTP_DELETE) ->
     mark_periodic_service_deleted(Context, Id).
 
 -spec save_periodic_fees(cb_context:context()) -> cb_context:context().
--spec save_periodic_fees(cb_context:context(), ne_binary()) -> cb_context:context().
+-spec save_periodic_fees(cb_context:context(), kz_term:ne_binary()) -> cb_context:context().
 save_periodic_fees(Context) ->
     save_periodic_fees(Context, kz_datamgr:get_uuid()).
 save_periodic_fees(Context, Id) ->
@@ -94,7 +94,7 @@ maybe_valid_relationship(Context) ->
     AuthAccountId = cb_context:auth_account_id(Context),
     onbill_util:validate_relationship(AccountId, AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId).
 
--spec mark_periodic_service_deleted(cb_context:context(), ne_binary()) -> cb_context:context().
+-spec mark_periodic_service_deleted(cb_context:context(), kz_term:ne_binary()) -> cb_context:context().
 mark_periodic_service_deleted(Context0, Id) ->
     Context = crossbar_doc:load(Id, Context0, ?TYPE_CHECK_OPTION(<<"periodic_fee">>)),
     case cb_context:resp_status(Context) of

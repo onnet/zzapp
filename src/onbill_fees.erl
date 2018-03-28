@@ -11,9 +11,9 @@
 
 -include("onbill.hrl").
 
--spec shape_fees(ne_binary(), integer(), integer(), ne_binary()) -> 'ok'. 
--spec shape_fees(ne_binary(), integer(), integer(), integer(), ne_binary()) -> 'ok'. 
--spec shape_fees(ne_binary(), integer(), integer(), integer(), kz_json:object(), kz_proplist()) -> 'ok'. 
+-spec shape_fees(kz_term:ne_binary(), integer(), integer(), kz_term:ne_binary()) -> 'ok'. 
+-spec shape_fees(kz_term:ne_binary(), integer(), integer(), integer(), kz_term:ne_binary()) -> 'ok'. 
+-spec shape_fees(kz_term:ne_binary(), integer(), integer(), integer(), kz_json:object(), kz_term:proplist()) -> 'ok'. 
 shape_fees(AccountId, Year, Month, Carrier) ->
     shape_fees(AccountId, Year, Month, 1, Carrier).
 shape_fees(AccountId, Year, Month, Day, Carrier) ->
@@ -185,7 +185,7 @@ process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
                               ,DaysInPeriod
                               ).
 
--spec per_minute_calls(ne_binary(), kz_year(), kz_month(), kz_day(), ne_binary()) -> ok.
+-spec per_minute_calls(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day(), kz_term:ne_binary()) -> ok.
 per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Carrier) ->
     per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
 per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
@@ -195,7 +195,7 @@ per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
     Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
     lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc, Timezone) end, {[], 0,0}, JObjs).
 
--spec get_period_per_minute_jobjs(ne_binary(), kz_year(), kz_month(), kz_day()) -> kz_json:objects().
+-spec get_period_per_minute_jobjs(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> kz_json:objects().
 get_period_per_minute_jobjs(AccountId, Year, Month, Day) ->
     {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
     {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
@@ -360,7 +360,7 @@ handle_ets_item_quantity(RawTableId, ResultTableId, ServiceType, Item, Price, Qu
               ),
     ets:insert(ResultTableId, {ServiceType, Item, Price, Quantity, dates_sequence_reduce(Dates), length(Dates), Name, <<"daily_calculated">>, 0.0}).
 
--spec dates_sequence_reduce(kz_proplist()) -> kz_proplist().
+-spec dates_sequence_reduce(kz_term:proplist()) -> kz_term:proplist().
 dates_sequence_reduce(DatesList) ->
     Pairs = lists:usort([{Year,Month} || {Year,Month,_} <- DatesList]),
     [format_days_of_month(Year, Month, DatesList) || {Year,Month} <- Pairs].
@@ -369,7 +369,7 @@ format_days_of_month(Year, Month, DatesList) ->
     Days = [?TO_INT(D) || {Y,M,D} <- DatesList, Year == Y  andalso Month == M],
     onbill_util:period_json(Year, Month, days_sequence_reduce(Days)).
 
--spec days_sequence_reduce(kz_proplist()) -> kz_proplist().
+-spec days_sequence_reduce(kz_term:proplist()) -> kz_term:proplist().
 days_sequence_reduce([Digit]) ->
     days_sequence_reduce([Digit], []);
 days_sequence_reduce([First,Last]) ->
@@ -437,7 +437,7 @@ aggregated_service_to_line({ServiceType, Item, Cost, Quantity, Period, DaysQty, 
 aggregated_service_to_line(_, _) ->
     [].
 
--spec vatify_amount(ne_binary(), number(), kz_json:object()) -> 'ok'.
+-spec vatify_amount(kz_term:ne_binary(), number(), kz_json:object()) -> 'ok'.
 vatify_amount(AmountName, Amount, OnbillResellerVars) ->
     VatRate = kz_json:get_value(<<"vat_rate">>, OnbillResellerVars),
     VatDisposition = kz_json:get_value(<<"vat_disposition">>, OnbillResellerVars),

@@ -77,17 +77,17 @@
 
 -define(KEY_TRIAL_EXPIRATION, <<"pvt_trial_expires">>).
 
--spec check_db(ne_binary()) -> 'ok'.
+-spec check_db(kz_term:ne_binary()) -> 'ok'.
 check_db(Db) when is_binary(Db) ->
     do_check_db(Db, kz_datamgr:db_exists(Db)).
 
--spec do_check_db(ne_binary(), boolean()) -> 'ok'.
+-spec do_check_db(kz_term:ne_binary(), boolean()) -> 'ok'.
 do_check_db(_Db, 'true') -> 'ok';
 do_check_db(Db, 'false') ->
     lager:debug("create Db ~p", [Db]),
     _ = kz_datamgr:db_create(Db).
 
--spec maybe_add_design_doc(ne_binary(), ne_binary()) -> 'ok' | {'error', 'not_found'}.
+-spec maybe_add_design_doc(kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok' | {'error', 'not_found'}.
 maybe_add_design_doc(DbName, ViewName) ->
     case kz_datamgr:lookup_doc_rev(DbName, <<"_design/", ViewName/binary>>) of
         {'error', 'not_found'} ->
@@ -99,7 +99,7 @@ maybe_add_design_doc(DbName, ViewName) ->
         {'ok', _ } -> 'ok'
     end.
 
--spec get_attachment(ne_binary(), ne_binary()) -> ok.
+-spec get_attachment(kz_term:ne_binary(), kz_term:ne_binary()) -> ok.
 get_attachment(AttachmentId, Db) ->
     case kz_datamgr:fetch_attachment(Db, AttachmentId, <<(kz_term:to_binary(AttachmentId))/binary, ".pdf">>) of
         {'ok', _} = OK -> OK;
@@ -110,18 +110,18 @@ get_attachment(AttachmentId, Db) ->
 price_round(Price) ->
     round(Price * 100) / 100.
 
--spec account_carriers_list(ne_binary()) -> list().
+-spec account_carriers_list(kz_term:ne_binary()) -> list().
 account_carriers_list(AccountId) ->
     kz_json:get_value(<<"carriers">>, reseller_vars(AccountId), []).
 
--spec carrier_doc(ne_binary(), ne_binary()) -> any().
+-spec carrier_doc(kz_term:ne_binary(), kz_term:ne_binary()) -> any().
 carrier_doc(Carrier, AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     DbName = kz_util:format_account_id(ResellerId,'encoded'),
     {'ok', CarrierDoc} =  kz_datamgr:open_doc(DbName, ?CARRIER_DOC(Carrier)),
     CarrierDoc.
 
--spec account_vars(ne_binary()) -> kz_json:object().
+-spec account_vars(kz_term:ne_binary()) -> kz_json:object().
 account_vars(AccountId) ->
     DbName = kz_util:format_account_id(AccountId,'encoded'),
     case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
@@ -132,16 +132,16 @@ account_vars(AccountId) ->
             kz_json:new()
     end.
 
--spec reseller_vars(ne_binary()) -> kz_json:object().
+-spec reseller_vars(kz_term:ne_binary()) -> kz_json:object().
 reseller_vars(AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     account_vars(ResellerId).
 
--spec reseller_country_of_residence(ne_binary()) -> kz_proplist().
+-spec reseller_country_of_residence(kz_term:ne_binary()) -> kz_term:proplist().
 reseller_country_of_residence(AccountId) ->
     kz_term:to_lower_binary(kz_json:get_value(<<"iso_code_country_of_residence">>, reseller_vars(AccountId), <<"uk">>)).
 
--spec maybe_main_carrier(ne_binary(), kz_json:object()) -> boolean(). 
+-spec maybe_main_carrier(kz_term:ne_binary(), kz_json:object()) -> boolean(). 
 maybe_main_carrier(Carrier, AccountId) when is_binary(Carrier) ->
     maybe_main_carrier(carrier_doc(Carrier, AccountId), AccountId);
 maybe_main_carrier(CarrierDoc, _) ->
@@ -150,7 +150,7 @@ maybe_main_carrier(CarrierDoc, _) ->
         _ -> 'false'
     end.
 
--spec get_main_carrier(ne_binary()|list(), ne_binary()) -> ne_binary().
+-spec get_main_carrier(kz_term:ne_binary()|list(), kz_term:ne_binary()) -> kz_term:ne_binary().
 get_main_carrier([Carrier],_) ->
     Carrier;
 get_main_carrier([Carrier|T], AccountId) ->
@@ -161,25 +161,25 @@ get_main_carrier([Carrier|T], AccountId) ->
 get_main_carrier(AccountId, _) ->
     get_main_carrier(account_carriers_list(AccountId), AccountId).
 
--spec format_datetime(integer()) -> ne_binary().
+-spec format_datetime(integer()) -> kz_term:ne_binary().
 format_datetime(TStamp) ->
     {{Year, Month, Day}, {Hour, Minute, Second}} = calendar:gregorian_seconds_to_datetime(TStamp),
     StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])),
     kz_term:to_binary(StrTime).
 
--spec format_datetime_tz(integer(), ne_binary()) -> ne_binary().
+-spec format_datetime_tz(integer(), kz_term:ne_binary()) -> kz_term:ne_binary().
 format_datetime_tz(TStamp, Timezone) ->
     DateTime = calendar:gregorian_seconds_to_datetime(TStamp),
     {{Year, Month, Day}, {Hour, Minute, Second}} = localtime:utc_to_local(DateTime, kz_term:to_list(Timezone)),
     StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])),
     kz_term:to_binary(StrTime).
 
--spec is_billable(ne_binary()) -> boolean().
+-spec is_billable(kz_term:ne_binary()) -> boolean().
 is_billable(AccountId) ->
     {'ok', JObj} = kz_account:fetch(AccountId),
     kz_account:is_enabled(JObj).
 
--spec validate_relationship(ne_binary(), ne_binary()) -> boolean().
+-spec validate_relationship(kz_term:ne_binary(), kz_term:ne_binary()) -> boolean().
 validate_relationship(ChildId, ResellerId) ->
     case get_children_list(ResellerId) of
         {'ok', Accounts} ->
@@ -190,7 +190,7 @@ validate_relationship(ChildId, ResellerId) ->
             'false'
     end.
 
--spec get_children_list(ne_binary()) -> {'ok', kz_proplist()} | {'error', any()}.
+-spec get_children_list(kz_term:ne_binary()) -> {'ok', kz_term:proplist()} | {'error', any()}.
 get_children_list(ResellerId) ->
     ViewOpts = [{'startkey', [ResellerId]}
                ,{'endkey', [ResellerId, kz_json:new()]}
@@ -216,20 +216,20 @@ maybe_fee_active(LookupTstamp, Fee) ->
     andalso
     LookupTstamp < kz_json:get_value([<<"value">>, <<"service_ends">>], Fee).
 
--spec prev_month(kz_year(), kz_month()) -> {kz_year(), kz_month()}.
+-spec prev_month(kz_time:year(), kz_time:month()) -> {kz_time:year(), kz_time:month()}.
 prev_month(Year, 1) ->
     {Year - 1, 12};
 prev_month(Year, Month) ->
     {Year, Month - 1}.
 
--spec next_month(kz_year(), kz_month()) -> {kz_year(), kz_month()}.
+-spec next_month(kz_time:year(), kz_time:month()) -> {kz_time:year(), kz_time:month()}.
 next_month(Year, 12) ->
     {Year + 1, 1};
 next_month(Year, Month) ->
     {Year, Month + 1}.
 
--spec adjust_period_first_day({kz_year(), kz_month(), kz_day()}) -> {kz_year(), kz_month(), kz_day()}.
--spec adjust_period_first_day(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+-spec adjust_period_first_day({kz_time:year(), kz_time:month(), kz_time:day()}) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
+-spec adjust_period_first_day(kz_time:year(), kz_time:month(), kz_time:day()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
 adjust_period_first_day({Year, Month, Day}) ->
     adjust_period_first_day(Year, Month, Day).
 
@@ -245,8 +245,8 @@ adjust_period_first_day(Year, Month, Day) ->
             {Year, Month, Day}
     end.
 
--spec adjust_period_last_day({kz_year(), kz_month(), kz_day()}) -> {kz_year(), kz_month(), kz_day()}.
--spec adjust_period_last_day(kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+-spec adjust_period_last_day({kz_time:year(), kz_time:month(), kz_time:day()}) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
+-spec adjust_period_last_day(kz_time:year(), kz_time:month(), kz_time:day()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
 adjust_period_last_day({Year, Month, Day}) ->
     adjust_period_last_day(Year, Month, Day).
 
@@ -262,8 +262,8 @@ adjust_period_last_day(Year, Month, Day) ->
             {Year, Month, Day}
     end.
 
--spec days_in_period(ne_binary(), integer()) -> integer().
--spec days_in_period(ne_binary(), kz_year(), kz_month(), kz_day()) -> integer().
+-spec days_in_period(kz_term:ne_binary(), integer()) -> integer().
+-spec days_in_period(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> integer().
 days_in_period(AccountId, Timestamp) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     days_in_period(AccountId, Year, Month, Day).
@@ -271,20 +271,20 @@ days_in_period(AccountId, Year, Month, Day) ->
     {SYear, SMonth, _} = period_start_date(AccountId, Year, Month, Day),
     calendar:last_day_of_the_month(SYear, SMonth).
 
--spec days_left_in_period(ne_binary(), gregorian_seconds()) -> integer().
+-spec days_left_in_period(kz_term:ne_binary(), kz_time:gregorian_seconds()) -> integer().
 days_left_in_period(AccountId, Timestamp) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     calendar:date_to_gregorian_days(period_end_date(AccountId, Timestamp))
     -
     calendar:date_to_gregorian_days(Year, Month, Day) + 1.
 
--spec period_end_modb(ne_binary(), kz_year(), kz_month(), kz_day()) -> ne_binary().
+-spec period_end_modb(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> kz_term:ne_binary().
 period_end_modb(AccountId, Year, Month, Day) ->
     {Y, M, _} = period_end_date(AccountId, Year, Month, Day),
     kazoo_modb:get_modb(AccountId, Y, M).
 
--spec date_json({kz_year(), kz_month(), kz_day()}) -> kz_proplist().
--spec date_json(kz_year(), kz_month(), kz_day()) -> kz_proplist().
+-spec date_json({kz_time:year(), kz_time:month(), kz_time:day()}) -> kz_term:proplist().
+-spec date_json(kz_time:year(), kz_time:month(), kz_time:day()) -> kz_term:proplist().
 date_json({Year, Month, Day}) ->
     date_json(Year, Month, Day).
 
@@ -299,7 +299,7 @@ date_json(Year, Month, Day) ->
                       ,{<<"day_ends_ts">>, calendar:datetime_to_gregorian_seconds({{?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)}, {23,59,59}})}
                       ]).
 
--spec period_json(kz_year(), kz_month(), kz_day()) -> kz_proplist().
+-spec period_json(kz_time:year(), kz_time:month(), kz_time:day()) -> kz_term:proplist().
 period_json(Year, Month, Day) ->
     kz_json:from_list([{<<"year">>, ?TO_BIN(Year)}
                       ,{<<"month_short">>, ?TO_BIN(httpd_util:month(?TO_INT(Month)))}
@@ -309,17 +309,17 @@ period_json(Year, Month, Day) ->
                   %    ,{<<"day_ends_ts">>, calendar:datetime_to_gregorian_seconds({{?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)}, {23,59,59}})}
                       ]).
 
--spec period_start_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
+-spec period_start_date(kz_term:ne_binary()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
 period_start_date(AccountId) ->
     Timestamp = kz_time:current_tstamp(),
     period_start_date(AccountId, Timestamp).
 
--spec period_start_date(ne_binary(), gregorian_seconds()) -> {kz_year(), kz_month(), kz_day()}.
+-spec period_start_date(kz_term:ne_binary(), kz_time:gregorian_seconds()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
 period_start_date(AccountId, Timestamp) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     period_start_date(AccountId, Year, Month, Day).
 
--spec period_start_date(ne_binary(), kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+-spec period_start_date(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
 period_start_date(AccountId, Year, Month, Day) ->
     BDay = kz_term:to_integer(billing_day(AccountId)),
     case Day >= BDay of
@@ -330,17 +330,17 @@ period_start_date(AccountId, Year, Month, Day) ->
              adjust_period_first_day(PrevYear, PrevMonth, BDay)
     end.
 
--spec period_end_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
+-spec period_end_date(kz_term:ne_binary()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
 period_end_date(AccountId) ->
     Timestamp = kz_time:current_tstamp(),
     period_end_date(AccountId, Timestamp).
 
--spec period_end_date(ne_binary(), gregorian_seconds()) -> {kz_year(), kz_month(), kz_day()}.
+-spec period_end_date(kz_term:ne_binary(), kz_time:gregorian_seconds()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
 period_end_date(AccountId, Timestamp) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     period_end_date(AccountId, Year, Month, Day).
 
--spec period_end_date(ne_binary(), kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+-spec period_end_date(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
 period_end_date(AccountId, Year, Month, Day) ->
     BDay = kz_term:to_integer(billing_day(AccountId)),
     case Day < BDay of
@@ -351,8 +351,8 @@ period_end_date(AccountId, Year, Month, Day) ->
              adjust_period_last_day(NextYear, NextMonth, BDay-1)
     end.
 
--spec next_period_start_date(ne_binary(), gregorian_seconds()) -> {kz_year(), kz_month(), kz_day()}.
--spec next_period_start_date(ne_binary(), kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+-spec next_period_start_date(kz_term:ne_binary(), kz_time:gregorian_seconds()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
+-spec next_period_start_date(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
 next_period_start_date(AccountId, Timestamp) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     next_period_start_date(AccountId, Year, Month, Day).
@@ -362,8 +362,8 @@ next_period_start_date(AccountId, Year, Month, Day) ->
     {NextMonthYear, NextMonth} = next_month(SYear, SMonth),
     adjust_period_first_day(NextMonthYear, NextMonth, SDay).
 
--spec previous_period_start_date(ne_binary(), gregorian_seconds()) -> {kz_year(), kz_month(), kz_day()}.
--spec previous_period_start_date(ne_binary(), kz_year(), kz_month(), kz_day()) -> {kz_year(), kz_month(), kz_day()}.
+-spec previous_period_start_date(kz_term:ne_binary(), kz_time:gregorian_seconds()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
+-spec previous_period_start_date(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
 previous_period_start_date(AccountId, Timestamp) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     previous_period_start_date(AccountId, Year, Month, Day).
@@ -373,7 +373,7 @@ previous_period_start_date(AccountId, Year, Month, Day) ->
     {PrevMonthYear, PrevMonth} = prev_month(SYear, SMonth),
     adjust_period_first_day(PrevMonthYear, PrevMonth, SDay).
 
--spec maybe_force_postpay_billing_day(ne_binary()) -> boolean().
+-spec maybe_force_postpay_billing_day(kz_term:ne_binary()) -> boolean().
 maybe_force_postpay_billing_day(AccountId) ->
     {'ok', MasterAccount} = kapps_util:get_master_account_id(),
     kz_json:get_atom_value(<<"force_postpay_billing_day">>
@@ -381,7 +381,7 @@ maybe_force_postpay_billing_day(AccountId) ->
                           ,kz_json:get_atom_value(<<"force_postpay_billing_day">>,reseller_vars(MasterAccount),'false')
                           ).
 
--spec maybe_force_prepay_billing_day(ne_binary()) -> boolean().
+-spec maybe_force_prepay_billing_day(kz_term:ne_binary()) -> boolean().
 maybe_force_prepay_billing_day(AccountId) ->
     {'ok', MasterAccount} = kapps_util:get_master_account_id(),
     kz_json:get_atom_value(<<"force_prepay_billing_day">>
@@ -389,7 +389,7 @@ maybe_force_prepay_billing_day(AccountId) ->
                           ,kz_json:get_atom_value(<<"force_prepay_billing_day">>,reseller_vars(MasterAccount),'false')
                           ).
 
--spec billing_day(ne_binary()) -> integer() | 'undefined'.
+-spec billing_day(kz_term:ne_binary()) -> integer() | 'undefined'.
 billing_day(AccountId) when is_binary(AccountId) ->
     case maybe_allow_postpay(AccountId) of
         {'true', _} ->
@@ -406,7 +406,7 @@ billing_day(AccountId) when is_binary(AccountId) ->
             end
     end.
 
--spec billing_day(kz_json:object(), ne_binary()) -> integer() | 'undefined'.
+-spec billing_day(kz_json:object(), kz_term:ne_binary()) -> integer() | 'undefined'.
 billing_day(AccountVarsJObj, AccountId) ->
     case kz_json:get_value(<<"pvt_billing_day">>, AccountVarsJObj) of
         'undefined' ->
@@ -430,7 +430,7 @@ set_billing_day(AccountId) ->
             end
     end.
 
--spec set_billing_day(integer(), ne_binary()) -> kz_json:object().
+-spec set_billing_day(integer(), kz_term:ne_binary()) -> kz_json:object().
 set_billing_day(BillingDay, AccountId) ->
     DbName = kz_util:format_account_id(AccountId,'encoded'),
     case kz_datamgr:open_doc(DbName, ?ONBILL_DOC) of
@@ -456,19 +456,19 @@ set_billing_day(BillingDay, AccountId) ->
                               ,kz_json:new())
     end.
 
--spec account_creation_date(ne_binary()) -> {kz_year(), kz_month(), kz_day()}.
+-spec account_creation_date(kz_term:ne_binary()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
 account_creation_date(AccountId) ->
     {'ok', AccountDoc} = kz_account:fetch(AccountId),
     Timestamp = kz_json:get_value(<<"pvt_created">>, AccountDoc),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     {Year, Month, Day}.
 
--spec account_creation_ts(ne_binary()) -> integer().
+-spec account_creation_ts(kz_term:ne_binary()) -> integer().
 account_creation_ts(AccountId) ->
     {'ok', AccountDoc} = kz_account:fetch(AccountId),
     kz_json:get_value(<<"pvt_created">>, AccountDoc).
 
--spec maybe_allow_postpay(ne_binary()) -> boolean().
+-spec maybe_allow_postpay(kz_term:ne_binary()) -> boolean().
 maybe_allow_postpay(AccountId) ->
     Limits = j5_limits:get(AccountId),
     case j5_limits:allow_postpay(Limits) of
@@ -476,14 +476,14 @@ maybe_allow_postpay(AccountId) ->
         'true' -> {'true', j5_limits:max_postpay(Limits)}
     end.
 
--spec trial_has_expired(ne_binary() | kz_account:doc()) -> boolean().
+-spec trial_has_expired(kz_term:ne_binary() | kz_account:doc()) -> boolean().
 trial_has_expired(AccountId) when is_binary(AccountId) ->
     {'ok', AccountJObj} = kz_account:fetch(AccountId),
     trial_has_expired(AccountJObj);
 trial_has_expired(AccountJObj) ->
     kz_account:trial_has_expired(AccountJObj).
 
--spec is_trial_account(ne_binary() | kz_account:doc()) -> boolean().
+-spec is_trial_account(kz_term:ne_binary() | kz_account:doc()) -> boolean().
 is_trial_account(AccountId) when is_binary(AccountId) ->
     {'ok', AccountJObj} = kz_account:fetch(AccountId),
     is_trial_account(AccountJObj);
@@ -493,7 +493,7 @@ is_trial_account(AccountJObj) ->
         _ -> 'true'
     end.
 
--spec maybe_convicted(ne_binary()) -> boolean().
+-spec maybe_convicted(kz_term:ne_binary()) -> boolean().
 maybe_convicted(AccountId) ->
     case maybe_below_waterline(AccountId) of
         'true' -> 'true';
@@ -519,7 +519,7 @@ maybe_below_waterline(AccountId) ->
         Draft when Draft > 0 -> 'false'
     end.
 
--spec maybe_administratively_convicted(ne_binary()) -> boolean().
+-spec maybe_administratively_convicted(kz_term:ne_binary()) -> boolean().
 maybe_administratively_convicted(AccountId) ->
     {ok, ServicesJObj} = kz_services:fetch_services_doc(AccountId,'false'),
     case kzd_services:status(ServicesJObj) of
@@ -531,19 +531,19 @@ maybe_administratively_convicted(AccountId) ->
             end
     end.
 
--spec current_service_status(ne_binary()) -> ne_binary().
+-spec current_service_status(kz_term:ne_binary()) -> kz_term:ne_binary().
 current_service_status(AccountId) ->
     {'ok', ServicesJObj} = kz_services:fetch_services_doc(AccountId,'false'),
     kzd_services:status(ServicesJObj).
 
--spec is_service_plan_assigned(ne_binary()) -> boolean().
+-spec is_service_plan_assigned(kz_term:ne_binary()) -> boolean().
 is_service_plan_assigned(AccountId) ->
     Services = kz_services:fetch(AccountId),
     ServicesJObj = kz_services:services_json(Services),
     Plans = kz_service_plans:plan_summary(ServicesJObj),
     not kz_term:is_empty(Plans).
 
--spec ensure_service_plan(ne_binary()) -> 'ok'.
+-spec ensure_service_plan(kz_term:ne_binary()) -> 'ok'.
 ensure_service_plan(AccountId) ->
     {'ok', MasterAccount} = kapps_util:get_master_account_id(),
     case is_service_plan_assigned(AccountId) of
@@ -567,7 +567,7 @@ add_service_plan(PlanId, AccountId) ->
     Services = kz_services:fetch(AccountId),
     kz_services:save(kz_services:add_service_plan(PlanId, Services)).
 
--spec default_service_plan(ne_binary()) -> ne_binary().
+-spec default_service_plan(kz_term:ne_binary()) -> kz_term:ne_binary().
 default_service_plan(AccountId) ->
     {'ok', MasterAccount} = kapps_util:get_master_account_id(),
     kz_json:get_value(<<"default_service_plan">>
@@ -575,7 +575,7 @@ default_service_plan(AccountId) ->
                      ,kz_json:get_value(<<"default_service_plan">>,reseller_vars(MasterAccount))
                      ).
 
--spec transit_to_full_subscription_state(ne_binary()) -> 'ok'.
+-spec transit_to_full_subscription_state(kz_term:ne_binary()) -> 'ok'.
 transit_to_full_subscription_state(AccountId) ->
     _ = ensure_service_plan(AccountId),
     set_billing_day(AccountId),
@@ -599,7 +599,7 @@ replicate_account_doc(JObj) ->
             kz_datamgr:ensure_saved(?KZ_ACCOUNTS_DB, kz_doc:delete_revision(JObj))
     end.
 
--spec reconcile_and_maybe_sync(ne_binary()) -> any().
+-spec reconcile_and_maybe_sync(kz_term:ne_binary()) -> any().
 reconcile_and_maybe_sync(AccountId) ->
     Services = kz_services:reconcile(AccountId),
     case kz_services:is_dirty(Services) of
@@ -609,12 +609,12 @@ reconcile_and_maybe_sync(AccountId) ->
             'ok'
     end.
 
--spec reconcile_and_sync(ne_binary()) -> any().
+-spec reconcile_and_sync(kz_term:ne_binary()) -> any().
 reconcile_and_sync(AccountId) ->
     _ = kz_services:reconcile(AccountId),
     kz_service_sync:sync(AccountId).
 
--spec maybe_save_as_dirty(ne_binary()) -> any().
+-spec maybe_save_as_dirty(kz_term:ne_binary()) -> any().
 maybe_save_as_dirty(AccountId) ->
     case kz_services:is_dirty(kz_services:fetch(AccountId)) of
         'true' -> 'ok';
@@ -622,21 +622,21 @@ maybe_save_as_dirty(AccountId) ->
             kz_services:save_as_dirty(AccountId)
     end.
 
--spec current_balance(ne_binary()) -> number().
+-spec current_balance(kz_term:ne_binary()) -> number().
 current_balance(AccountId) ->
     case wht_util:current_balance(AccountId) of
         {'ok', Balance} -> Balance;
         _ -> 0
     end.
 
--spec current_account_dollars(ne_binary()) -> number().
+-spec current_account_dollars(kz_term:ne_binary()) -> number().
 current_account_dollars(AccountId) ->
     case wht_util:current_account_dollars(AccountId) of
         {'ok', Balance} -> Balance;
         _ -> 0
     end.
 
--spec maybe_process_new_billing_period(ne_binary()) -> boolean().
+-spec maybe_process_new_billing_period(kz_term:ne_binary()) -> boolean().
 maybe_process_new_billing_period(AccountId) ->
     {Year, Month, _} = period_start_date(AccountId, kz_time:current_tstamp()),
     case kazoo_modb:open_doc(AccountId, ?MRC_DOC, Year, Month) of
@@ -644,7 +644,7 @@ maybe_process_new_billing_period(AccountId) ->
         {'error', 'not_found'} -> 'true'
     end.
 
--spec list_account_periods(ne_binary()) -> kz_json:objects().
+-spec list_account_periods(kz_term:ne_binary()) -> kz_json:objects().
 list_account_periods(AccountId) ->
     {Year, Month, _Day} = account_creation_date(AccountId),
     BillingDay = kz_term:to_integer(billing_day(AccountId)),
@@ -665,12 +665,12 @@ list_account_periods(AccountId, BillingDay, Timestamp, TS_Now, Acc) ->
         calendar:datetime_to_gregorian_seconds({next_period_start_date(AccountId, Timestamp), {0,0,0}}),
     list_account_periods(AccountId, BillingDay, NextTimestamp, TS_Now, [DataBag] ++ Acc).
 
--spec period_openning_balance(ne_binary(), kz_year(), kz_month(), kz_day()) -> number() | {'error', any()}.
+-spec period_openning_balance(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> number() | {'error', any()}.
 period_openning_balance(AccountId, Year, Month, Day) ->
     {SYear, SMonth, SDay} = period_start_date(AccountId, Year, Month, Day),
     day_start_balance(AccountId, SYear, SMonth, SDay).
 
--spec period_openning_balance_dollars(ne_binary(), kz_year(), kz_month(), kz_day()) -> number() | {'error', any()}.
+-spec period_openning_balance_dollars(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> number() | {'error', any()}.
 period_openning_balance_dollars(AccountId, Year, Month, Day) ->
     case period_openning_balance(AccountId, Year, Month, Day) of
         Balance when is_number(Balance) ->
@@ -679,7 +679,7 @@ period_openning_balance_dollars(AccountId, Year, Month, Day) ->
             Balance
     end.
 
--spec day_start_balance(ne_binary(), kz_year(), kz_month(), kz_day()) -> number() | {'error', any()}.
+-spec day_start_balance(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> number() | {'error', any()}.
 day_start_balance(AccountId, Year, Month, 1) ->
     case kazoo_modb:open_doc(AccountId, <<"monthly_rollup">>, Year, Month) of
         {'ok', JObj} -> get_amount(JObj);
@@ -712,7 +712,7 @@ day_start_balance(AccountId, Year, Month, Day) ->
             Error
     end.
 
--spec day_start_balance_dollars(ne_binary(), kz_year(), kz_month(), kz_day()) -> number() | {'error', any()}.
+-spec day_start_balance_dollars(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> number() | {'error', any()}.
 day_start_balance_dollars(AccountId, Year, Month, Day) ->
     case day_start_balance(AccountId, Year, Month, Day) of
         Balance when is_number(Balance) ->
@@ -730,7 +730,7 @@ get_amount(JObj) ->
         _ -> Amount
     end.
 
--spec get_range(ne_binary(), gregorian_seconds(), gregorian_seconds()) -> kz_proplists().
+-spec get_range(kz_term:ne_binary(), kz_time:gregorian_seconds(), kz_time:gregorian_seconds()) -> kz_term:proplists().
 get_range(AccountId, From, To) ->
     [ begin
           {AccountId, Year, Month} = kazoo_modb_util:split_account_mod(MODb),
@@ -742,7 +742,7 @@ get_range(AccountId, From, To) ->
       end || MODb <- kazoo_modb:get_range(AccountId, From, To)
     ].
 
--spec process_documents(kz_proplists(), kz_proplists(), ne_binary(), kz_proplists()) -> any().
+-spec process_documents(kz_term:proplists(), kz_term:proplists(), kz_term:ne_binary(), kz_term:proplists()) -> any().
 process_documents(_, _, _, []) ->
     'ok';
 process_documents(DelKeys, SetValues, EncodedDb, [DocId|T]) ->
@@ -755,7 +755,7 @@ process_documents(DelKeys, SetValues, EncodedDb, [DocId|T]) ->
     process_documents(DelKeys, SetValues, EncodedDb, T).
 
 
--spec process_documents_case(kz_proplists(), kz_proplists(), ne_binary(), kz_proplists(), any()) -> any().
+-spec process_documents_case(kz_term:proplists(), kz_term:proplists(), kz_term:ne_binary(), kz_term:proplists(), any()) -> any().
 process_documents_case(_, _, _, [], _) ->
     'ok';
 process_documents_case(DelKeys, SetValues, EncodedDb, [DocId|T], {K,V}) ->
@@ -771,7 +771,7 @@ process_documents_case(DelKeys, SetValues, EncodedDb, [DocId|T], {K,V}) ->
     end,
     process_documents_case(DelKeys, SetValues, EncodedDb, T, {K,V}).
 
--spec replicate_onbill_doc(ne_binary()) ->
+-spec replicate_onbill_doc(kz_term:ne_binary()) ->
                                           {'ok', kz_json:object()} |
                                           {'error', any()}.
 replicate_onbill_doc(AccountId) ->

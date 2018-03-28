@@ -46,7 +46,7 @@ validate_onbill(Context, Id, ?HTTP_GET) ->
 validate_onbill(Context, Id, ?HTTP_POST) ->
     save(Id, kz_util:format_account_id(cb_context:account_id(Context),'encoded'), Context).
 
--spec save(ne_binary(), ne_binary(), cb_context:context()) -> cb_context:context().
+-spec save(kz_term:ne_binary(), kz_term:ne_binary(), cb_context:context()) -> cb_context:context().
 save(Id, DbName, Context) ->
     ReqData = kz_json:delete_key(<<"id">>, cb_context:req_data(Context)),
     Doc = case kz_datamgr:open_doc(DbName, Id) of

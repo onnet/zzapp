@@ -99,7 +99,7 @@ maybe_handle_load_failure(Context, 404) ->
                        ]);
 maybe_handle_load_failure(Context, _RespCode) -> Context.
 
--spec payment_url(cb_context:context()) -> ne_binary().
+-spec payment_url(cb_context:context()) -> kz_term:ne_binary().
 payment_url(Ctx) ->
     ConfigDoc = cb_context:doc(Ctx),
     case kz_json:get_value(<<"environment">>, ConfigDoc) of
@@ -108,7 +108,7 @@ payment_url(Ctx) ->
         _ -> <<"no_url_provided">>
     end.
 
--spec compose_payment_url(ne_binary(), cb_context:context()) -> ne_binary().
+-spec compose_payment_url(kz_term:ne_binary(), cb_context:context()) -> kz_term:ne_binary().
 compose_payment_url(ShopUrl, Ctx) ->
     AccountId = cb_context:account_id(Ctx),
     ConfigDoc = cb_context:doc(Ctx),

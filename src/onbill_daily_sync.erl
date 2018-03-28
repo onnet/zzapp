@@ -23,7 +23,7 @@
 %%% API
 %%%===================================================================
 
--spec start_link() -> startlink_ret().
+-spec start_link() -> kz_types:startlink_ret().
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
 
@@ -37,15 +37,15 @@ init([]) ->
  %   kt_compactor:compact_db(<<"services">>),
     {'ok', #state{}}.
 
--spec handle_call(any(), pid_ref(), state()) -> handle_call_ret_state(state()).
+-spec handle_call(any(), kz_term:pid_ref(), state()) -> kz_types:handle_call_ret_state(state()).
 handle_call(_Request, _From, State) ->
     {'reply', {'error', 'not_implemented'}, State}.
 
--spec handle_cast(any(), state()) -> handle_cast_ret_state(state()).
+-spec handle_cast(any(), state()) -> kz_types:handle_cast_ret_state(state()).
 handle_cast(_Msg, State) ->
     {'noreply', State}.
 
--spec handle_info(any(), state()) -> handle_info_ret_state(state()).
+-spec handle_info(any(), state()) -> kz_types:handle_info_ret_state(state()).
 handle_info('crawl_accounts', _) ->
     case kz_datamgr:get_results(?KZ_ACCOUNTS_DB, ?CB_LISTING_BY_ID) of
         {'ok', JObjs} ->
@@ -88,7 +88,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
--spec maybe_process_account (ne_binary()) -> {'ok', 'account_processed'}|{'ok', 'no_need_to_process'}|{'error', _}.
+-spec maybe_process_account (kz_term:ne_binary()) -> {'ok', 'account_processed'}|{'ok', 'no_need_to_process'}|{'error', _}.
 maybe_process_account(<<AccountId:32/binary>>) ->
     case kz_datamgr:open_doc(?KZ_ACCOUNTS_DB, AccountId) of
         {'ok', AccountJObj} ->
@@ -107,7 +107,7 @@ maybe_process_account(<<AccountId:32/binary>>) ->
 maybe_process_account(_) ->
     {'error', 'invalid_doc_id'}.
 
--spec process_account (ne_binary(), kz_account:doc()) -> 'ok'.
+-spec process_account (kz_term:ne_binary(), kz_account:doc()) -> 'ok'.
 process_account(AccountId, AccountJObj) ->
     case  not kapps_util:is_master_account(AccountId) 
            andalso onbill_util:is_service_plan_assigned(AccountId)
@@ -129,7 +129,7 @@ process_account(AccountId, AccountJObj) ->
             {'ok', 'no_need_to_process'}
     end.
 
--spec maybe_remove_subscriptions(ne_binary(), boolean()) -> any().
+-spec maybe_remove_subscriptions(kz_term:ne_binary(), boolean()) -> any().
 maybe_remove_subscriptions(AccountId, 'true') ->
     onbill_bk_util:maybe_cancel_trunk_subscriptions(AccountId);
 maybe_remove_subscriptions(_, 'false') ->

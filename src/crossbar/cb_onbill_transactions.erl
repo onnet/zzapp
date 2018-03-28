@@ -38,7 +38,7 @@ validate(Context, Id) ->
         'false' ->  cb_context:add_system_error('forbidden', Context)
     end.
 
--spec validate_transaction(cb_context:context(), ne_binary(), path_token()) -> cb_context:context().
+-spec validate_transaction(cb_context:context(), kz_term:ne_binary(), path_token()) -> cb_context:context().
 validate_transaction(Context, <<Year:4/binary, Month:2/binary, _:2/binary, "-dailyfee">> = Id, ?HTTP_GET) ->
     leak_job_fields(crossbar_doc:load(Id
                                      ,cb_context:set_account_modb(Context, kz_term:to_integer(Year), kz_term:to_integer(Month))

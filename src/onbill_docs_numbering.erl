@@ -16,7 +16,7 @@
 -define(NUMBER_DOC_ID(Carrier, DocType, DocNumber), <<(?TO_BIN(Carrier))/binary,".",(?TO_BIN(DocType))/binary,".", (?TO_BIN(DocNumber))/binary>>).
 
 
--spec get_binary_number(ne_binary(), ne_binary(), ne_binary(), integer(), integer()) -> ne_binary().
+-spec get_binary_number(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), integer(), integer()) -> kz_term:ne_binary().
 get_binary_number(AccountId, Carrier, DocType0, Year, Month) ->
     DocType = maybe_doc_number_follows(AccountId, Carrier, DocType0),
     {YNow, MNow, _} = erlang:date(),
@@ -24,7 +24,7 @@ get_binary_number(AccountId, Carrier, DocType0, Year, Month) ->
     TNow = ?TO_INT(YNow) * 100 + ?TO_INT(MNow),
     get_binary_number(AccountId, Carrier, DocType, Year, Month, TReq, TNow).
 
--spec get_binary_number(ne_binary(), ne_binary(), ne_binary(), integer(), integer(), integer(), integer()) -> ne_binary().
+-spec get_binary_number(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), integer(), integer(), integer(), integer()) -> kz_term:ne_binary().
 get_binary_number(AccountId, Carrier, DocType, Year, Month, TReq, TNow) when TReq > TNow ->
     Reason = <<"INVALID_", (kz_term:to_binary(DocType))/binary,":_FUTURE_PERIOD">>,
     alert_doc_numbering_problem(AccountId, Carrier, DocType, Year, Month, Reason),
@@ -48,7 +48,7 @@ binary_number(AccountId, Carrier, DocType, Year, Month) ->
         {_E1, E2} -> <<"INVALID_", (kz_term:to_binary(DocType))/binary,":_", (kz_term:to_binary(E2))/binary>>
     end.
 
--spec get_new_binary_number(ne_binary(), ne_binary(), ne_binary()) -> ne_binary().
+-spec get_new_binary_number(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) -> kz_term:ne_binary().
 get_new_binary_number(AccountId, Carrier, DocType0) ->
     DocType = maybe_doc_number_follows(AccountId, Carrier, DocType0),
     {Year, Month, _} = erlang:date(),
@@ -68,7 +68,7 @@ get_number(AccountId, Carrier, DocType, Year, Month) ->
         E -> E
     end.
 
--spec number_lookup(ne_binary(), ne_binary(), ne_binary(), integer(), integer()) -> {'ok', integer()}|{'error', atom()}.
+-spec number_lookup(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), integer(), integer()) -> {'ok', integer()}|{'error', atom()}.
 number_lookup(AccountId, Carrier, DocType0, Year, Month) ->
     DocType = maybe_doc_number_follows(AccountId, Carrier, DocType0),
     ResellerId = kz_services:find_reseller_id(AccountId),
@@ -89,13 +89,13 @@ number_lookup(AccountId, Carrier, DocType0, Year, Month) ->
 %% We can issue new number for requested Month in case there is no such
 %% type of documents generated in later periods
 %%
--spec maybe_get_new_number(ne_binary(), ne_binary(), kz_year(), kz_month()) -> {'ok', integer()}|{'error', atom()}.
+-spec maybe_get_new_number(kz_term:ne_binary(), kz_term:ne_binary(), kz_time:year(), kz_time:month()) -> {'ok', integer()}|{'error', atom()}.
 maybe_get_new_number(AccountId, DocType, Year, Month) ->
     Carriers = onbill_util:account_carriers_list(AccountId),
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
     maybe_get_new_number(AccountId, MainCarrier, DocType, Year, Month).
 
--spec maybe_get_new_number(ne_binary(), ne_binary(), ne_binary(), kz_year(), kz_month()) -> {'ok', integer()}|{'error', atom()}.
+-spec maybe_get_new_number(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_time:year(), kz_time:month()) -> {'ok', integer()}|{'error', atom()}.
 maybe_get_new_number(AccountId, Carrier, DocType0, Year, Month) ->
     DocType = maybe_doc_number_follows(AccountId, Carrier, DocType0),
     {NextMonthYear,NextMonth} = onbill_util:next_month(Year, Month),

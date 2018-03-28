@@ -15,7 +15,7 @@
 
 -include("onbill.hrl").
 
--spec handle_doc_created(kz_json:object(), kz_proplist()) -> any().
+-spec handle_doc_created(kz_json:object(), kz_term:proplist()) -> any().
 handle_doc_created(JObj, _Props) ->
     AccountId = kz_json:get_value(<<"Account-ID">>, JObj),
     case (AccountId /= 'undefined')
@@ -50,7 +50,7 @@ handle_doc_created(<<"credit">>, AccountId, _JObj) ->
 handle_doc_created(_, _, _) ->
     'ok'.
 
--spec handle_doc_edited(kz_json:object(), kz_proplist()) -> any().
+-spec handle_doc_edited(kz_json:object(), kz_term:proplist()) -> any().
 handle_doc_edited(JObj, _Props) ->
     AccountId = kz_json:get_value(<<"Account-ID">>, JObj),
     case (AccountId /= 'undefined')
@@ -70,6 +70,6 @@ handle_doc_edited(<<"limits">>, AccountId, _) ->
 handle_doc_edited(_, _, _) ->
     'ok'.
 
--spec handle_logger(kz_json:object(), kz_proplist()) -> any().
+-spec handle_logger(kz_json:object(), kz_term:proplist()) -> any().
 handle_logger(JObj, _Props) ->
     lager:info("IAM listen to JObj: ~p",[JObj]).

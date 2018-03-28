@@ -49,7 +49,7 @@ cleanup_device_doc() ->
          ],
     cleanup_doc('account', <<"devices/crossbar_listing">>, DelKeys, SetValues, Databases, length(Databases) + 1).
 
--spec cleanup_doc(atom(), ne_binary(), kz_proplist(), kz_proplist(),  ne_binaries(), non_neg_integer()) -> 'no_return'.
+-spec cleanup_doc(atom(), kz_term:ne_binary(), kz_term:proplist(), kz_term:proplist(),  kz_term:ne_binaries(), non_neg_integer()) -> 'no_return'.
 cleanup_doc(_, _, _, _, [], _) -> 'no_return';
 cleanup_doc(DbType, View, DelKeys, SetValues, [Database|Databases], Total) ->
     case kz_datamgr:db_classification(Database) of
@@ -73,7 +73,7 @@ cleanup_doc(DbType, View, DelKeys, SetValues, [Database|Databases], Total) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 -spec cleanup_trunkstore_doc() -> 'no_return'.
--spec cleanup_trunkstore_doc(ne_binaries(), non_neg_integer()) -> 'no_return'.
+-spec cleanup_trunkstore_doc(kz_term:ne_binaries(), non_neg_integer()) -> 'no_return'.
 cleanup_trunkstore_doc() ->
     Databases = get_databases(),
     cleanup_trunkstore_doc(Databases, length(Databases) + 1).
@@ -110,11 +110,11 @@ cleanup_trunkstore_doc([Database|Databases], Total) ->
 %%%%%%%%%%%%%%%%%%%%%%%%  Some util %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--spec get_databases() -> ne_binaries().
+-spec get_databases() -> kz_term:ne_binaries().
 get_databases() ->
         {'ok', Databases} = kz_datamgr:db_info(),
             lists:sort(fun get_database_sort/2, lists:usort(Databases)).
 
--spec get_database_sort(ne_binary(), ne_binary()) -> boolean().
+-spec get_database_sort(kz_term:ne_binary(), kz_term:ne_binary()) -> boolean().
 get_database_sort(Db1, Db2) ->
         kzs_util:db_priority(Db1) < kzs_util:db_priority(Db2).

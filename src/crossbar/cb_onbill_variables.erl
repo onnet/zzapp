@@ -84,7 +84,7 @@ validate_onbill(Context, AttachmentId, ?HTTP_GET) ->
 validate_onbill(Context, AttachmentId, ?HTTP_POST) ->
     save_variables_attachment(Context, ?VARIABLES_DOC_ID, AttachmentId).
 
--spec save(ne_binary(), cb_context:context()) -> cb_context:context().
+-spec save(kz_term:ne_binary(), cb_context:context()) -> cb_context:context().
 save(Id, Context) ->
     ReqData = cb_context:req_data(Context),
     DbName = kz_util:format_account_id(cb_context:account_id(Context),'encoded'),

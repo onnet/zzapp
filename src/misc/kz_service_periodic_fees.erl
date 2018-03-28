@@ -9,7 +9,7 @@
 
 -export([reconcile/1]).
 
--include("/opt/kazoo/core/kazoo_services/src/kazoo_services.hrl").
+-include_lib("kazoo_services/include/kazoo_services.hrl").
 
 -define(CATEGORY, <<"periodic_fees">>).
 
@@ -47,7 +47,7 @@ reconcile_fee(JObj, Services) ->
     lager:debug("reconciling fee ~s to ~p", [Item, Quantity]),
     kz_services:update(?CATEGORY, Item, Quantity, Services).
 
--spec count_active_fees(gregorian_seconds(), kz_json:object()) -> kz_json:objects().
+-spec count_active_fees(kz_time:gregorian_seconds(), kz_json:object()) -> kz_json:objects().
 count_active_fees(LookupTstamp, FeeDocs) ->
     ActiveFees = [kz_json:get_value(<<"value">>, JObj)
                   || JObj <- FeeDocs

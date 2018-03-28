@@ -26,7 +26,7 @@
 %% @end
 %%--------------------------------------------------------------------
 -spec save(knm_number:knm_number()) -> knm_number:knm_number().
--spec save(knm_number:knm_number(), ne_binary()) -> knm_number:knm_number().
+-spec save(knm_number:knm_number(), kz_term:ne_binary()) -> knm_number:knm_number().
 save(Number) ->
     State = knm_phone_number:state(knm_number:phone_number(Number)),
     save(Number, State).
@@ -89,7 +89,7 @@ update_e911(Number) ->
     end.
 
 -spec remove_number(knm_number:knm_number()) -> {'ok', knm_number:knm_number()} |
-                                                {'error', ne_binary()}.
+                                                {'error', kz_term:ne_binary()}.
 remove_number(Number) ->
     CarrierData = knm_phone_number:carrier_data(knm_number:phone_number(Number)),
     case kz_json:get_ne_binary_value(?ADDRESS_ID, CarrierData) of
@@ -99,11 +99,11 @@ remove_number(Number) ->
             assign_address(Number, 'null')
     end.
 
--spec assign_address(knm_number:knm_number(), ne_binary() | 'null') -> {'ok', knm_number:knm_number()}.
+-spec assign_address(knm_number:knm_number(), kz_term:ne_binary() | 'null') -> {'ok', knm_number:knm_number()}.
 assign_address(Number, AddressId) ->
     {'ok', set_address_id(Number, AddressId)}.
 
--spec set_address_id(knm_number:knm_number(), ne_binary() | 'null') -> knm_number:knm_number().
+-spec set_address_id(knm_number:knm_number(), kz_term:ne_binary() | 'null') -> knm_number:knm_number().
 set_address_id(Number, AddressId) ->
     PN = knm_number:phone_number(Number),
     Data = kz_json:from_list([{?ADDRESS_ID, AddressId}]),

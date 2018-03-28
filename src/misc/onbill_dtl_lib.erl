@@ -12,15 +12,15 @@
 -spec version() -> 1.
 version() -> 1.
 
--spec inventory(atom()) -> kz_proplist().
+-spec inventory(atom()) -> kz_term:proplist().
 inventory(filters) -> [pad_left, gregsec_to_date];
 inventory(tags) -> [].
 
--spec pad_left(any()) -> ne_binary().
+-spec pad_left(any()) -> kz_term:ne_binary().
 pad_left(Val) ->
     kz_binary:pad_left(kz_term:to_binary(Val), 2, <<"0">>).
 
--spec gregsec_to_date(any()) -> kz_datetime().
+-spec gregsec_to_date(any()) -> kz_time:datetime().
 gregsec_to_date(Seconds) ->
     try
         calendar:gregorian_seconds_to_datetime(Seconds)

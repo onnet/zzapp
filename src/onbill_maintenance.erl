@@ -12,17 +12,17 @@
 
 -include("onbill.hrl").
 
--spec populate_modb_with_fees(ne_binary(), integer(), integer()) -> ok.
+-spec populate_modb_with_fees(kz_term:ne_binary(), integer(), integer()) -> ok.
 populate_modb_with_fees(AccountId, Year, Month) ->
     kz_bookkeeper_onbill:populate_modb_with_fees(kz_term:to_binary(AccountId), ?TO_INT(Year), ?TO_INT(Month)).
 
--spec populate_modb_day_with_fee(ne_binary(), integer(), integer(), integer()) -> ok.
+-spec populate_modb_day_with_fee(kz_term:ne_binary(), integer(), integer(), integer()) -> ok.
 populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
     kz_bookkeeper_onbill:populate_modb_day_with_fee(kz_term:to_binary(AccountId), ?TO_INT(Year), ?TO_INT(Month), ?TO_INT(Day)).
 
 -spec refresh() -> 'no_return'.
--spec refresh(ne_binaries(), non_neg_integer()) -> 'no_return'.
--spec refresh(ne_binary(), non_neg_integer(), non_neg_integer()) -> 'ok'.
+-spec refresh(kz_term:ne_binaries(), non_neg_integer()) -> 'no_return'.
+-spec refresh(kz_term:ne_binary(), non_neg_integer(), non_neg_integer()) -> 'ok'.
 refresh() ->
     kz_datamgr:revise_docs_from_folder(<<"system_schemas">>, 'onbill', "schemas"),
     Databases = get_databases(),
@@ -55,12 +55,12 @@ refresh([Database|Databases], Total) ->
     _ = refresh(Database, length(Databases) + 1, Total),
     refresh(Databases, Total).
 
--spec get_databases() -> ne_binaries().
+-spec get_databases() -> kz_term:ne_binaries().
 get_databases() ->
         {'ok', Databases} = kz_datamgr:db_info(),
             lists:sort(fun get_database_sort/2, lists:usort(Databases)).
 
--spec get_database_sort(ne_binary(), ne_binary()) -> boolean().
+-spec get_database_sort(kz_term:ne_binary(), kz_term:ne_binary()) -> boolean().
 get_database_sort(Db1, Db2) ->
         kzs_util:db_priority(Db1) < kzs_util:db_priority(Db2).
 
@@ -69,7 +69,7 @@ get_database_sort(Db1, Db2) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 -spec correct_billing_id() -> 'no_return'.
--spec correct_billing_id(ne_binaries(), non_neg_integer()) -> 'no_return'.
+-spec correct_billing_id(kz_term:ne_binaries(), non_neg_integer()) -> 'no_return'.
 correct_billing_id() ->
     Databases = get_databases(),
     correct_billing_id(Databases, length(Databases) + 1).
@@ -100,17 +100,17 @@ correct_billing_id([Database|Databases], Total) ->
 %%%%%%%%%%%%%%%%%%%%%%%  Set account billing day %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--spec set_billing_day(ne_binary()) -> 'ok'.
+-spec set_billing_day(kz_term:ne_binary()) -> 'ok'.
 set_billing_day(Day) ->
     Databases = get_databases(),
     set_billing_day(Day, Databases, length(Databases) + 1).
 
--spec set_billing_day(ne_binary(), ne_binary()) -> 'ok'.
+-spec set_billing_day(kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok'.
 set_billing_day(AccountId, Day) ->
     onbill_util:set_billing_day(?TO_INT(Day), AccountId),
     'ok'.
 
--spec set_billing_day(ne_binary(), ne_binaries(), non_neg_integer()) -> 'ok'.
+-spec set_billing_day(kz_term:ne_binary(), kz_term:ne_binaries(), non_neg_integer()) -> 'ok'.
 set_billing_day(_, [], _) -> 'no_return';
 set_billing_day(Day, [Database|Databases], Total) ->
     case kz_datamgr:db_classification(Database) of
@@ -129,7 +129,7 @@ set_billing_day(Day, [Database|Databases], Total) ->
 %%%%%%%%%%%%%%%%%%%%%%%  Set option to ratedeck  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--spec set_rate_value(ne_binary(), ne_binary(), ne_binary(), ne_binary(), ne_binary()) -> 'ok'.
+-spec set_rate_value(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok'.
 set_rate_value(RatedeckDb, SetKey, SetValue, LookupKey, LookupValue) ->
     case kz_datamgr:get_result_ids(RatedeckDb, <<"rates/crossbar_listing">>) of
         {ok,DocIds} ->
@@ -139,7 +139,7 @@ set_rate_value(RatedeckDb, SetKey, SetValue, LookupKey, LookupValue) ->
             'ok'
     end.
 
--spec set_rate_list_value(ne_binary(), ne_binary(), ne_binary(), ne_binary(), ne_binary()) -> 'ok'.
+-spec set_rate_list_value(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok'.
 set_rate_list_value(RatedeckDb, SetKey, SetCommaSeparatedValues, LookupKey, LookupValue) ->
     case kz_datamgr:get_result_ids(RatedeckDb, <<"rates/crossbar_listing">>) of
         {ok,DocIds} ->

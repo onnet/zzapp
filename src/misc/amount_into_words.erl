@@ -9,7 +9,7 @@
 
 -define(U(A), unicode:characters_to_list(A, utf8)).
 
--spec render(ne_binary() | integer()) -> list().
+-spec render(kz_term:ne_binary() | integer()) -> list().
 render(Num) when is_integer(Num) ->
     Tris = tri_split(lists:reverse(integer_to_list(Num)), [], [], 0),
     gen_string(Tris, length(Tris) + 1, []);

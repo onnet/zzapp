@@ -18,7 +18,7 @@
 -include_lib("/opt/kazoo/core/kazoo_stdlib/include/kz_databases.hrl").
 -include_lib("/opt/kazoo/core/kazoo_transactions/include/kazoo_transactions.hrl").
 
--spec sync(kz_service_item:items(), ne_binary()) -> 'ok'|'delinquent'|'retry'.
+-spec sync(kz_service_item:items(), kz_term:ne_binary()) -> 'ok'|'delinquent'|'retry'.
 sync(Items, AccountId) ->
     case kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded')) of
         'true' ->
@@ -27,7 +27,7 @@ sync(Items, AccountId) ->
             'delinquent'
     end.
 
--spec maybe_sync(kz_service_item:items(), ne_binary()) -> 'ok'|'delinquent'|'retry'.
+-spec maybe_sync(kz_service_item:items(), kz_term:ne_binary()) -> 'ok'|'delinquent'|'retry'.
 maybe_sync(Items, AccountId) ->
     lager:info("onbill_trace:maybe_sync attempt to sync AccountId: ~p",[AccountId]), 
     case onbill_util:is_trial_account(AccountId) of
@@ -92,7 +92,7 @@ maybe_billing_period_starts(Items, AccountId) ->
             end
     end.
 
--spec run_sync(kz_service_item:items(), ne_binary(), gregorian_seconds()) -> 'ok'|'delinquent'|'retry'.
+-spec run_sync(kz_service_item:items(), kz_term:ne_binary(), kz_time:gregorian_seconds()) -> 'ok'|'delinquent'|'retry'.
 run_sync(Items, AccountId, Timestamp) ->
     case onbill_bk_util:max_daily_usage_exceeded(Items, AccountId, Timestamp) of
         {'true', NewMax, ExcessDets} ->
@@ -132,27 +132,27 @@ sync(Timestamp, ServiceItems, AccountId, NewMax, Items) ->
                        ,[ItemsCost])
     end.
 
--spec is_good_standing(ne_binary()) -> boolean().
+-spec is_good_standing(kz_term:ne_binary()) -> boolean().
 is_good_standing(AccountId) ->
     lager:debug("is_good_standing/1 ~p: ~p",[AccountId, not onbill_util:maybe_convicted(AccountId)]),
     not onbill_util:maybe_convicted(AccountId).
 
--spec is_good_standing(ne_binary(), ne_binary()) -> boolean().
+-spec is_good_standing(kz_term:ne_binary(), kz_term:ne_binary()) -> boolean().
 is_good_standing(AccountId, _Status) ->
     is_good_standing(AccountId).
     
 % We store all transactions local, so why double and then deduplicate them..
--spec transactions(ne_binary(), gregorian_seconds(), gregorian_seconds()) -> {'ok', []}.
+-spec transactions(kz_term:ne_binary(), kz_time:gregorian_seconds(), kz_time:gregorian_seconds()) -> {'ok', []}.
 transactions(_AccountId, _From, _To) ->
     {'ok', []}.
 
--spec subscriptions(ne_binary()) -> atom() | kz_json:objects().
+-spec subscriptions(kz_term:ne_binary()) -> atom() | kz_json:objects().
 subscriptions(AccountId) ->
     lager:debug("IAM subscriptions/1 call. AccountId: ~p",[AccountId]),
     [kz_json:new()].
 
--spec commit_transactions(ne_binary(),kz_transactions:kz_transactions()) -> 'ok' | 'error'.
--spec commit_transactions(ne_binary(), kz_transactions:kz_transactions(), integer()) -> 'ok' | 'error'.
+-spec commit_transactions(kz_term:ne_binary(),kz_transactions:kz_transactions()) -> 'ok' | 'error'.
+-spec commit_transactions(kz_term:ne_binary(), kz_transactions:kz_transactions(), integer()) -> 'ok' | 'error'.
 commit_transactions(BillingId, Transactions) ->
     commit_transactions(BillingId, Transactions, 3).
 
@@ -185,12 +185,12 @@ commit_transactions(BillingId, _Transactions, _Try) ->
     lager:error("too many attempts writing transaction to services in ~p", [BillingId]),
     'error'.
 
--spec already_charged(ne_binary() | integer() , integer() | kz_json:objects()) -> boolean().
+-spec already_charged(kz_term:ne_binary() | integer() , integer() | kz_json:objects()) -> boolean().
 already_charged(BillingId, Code) when is_integer(Code) ->
   lager:info("IAM already_charged/2 BillingId: ~p, Code: ~p",[BillingId, Code]),
     kz_bookkeeper_braintree:already_charged(BillingId, Code).
 
--spec charge_transactions(ne_binary(), kz_json:objects()) -> kz_json:objects().
+-spec charge_transactions(kz_term:ne_binary(), kz_json:objects()) -> kz_json:objects().
 charge_transactions(BillingId, Transactions) ->
   lager:info("IAM charge_transactions/2 BillingId: ~p, Transactions: ~p",[BillingId, Transactions]),
     charge_transactions(BillingId, Transactions, []).
@@ -219,7 +219,7 @@ handle_charged_transaction(AccountId, Transaction) ->
         _ -> [Transaction]
     end.
 
--spec handle_topup(ne_binary(), kz_json:object()) -> kz_proplist().
+-spec handle_topup(kz_term:ne_binary(), kz_json:object()) -> kz_term:proplist().
 handle_topup(BillingId, Transaction) ->
     case already_charged(BillingId, ?CODE_TOPUP) of
         'true' ->
@@ -240,7 +240,7 @@ handle_topup(BillingId, Transaction) ->
             end
     end.
 
--spec send_topup_notification(boolean(), ne_binary(), bt_transaction()) -> boolean().
+-spec send_topup_notification(boolean(), kz_term:ne_binary(), bt_transaction()) -> boolean().
 send_topup_notification(Success, BillingId, BtTransaction) ->
     Transaction = braintree_transaction:record_to_json(BtTransaction),
     Amount = wht_util:dollars_to_units(kz_json:get_float_value(<<"amount">>, Transaction, 0.0)),
@@ -270,12 +270,12 @@ handle_quick_sale_response(BtTransaction) ->
     %% https://www.braintreepayments.com/docs/ruby/reference/processor_responses
     kz_term:to_integer(RespCode) < 2000.
 
--spec populate_modb_with_fees(ne_binary(), integer(), integer()) -> kz_proplist().
+-spec populate_modb_with_fees(kz_term:ne_binary(), integer(), integer()) -> kz_term:proplist().
 populate_modb_with_fees(AccountId, Year, Month) ->
     LastMonthDay = calendar:last_day_of_the_month(Year, Month),
     [populate_modb_day_with_fee(AccountId, Year, Month, Day) || Day <- lists:seq(1, LastMonthDay)].
 
--spec populate_modb_day_with_fee(ne_binary(), integer(), integer(), integer()) -> any().
+-spec populate_modb_day_with_fee(kz_term:ne_binary(), integer(), integer(), integer()) -> any().
 populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
     Timestamp = calendar:datetime_to_gregorian_seconds({{Year, Month, Day},{3,0,0}}),
     {CurrYear, CurrMonth, _} = erlang:date(),

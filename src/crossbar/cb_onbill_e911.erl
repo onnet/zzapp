@@ -53,7 +53,7 @@ resource_exists(_) -> 'true'.
 resource_exists(_, ?BIN_DATA) -> 'true';
 resource_exists(_, ?CONFIRM_ADDRESS) -> 'true'.
 
--spec acceptable_content_types() -> kz_proplist().
+-spec acceptable_content_types() -> kz_term:proplist().
 acceptable_content_types() ->
     ?ATTACHMENT_MIME_TYPES.
 
@@ -114,7 +114,7 @@ validate_e911(Context, ?HTTP_GET) ->
 validate_e911(Context, ?HTTP_PUT) ->
     save_e911_doc(Context).
 
--spec validate_e911_doc(cb_context:context(), ne_binary(), path_token()) -> cb_context:context().
+-spec validate_e911_doc(cb_context:context(), kz_term:ne_binary(), path_token()) -> cb_context:context().
 validate_e911_doc(Context, Id, ?HTTP_GET) ->
     crossbar_doc:load(Id, Context, ?TYPE_CHECK_OPTION(<<"e911_address">>));
 validate_e911_doc(Context, Id, ?HTTP_POST) ->
@@ -133,7 +133,7 @@ e911_addresses_summary(Context) ->
     crossbar_doc:load_view(?CB_E911_ADDRESSES, [], Context, fun onbill_util:normalize_view_results/2).
 
 -spec save_e911_doc(cb_context:context()) -> cb_context:context().
--spec save_e911_doc(cb_context:context(), ne_binary()) -> cb_context:context().
+-spec save_e911_doc(cb_context:context(), kz_term:ne_binary()) -> cb_context:context().
 save_e911_doc(Context) ->
     save_e911_doc(Context, kz_datamgr:get_uuid()).
 save_e911_doc(Context, Id) ->
@@ -150,7 +150,7 @@ save_e911_doc(Context, Id) ->
     NewDoc = kz_json:merge_recursive(Doc, ReqData),
     crossbar_doc:save(cb_context:set_doc(Context, NewDoc)).
 
--spec validate_attachment_binary(cb_context:context(), ne_binary(), http_method(), kz_proplist()) -> cb_context:context().
+-spec validate_attachment_binary(cb_context:context(), kz_term:ne_binary(), http_method(), kz_term:proplist()) -> cb_context:context().
 validate_attachment_binary(Context0, Id, ?HTTP_GET, _Files) ->
     lager:debug("fetch contents for '~s'", [Id]),
     Context = crossbar_doc:load(Id, Context0, ?TYPE_CHECK_OPTION(<<"e911_address">>)),
@@ -214,7 +214,7 @@ maybe_valid_relationship(Context) ->
     AuthAccountId = cb_context:auth_account_id(Context),
     onbill_util:validate_relationship(AccountId, AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId).
 
--spec delete_e911_doc(cb_context:context(), ne_binary()) -> cb_context:context().
+-spec delete_e911_doc(cb_context:context(), kz_term:ne_binary()) -> cb_context:context().
 delete_e911_doc(Context0, Id) ->
     Context = crossbar_doc:load(Id, Context0, ?TYPE_CHECK_OPTION(<<"e911_address">>)),
     case cb_context:resp_status(Context) of

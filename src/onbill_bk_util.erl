@@ -23,7 +23,7 @@
 -include_lib("/opt/kazoo/core/kazoo_stdlib/include/kz_databases.hrl").
 -include_lib("/opt/kazoo/core/kazoo_transactions/include/kazoo_transactions.hrl").
 
--spec max_daily_usage_exceeded(kz_service_item:items(), ne_binary(), integer()) -> any().
+-spec max_daily_usage_exceeded(kz_service_item:items(), kz_term:ne_binary(), integer()) -> any().
 max_daily_usage_exceeded(Items, AccountId, Timestamp) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     DailyFeeId = prepare_dailyfee_doc_name(Year, Month, Day),
@@ -49,14 +49,14 @@ max_daily_usage_exceeded(Items, AccountId, Timestamp) ->
             {'true', ItemsJObj, []}
     end.
 
--spec prepare_dailyfee_doc_name(integer(), integer(), integer()) -> ne_binary().
+-spec prepare_dailyfee_doc_name(integer(), integer(), integer()) -> kz_term:ne_binary().
 prepare_dailyfee_doc_name(Y, M, D) ->
     Year = kz_term:to_binary(Y),
     Month = kz_date:pad_month(M),
     Day = kz_date:pad_month(D),
     <<Year/binary, Month/binary, Day/binary, "-dailyfee">>.
 
--spec select_daily_count_items_list(kz_service_item:items(), ne_binary()) -> kz_proplist().
+-spec select_daily_count_items_list(kz_service_item:items(), kz_term:ne_binary()) -> kz_term:proplist().
 select_daily_count_items_list(Items, AccountId) ->
     case kz_json:is_json_object(Items) of
         'false' ->
@@ -70,7 +70,7 @@ select_daily_count_items_list(Items, AccountId) ->
             [kz_json:get_value(ItemPath, Items) || ItemPath <- DailyItemsPaths]
     end.
 
--spec select_daily_count_items_json(kz_service_item:items()|kz_json:object(), ne_binary()) -> kz_json:object().
+-spec select_daily_count_items_json(kz_service_item:items()|kz_json:object(), kz_term:ne_binary()) -> kz_json:object().
 select_daily_count_items_json(Items, AccountId) ->
     case kz_json:is_json_object(Items) of
         'false' ->
@@ -92,7 +92,7 @@ select_non_zero_items_json(Items) ->
     ],
     kz_json:set_values(Upd, kz_json:new()).
 
--spec select_non_zero_items_list(kz_service_item:items()|kz_json:object(), ne_binary()) -> kz_proplist().
+-spec select_non_zero_items_list(kz_service_item:items()|kz_json:object(), kz_term:ne_binary()) -> kz_term:proplist().
 select_non_zero_items_list(Items, AccountId) ->
     case kz_json:is_json_object(Items) of
         'false' ->
@@ -127,7 +127,7 @@ excess_details(NewJObj, MaxJObj) ->
 
 
 
--spec update_dailyfee_max(integer(), ne_binary(), any(), any()) -> any().
+-spec update_dailyfee_max(integer(), kz_term:ne_binary(), any(), any()) -> any().
 update_dailyfee_max(Timestamp, AccountId, MaxUsage, Items) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     DailyFeeId = prepare_dailyfee_doc_name(Year, Month, Day),
@@ -142,7 +142,7 @@ update_dailyfee_max(Timestamp, AccountId, MaxUsage, Items) ->
             kazoo_modb:save_doc(AccountId, NewDoc, Year, Month)
     end.
 
--spec save_dailyfee_doc(integer(), ne_binary(), number(), any(), any()) -> any().
+-spec save_dailyfee_doc(integer(), kz_term:ne_binary(), number(), any(), any()) -> any().
 save_dailyfee_doc(Timestamp, AccountId, Amount, MaxUsage, Items) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     DailyFeeId = prepare_dailyfee_doc_name(Year, Month, Day),
@@ -151,7 +151,7 @@ save_dailyfee_doc(Timestamp, AccountId, Amount, MaxUsage, Items) ->
         {'ok', DFDoc} -> update_dailyfee_doc(Timestamp, AccountId, Amount, MaxUsage, Items, DFDoc)
     end.
 
--spec create_dailyfee_doc(integer(), ne_binary(), number(), any(), any()) -> any().
+-spec create_dailyfee_doc(integer(), kz_term:ne_binary(), number(), any(), any()) -> any().
 create_dailyfee_doc(Timestamp, AccountId, Amount, MaxUsage, Items) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     MonthStrBin = kz_term:to_binary(httpd_util:month(Month)),
@@ -169,14 +169,14 @@ create_dailyfee_doc(Timestamp, AccountId, Amount, MaxUsage, Items) ->
     Upd = dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items),
     kazoo_modb:save_doc(AccountId, kz_json:set_values(Upd, BrandNewDoc), Year, Month).
 
--spec update_dailyfee_doc(integer(), ne_binary(), number(), any(), any(), kz_json:object()) -> any().
+-spec update_dailyfee_doc(integer(), kz_term:ne_binary(), number(), any(), any(), kz_json:object()) -> any().
 update_dailyfee_doc(Timestamp, AccountId, Amount, MaxUsage, Items, DFDoc) ->
     Upd = dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items),
     NewDoc = kz_json:set_values(Upd, DFDoc),
     {{Year, Month, _}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     kazoo_modb:save_doc(AccountId, NewDoc, Year, Month).
 
--spec dailyfee_doc_update_routines(gregorian_seconds(), ne_binary(), number(), kz_json:object(), kz_service_item:items()) -> any().
+-spec dailyfee_doc_update_routines(kz_time:gregorian_seconds(), kz_term:ne_binary(), number(), kz_json:object(), kz_service_item:items()) -> any().
 dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items) ->
     {{Year, Month, _}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     [{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"all_items">>], select_non_zero_items_json(Items)}
@@ -187,7 +187,7 @@ dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items) ->
      ,{<<"pvt_modified">>, Timestamp}
     ].
 
--spec charge_newly_added(ne_binary(), kz_json:object(), kz_proplist(), integer()) -> 'ok'|kz_proplist(). 
+-spec charge_newly_added(kz_term:ne_binary(), kz_json:object(), kz_term:proplist(), integer()) -> 'ok'|kz_term:proplist(). 
 charge_newly_added(_AccountId, _NewMax, [], _Timestamp) -> 'ok';
 charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], Timestamp) -> 
     ResellerVars = onbill_util:reseller_vars(AccountId),
@@ -243,7 +243,7 @@ discount_newly_added(Qty, ItemJObj) ->
     ,{<<"cumulative_discount">>, CumulativeDiscount}
     ].
 
--spec process_new_billing_period_mrc(ne_binary(), gregorian_seconds()) -> 'ok'|kz_proplist(). 
+-spec process_new_billing_period_mrc(kz_term:ne_binary(), kz_time:gregorian_seconds()) -> 'ok'|kz_term:proplist(). 
 process_new_billing_period_mrc(AccountId, Timestamp) ->
     case onbill_bk_util:current_usage_amount_in_units(AccountId)
         > (onbill_util:current_balance(AccountId) + abs(j5_limits:max_postpay(j5_limits:get(AccountId))))
@@ -261,7 +261,7 @@ process_new_billing_period_mrc(AccountId, Timestamp) ->
             {'ok', 'mrc_processed'}
     end.
 
--spec maybe_cancel_trunk_subscriptions(ne_binary()) -> {'not_enough_funds', 'no_trunks_set'}
+-spec maybe_cancel_trunk_subscriptions(kz_term:ne_binary()) -> {'not_enough_funds', 'no_trunks_set'}
                                                        |{'not_enough_funds', 'trunks_canceled'}. 
 maybe_cancel_trunk_subscriptions(AccountId) ->
     AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
@@ -299,7 +299,7 @@ charge_new_billing_period_mrc(ItemsJObj, AccountId, Timestamp) ->
      ,not lists:member(Category, kz_json:get_value(<<"pvt_daily_count_categories">>, onbill_util:reseller_vars(AccountId), []))
     ].
 
--spec create_monthly_recurring_doc(ne_binary(), kz_json:object(), gregorian_seconds()) -> any().
+-spec create_monthly_recurring_doc(kz_term:ne_binary(), kz_json:object(), kz_time:gregorian_seconds()) -> any().
 create_monthly_recurring_doc(AccountId, NewMax, Timestamp) ->
     {Year, Month, Day} = onbill_util:period_start_date(AccountId, Timestamp),
     MonthStrBin = kz_term:to_binary(httpd_util:month(Month)),
@@ -315,14 +315,14 @@ create_monthly_recurring_doc(AccountId, NewMax, Timestamp) ->
     BrandNewDoc = kz_json:set_values(Routines, kz_json:new()),
     kazoo_modb:save_doc(AccountId, BrandNewDoc, Year, Month).
 
--spec charge_mrc_category(ne_binary(), ne_binary(), kz_json:object(), gregorian_seconds()) -> any().
+-spec charge_mrc_category(kz_term:ne_binary(), kz_term:ne_binary(), kz_json:object(), kz_time:gregorian_seconds()) -> any().
 charge_mrc_category(AccountId, Category, NewMax, Timestamp) ->
     ItemsList = kz_json:get_keys(kz_json:get_value(Category, NewMax)),
     [charge_mrc_item(AccountId, kz_json:get_value([Category,Item],NewMax), Timestamp)
      || Item <- ItemsList
     ].
 
--spec charge_mrc_item(ne_binary(), kz_json:object(), gregorian_seconds()) -> 'ok'|kz_proplist(). 
+-spec charge_mrc_item(kz_term:ne_binary(), kz_json:object(), kz_time:gregorian_seconds()) -> 'ok'|kz_term:proplist(). 
 charge_mrc_item(AccountId, ItemJObj, Timestamp) ->
     case maybe_prorate_new_period(AccountId, Timestamp) of
         'true' ->
@@ -339,7 +339,7 @@ charge_mrc_item(AccountId, ItemJObj, Timestamp) ->
             create_debit_tansaction(AccountId, ItemJObj, Timestamp, <<"monthly_recurring">>, 1.0)
     end.
 
--spec create_debit_tansaction(ne_binary(), kz_json:object(), gregorian_seconds(), ne_binary(), float()) -> 'ok'|kz_proplist(). 
+-spec create_debit_tansaction(kz_term:ne_binary(), kz_json:object(), kz_time:gregorian_seconds(), kz_term:ne_binary(), float()) -> 'ok'|kz_term:proplist(). 
 create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Ratio) ->
     CItem = calc_item(ItemJObj, AccountId),
     DiscountedItemCost = kz_json:get_float_value(<<"discounted_item_cost">>, CItem),
@@ -368,7 +368,7 @@ create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Ratio) ->
                ,Routines
      ).
 
--spec items_amount(kz_json:objects(), ne_binary(), float()) -> number().
+-spec items_amount(kz_json:objects(), kz_term:ne_binary(), float()) -> number().
 items_amount([], _, Acc) ->
     Acc;
 items_amount([ServiceItem|ServiceItems], AccountId, Acc) ->
@@ -376,11 +376,11 @@ items_amount([ServiceItem|ServiceItems], AccountId, Acc) ->
     SubTotal = Acc + ItemCost,
     items_amount(ServiceItems, AccountId, SubTotal).
 
--spec item_cost(kz_json:object(), ne_binary()) -> number().
+-spec item_cost(kz_json:object(), kz_term:ne_binary()) -> number().
 item_cost(ItemJObj, AccountId) ->
     kz_json:get_value(<<"discounted_item_cost">>, calc_item(ItemJObj, AccountId)).
 
--spec calc_item(kz_json:object(), ne_binary()) -> number().
+-spec calc_item(kz_json:object(), kz_term:ne_binary()) -> number().
 calc_item(ItemJObj, AccountId) ->
     try
         ResellerVars = onbill_util:reseller_vars(AccountId),
@@ -435,7 +435,7 @@ calc_item(ItemJObj, AccountId) ->
             ]}
     end.
 
--spec current_items(ne_binary()) -> kz_service_item:items().
+-spec current_items(kz_term:ne_binary()) -> kz_service_item:items().
 current_items(AccountId) -> 
     Services = kz_services:fetch(AccountId),
     ServicesJObj = kz_services:services_json(Services),
@@ -444,11 +444,11 @@ current_items(AccountId) ->
         E -> E
     end.
 
--spec current_usage_amount_in_units(ne_binary()) -> float().
+-spec current_usage_amount_in_units(kz_term:ne_binary()) -> float().
 current_usage_amount_in_units(AccountId) ->
     wht_util:dollars_to_units(current_usage_amount(AccountId)).
 
--spec current_usage_amount(ne_binary()) -> float().
+-spec current_usage_amount(kz_term:ne_binary()) -> float().
 current_usage_amount(AccountId) ->
     case current_items(AccountId) of
         {_,E} -> E;
@@ -457,7 +457,7 @@ current_usage_amount(AccountId) ->
             items_amount(ItemsJObj, AccountId, 0.0)
     end.
 
--spec today_dailyfee_absent(ne_binary()) -> boolean().
+-spec today_dailyfee_absent(kz_term:ne_binary()) -> boolean().
 today_dailyfee_absent(AccountId) ->
     Timestamp = kz_time:current_tstamp(),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
@@ -467,12 +467,12 @@ today_dailyfee_absent(AccountId) ->
         _ -> 'false'
     end.
 
--spec maybe_issue_previous_billing_period_docs(ne_binary(), kz_year(), kz_month(), kz_day()) -> any().
+-spec maybe_issue_previous_billing_period_docs(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> any().
 maybe_issue_previous_billing_period_docs(AccountId, Year, Month, Day) ->
     {PYear, PMonth, PDay} = onbill_util:previous_period_start_date(AccountId, Year, Month, Day),
     _ = kz_util:spawn(fun onbill_docs:generate_docs/4, [AccountId, PYear, PMonth, PDay]).
 
--spec maybe_prorate_new_period(ne_binary(), gregorian_seconds()) -> boolean().
+-spec maybe_prorate_new_period(kz_term:ne_binary(), kz_time:gregorian_seconds()) -> boolean().
 maybe_prorate_new_period(AccountId, Timestamp) ->
     case onbill_util:maybe_allow_postpay(AccountId) of
         {'true', _} ->
@@ -481,7 +481,7 @@ maybe_prorate_new_period(AccountId, Timestamp) ->
             maybe_prorate_new_prepay_period(AccountId)
     end.
 
--spec maybe_prorate_new_prepay_period(ne_binary()) -> boolean().
+-spec maybe_prorate_new_prepay_period(kz_term:ne_binary()) -> boolean().
 maybe_prorate_new_prepay_period(AccountId) ->
     {'ok', MasterAccount} = kapps_util:get_master_account_id(),
     kz_json:get_atom_value(<<"prepay_prorate_new_period">>
@@ -490,7 +490,7 @@ maybe_prorate_new_prepay_period(AccountId) ->
                                                  ,onbill_util:reseller_vars(MasterAccount),'false')
                           ).
 
--spec maybe_prorate_new_postpay_period(ne_binary(), gregorian_seconds()) -> boolean().
+-spec maybe_prorate_new_postpay_period(kz_term:ne_binary(), kz_time:gregorian_seconds()) -> boolean().
 maybe_prorate_new_postpay_period(AccountId, Timestamp) ->
     {'ok', MasterAccount} = kapps_util:get_master_account_id(),
     {{Year, Month, _}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),

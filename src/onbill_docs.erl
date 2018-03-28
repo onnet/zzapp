@@ -13,16 +13,16 @@
 
 -include("onbill.hrl").
 
--spec generate_docs(ne_binary(), integer()) -> ok.
+-spec generate_docs(kz_term:ne_binary(), integer()) -> ok.
 generate_docs(AccountId, Timestamp) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     generate_docs(AccountId, Year, Month, Day).
 
--spec generate_docs(ne_binary(), kz_year(), kz_month()) -> ok.
+-spec generate_docs(kz_term:ne_binary(), kz_time:year(), kz_time:month()) -> ok.
 generate_docs(AccountId, Year, Month) ->
     generate_docs(AccountId, Year, Month, 1).
 
--spec generate_docs(ne_binary(), kz_year(), kz_month(), kz_day()) -> ok.
+-spec generate_docs(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> ok.
 generate_docs(AccountId, Year, Month, Day) ->
     Carriers = onbill_util:account_carriers_list(AccountId),
     _ = [generate_docs(AccountId, Year, Month, Day, Carrier) || Carrier <- Carriers],
@@ -215,7 +215,7 @@ create_pdf(Vars, TemplateId, Carrier, AccountId) ->
             {'error', _R}
     end.
 
--spec save_pdf(ne_binary(), ne_binary(), kz_proplist(), ne_binary(), ne_binary(), ne_binary()) -> ok.
+-spec save_pdf(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:proplist(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) -> ok.
 save_pdf(DocId, DbName, Vars, TemplateId, Carrier, AccountId) when is_binary(DocId) ->
     {'ok', PDF_Data} = create_pdf(Vars, TemplateId, Carrier, AccountId),
     NewDoc = case kz_datamgr:open_doc(DbName, DocId) of
@@ -374,9 +374,9 @@ aggregate_data(InvoiceDoc, {AggrVars, TotalNetto, TotalVAT, TotalBrutto}) ->
             {AggrVars, TotalNetto, TotalVAT, TotalBrutto} 
     end.
     
--spec per_minute_reports(ne_binary(), integer()) -> 'ok'.
--spec per_minute_reports(ne_binary(), integer(), integer()) -> 'ok'.
--spec per_minute_reports(ne_binary(), integer(), integer(), integer()) -> 'ok'.
+-spec per_minute_reports(kz_term:ne_binary(), integer()) -> 'ok'.
+-spec per_minute_reports(kz_term:ne_binary(), integer(), integer()) -> 'ok'.
+-spec per_minute_reports(kz_term:ne_binary(), integer(), integer(), integer()) -> 'ok'.
 per_minute_reports(AccountId, Timestamp) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     per_minute_reports(AccountId, Year, Month, Day).
@@ -419,8 +419,8 @@ per_minute_report(AccountId, Year, Month, Day, Carrier, CallsJObjs, CallsTotalSe
 per_minute_report(_, _, _, _, _, _, _, _) ->
     'ok'.
 
--spec create_modb_doc(number(), ne_binary(), ne_binary()) -> any().
--spec create_modb_doc(number(), ne_binary(), ne_binary(), ne_binary(), kz_year(), kz_month(), kz_day()) -> any().
+-spec create_modb_doc(number(), kz_term:ne_binary(), kz_term:ne_binary()) -> any().
+-spec create_modb_doc(number(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> any().
 create_modb_doc(Amount, AccountId, DocVars) ->
     Carriers = onbill_util:account_carriers_list(AccountId),
     MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
@@ -462,7 +462,7 @@ create_modb_doc(Amount, AccountId, DocVars, DocNumber, Year, Month, Day) ->
            ++ VatifiedAmount,
     save_pdf(Vars, DocType, MainCarrier, AccountId, Year, Month).
 
--spec add_onbill_pdf(ne_binary(), ne_binary(), ne_binary()) -> any().
+-spec add_onbill_pdf(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary()) -> any().
 add_onbill_pdf(TemplateId, Carrier, AccountId) ->
     DbName = kz_util:format_account_id(AccountId,'encoded'),
     ResellerVars = onbill_util:reseller_vars(AccountId),

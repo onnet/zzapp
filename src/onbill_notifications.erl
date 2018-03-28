@@ -141,7 +141,7 @@ trial_has_expired_init() ->
                                                        ,{'reply_to', ?TEMPLATE_REPLY_TO}
                                                        ]).
 
--spec send_account_update(ne_binary(), ne_binary(), kz_json:object()) -> 'ok'.
+-spec send_account_update(kz_term:ne_binary(), kz_term:ne_binary(), kz_json:object()) -> 'ok'.
 send_account_update(AccountId, TemplateId, DataBag) ->
     case kz_amqp_worker:call(build_customer_update_payload(AccountId, TemplateId, DataBag)
                             ,fun kapi_notifications:publish_customer_update/1
@@ -154,7 +154,7 @@ send_account_update(AccountId, TemplateId, DataBag) ->
             lager:debug("failed to publish_customer update notification: ~p", [_E])
     end.
 
--spec build_customer_update_payload(ne_binary(), ne_binary(), kz_json:object()) -> kz_proplist().
+-spec build_customer_update_payload(kz_term:ne_binary(), kz_term:ne_binary(), kz_json:object()) -> kz_term:proplist().
 build_customer_update_payload(AccountId, TemplateId, DataBag) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     RecipientId =
@@ -170,7 +170,7 @@ build_customer_update_payload(AccountId, TemplateId, DataBag) ->
        | kz_api:default_headers(?OB_APP_NAME, ?OB_APP_VERSION)
       ]).
 
--spec maybe_send_account_updates(ne_binary(), kz_account:doc()) -> 'ok'.
+-spec maybe_send_account_updates(kz_term:ne_binary(), kz_account:doc()) -> 'ok'.
 maybe_send_account_updates(AccountId, AccountJObj) ->
     case onbill_util:is_trial_account(AccountJObj) of
         'true' ->
@@ -183,7 +183,7 @@ maybe_send_account_updates(AccountId, AccountJObj) ->
             end
     end.
 
--spec maybe_new_billing_period_approaching(ne_binary(), kz_account:doc()) -> 'ok'.
+-spec maybe_new_billing_period_approaching(kz_term:ne_binary(), kz_account:doc()) -> 'ok'.
 maybe_new_billing_period_approaching(AccountId, AccountJObj) ->
     Timestamp = kz_time:current_tstamp(),
     Days_Before_MRC_Update = ?KEY_PERIOD(?MRC_APPROACHING_KEY),
@@ -202,7 +202,7 @@ maybe_new_billing_period_approaching(AccountId, AccountJObj) ->
         _ -> 'ok'
     end.
 
--spec maybe_send_new_billing_period_approaching_update(ne_binary(), kz_account:doc(), boolean()) -> 'ok'.
+-spec maybe_send_new_billing_period_approaching_update(kz_term:ne_binary(), kz_account:doc(), boolean()) -> 'ok'.
 maybe_send_new_billing_period_approaching_update(AccountId, AccountJObj, 'true') ->
     case key_tstamp(?MRC_APPROACHING_KEY, AccountJObj) of
         MRC_ApproachingSent when is_number(MRC_ApproachingSent) ->
@@ -223,7 +223,7 @@ maybe_send_new_billing_period_approaching_update(AccountId, AccountJObj, 'true')
 maybe_send_new_billing_period_approaching_update(AccountId, _AccountJObj, 'false') ->
     lager:debug("mrc approaching alert disabled for Account: ~p", [AccountId]).
 
--spec customer_update_databag(ne_binary()) -> kz_json:object().
+-spec customer_update_databag(kz_term:ne_binary()) -> kz_json:object().
 customer_update_databag(AccountId) ->
     Values = [{<<"reseller">>, reseller_info_databag(AccountId)}
              ,{<<"account">>, account_info_databag(AccountId)}
@@ -231,7 +231,7 @@ customer_update_databag(AccountId) ->
              ],
     kz_json:set_values(Values, kz_json:new()).
 
--spec reseller_info_databag(ne_binary()) -> kz_json:object().
+-spec reseller_info_databag(kz_term:ne_binary()) -> kz_json:object().
 reseller_info_databag(AccountId) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
     {'ok', ResellerDoc} = kz_account:fetch(ResellerId),
@@ -239,14 +239,14 @@ reseller_info_databag(AccountId) ->
              ],
     kz_json:set_values(Values, kz_json:new()).
 
--spec account_info_databag(ne_binary()) -> kz_json:object().
+-spec account_info_databag(kz_term:ne_binary()) -> kz_json:object().
 account_info_databag(AccountId) ->
     {'ok', AccountDoc} = kz_account:fetch(AccountId),
     Values = [{<<"name">>, kz_account:name(AccountDoc)}
              ],
     kz_json:set_values(Values, kz_json:new()).
 
--spec services_info_databag(ne_binary()) -> kz_json:object().
+-spec services_info_databag(kz_term:ne_binary()) -> kz_json:object().
 services_info_databag(AccountId) ->
     Services = kz_services:fetch(AccountId),
     ServicesJObj = kz_services:services_json(Services),
@@ -275,44 +275,44 @@ services_info_databag(AccountId) ->
                       ,{<<"currency_sign">>, CurrencySign}
                       ]).
 
--spec update_account_key_sent(ne_binary(), kz_account:doc()) -> 'ok'.
+-spec update_account_key_sent(kz_term:ne_binary(), kz_account:doc()) -> 'ok'.
 update_account_key_sent(Key, AccountJObj0) ->
     AccountJObj1 = set_key_sent(Key, AccountJObj0),
     AccountJObj2 = set_key_tstamp(Key, AccountJObj1),
     _ = kz_util:account_update(AccountJObj2),
    'ok'.
 
--spec onbill_notification_enabled(ne_binary()) -> boolean().
+-spec onbill_notification_enabled(kz_term:ne_binary()) -> boolean().
 onbill_notification_enabled(AccountId) ->
     kz_json:is_true(?ONBILL_NOTIFICATION_ENABLED, onbill_util:reseller_vars(AccountId)).
 
--spec set_key_sent(ne_binary(), kz_account:doc()) -> kz_account:doc().
+-spec set_key_sent(kz_term:ne_binary(), kz_account:doc()) -> kz_account:doc().
 set_key_sent(Key, JObj) ->
     kz_json:set_value(?KEY_SENT(Key), 'true', JObj).
 
--spec key_enabled(ne_binary(), kz_account:doc()) -> boolean().
+-spec key_enabled(kz_term:ne_binary(), kz_account:doc()) -> boolean().
 key_enabled(Key, JObj) ->
     kz_json:is_true(?KEY_ENABLED(Key), JObj, 'true').
 
-%-spec reset_key_enabled(ne_binary(), kz_account:doc()) -> boolean().
+%-spec reset_key_enabled(kz_term:ne_binary(), kz_account:doc()) -> boolean().
 %reset_key_enabled(Key, JObj) ->
 %    kz_json:is_true(?KEY_ENABLED(Key), JObj, 'false').
 
--spec key_tstamp(ne_binary(), kz_account:doc()) -> api_number().
+-spec key_tstamp(kz_term:ne_binary(), kz_account:doc()) -> kz_term:api_number().
 key_tstamp(Key, JObj) ->
     kz_json:get_integer_value(?KEY_TSTAMP(Key), JObj).
 
--spec set_key_tstamp(ne_binary(), kz_account:doc()) -> kz_account:doc().
+-spec set_key_tstamp(kz_term:ne_binary(), kz_account:doc()) -> kz_account:doc().
 set_key_tstamp(Key, JObj) ->
     TStamp = kz_time:current_tstamp(),
     set_key_tstamp(Key, JObj, TStamp).
 
--spec set_key_tstamp(ne_binary(), kz_account:doc(), number()) -> kz_account:doc().
+-spec set_key_tstamp(kz_term:ne_binary(), kz_account:doc(), number()) -> kz_account:doc().
 set_key_tstamp(Key, JObj, TStamp) ->
     kz_json:set_value(?KEY_TSTAMP(Key), TStamp, JObj).
 
--spec maybe_send_service_suspend_update(ne_binary()) -> any().
--spec maybe_send_service_suspend_update(ne_binary(), kz_account:doc(), boolean()) -> any().
+-spec maybe_send_service_suspend_update(kz_term:ne_binary()) -> any().
+-spec maybe_send_service_suspend_update(kz_term:ne_binary(), kz_account:doc(), boolean()) -> any().
 maybe_send_service_suspend_update(AccountId) ->
     {'ok', AccountJObj} = kz_account:fetch(AccountId),
     maybe_send_service_suspend_update(AccountId, AccountJObj, key_enabled(?SERVICE_SUSPEND_KEY, AccountJObj)).
@@ -336,7 +336,7 @@ maybe_send_service_suspend_update(AccountId, AccountJObj, 'true') ->
 maybe_send_service_suspend_update(AccountId, _AccountJObj, 'false') ->
     lager:debug("service suspended for account: ~p", [AccountId]).
 
--spec maybe_send_trial_has_expired_update(ne_binary()) -> any().
+-spec maybe_send_trial_has_expired_update(kz_term:ne_binary()) -> any().
 maybe_send_trial_has_expired_update(AccountId) ->
     {'ok', AccountJObj} = kz_account:fetch(AccountId),
     case key_tstamp(?TRIAL_HAS_EXPIRED_KEY, AccountJObj) of
