@@ -63,7 +63,7 @@
 % -define(TEMPLATE_CATEGORY, <<"account">>).
 -define(TEMPLATE_CATEGORY, <<"onbill">>).
 -define(TEMPLATE_TO, ?CONFIGURED_EMAILS(?EMAIL_ADMINS)).
--define(TEMPLATE_FROM, teletype_util:default_from_address(?MOD_CONFIG_CRAWLER)).
+-define(TEMPLATE_FROM, teletype_util:default_from_address()).
 -define(TEMPLATE_CC, ?CONFIGURED_EMAILS(?EMAIL_SPECIFIED, [])).
 -define(TEMPLATE_BCC, ?CONFIGURED_EMAILS(?EMAIL_SPECIFIED, [])).
 -define(TEMPLATE_REPLY_TO, teletype_util:default_reply_to(?MOD_CONFIG_CRAWLER)).
