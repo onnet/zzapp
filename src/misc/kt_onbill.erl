@@ -119,8 +119,8 @@ current_state(#{account_id := AccountId}, init) ->
     {'ok', get_descendants(AccountId)};
 current_state(_, []) -> stop;
 current_state(_, [SubAccountId | DescendantsIds]) ->
-    {'ok', JObj} = kz_account:fetch(SubAccountId),
-    Realm = kz_account:realm(JObj),
+    {'ok', JObj} = kzd_accounts:fetch(SubAccountId),
+    Realm = kzd_accounts:realm(JObj),
     Services = kz_services:fetch(SubAccountId),
     {AllowPostpay, MaxPostpay} =
         case onbill_util:maybe_allow_postpay(SubAccountId) of
@@ -128,10 +128,10 @@ current_state(_, [SubAccountId | DescendantsIds]) ->
             {'true', Max} -> {'true', Max}
         end,
     {[SubAccountId
-     ,kz_account:name(JObj)
+     ,kzd_accounts:name(JObj)
      ,Realm
-     ,kz_account:is_enabled(JObj)
-     ,kz_account:is_reseller(JObj)
+     ,kzd_accounts:is_enabled(JObj)
+     ,kzd_accounts:is_reseller(JObj)
      ,descendants_count(SubAccountId)
      ,onbill_util:billing_day(SubAccountId)
      ,onbill_util:current_service_status(SubAccountId)
@@ -162,7 +162,7 @@ generate_docs(#{account_id := AccountId}, init) ->
     {'ok', get_children(AccountId)};
 generate_docs(_, []) -> stop;
 generate_docs(_, [SubAccountId | DescendantsIds]) ->
-    {'ok', JObj} = kz_account:fetch(SubAccountId),
+    {'ok', JObj} = kzd_accounts:fetch(SubAccountId),
     {{Year,Month,Day},{_,_,_}} = calendar:universal_time(),
     {PSYear,PSMonth,PSDay} = onbill_util:previous_period_start_date(SubAccountId, Year, Month, Day),
     {PEYear,PEMonth,PEDay} = onbill_util:period_end_date(SubAccountId, PSYear, PSMonth, PSDay),
@@ -175,7 +175,7 @@ generate_docs(_, [SubAccountId | DescendantsIds]) ->
             onbill_docs:generate_docs(SubAccountId, PEYear, PEMonth, PEDay)
     end,
     {[SubAccountId
-     ,kz_account:name(JObj)
+     ,kzd_accounts:name(JObj)
      ]
     ,DescendantsIds
     }.
@@ -188,12 +188,12 @@ sync_onbills(#{account_id := AccountId}, init) ->
     {'ok', get_children(AccountId)};
 sync_onbills(_, []) -> stop;
 sync_onbills(_, [SubAccountId | DescendantsIds]) ->
-    {'ok', JObj} = kz_account:fetch(SubAccountId),
+    {'ok', JObj} = kzd_accounts:fetch(SubAccountId),
     case onbill_util:replicate_onbill_doc(SubAccountId) of
         {'ok', _} ->
-            {[SubAccountId ,kz_account:name(JObj), <<"exists">>] ,DescendantsIds };
+            {[SubAccountId ,kzd_accounts:name(JObj), <<"exists">>] ,DescendantsIds };
         _ ->
-            {[SubAccountId ,kz_account:name(JObj), <<"absent">>] ,DescendantsIds }
+            {[SubAccountId ,kzd_accounts:name(JObj), <<"absent">>] ,DescendantsIds }
     end.
 
 
@@ -262,8 +262,8 @@ estimated_monthly_total(AccountId) ->
 is_allowed(ExtraArgs) ->
     AuthAccountId = maps:get('auth_account_id', ExtraArgs),
     AccountId = maps:get('account_id', ExtraArgs),
-    {'ok', AccountDoc} = kz_account:fetch(AccountId),
-    {'ok', AuthAccountDoc} = kz_account:fetch(AuthAccountId),
+    {'ok', AccountDoc} = kzd_accounts:fetch(AccountId),
+    {'ok', AuthAccountDoc} = kzd_accounts:fetch(AuthAccountId),
     kz_util:is_in_account_hierarchy(AuthAccountId, AccountId, 'true')
-        andalso kz_account:is_reseller(AccountDoc)
-        orelse kz_account:is_superduper_admin(AuthAccountDoc).
+        andalso kzd_accounts:is_reseller(AccountDoc)
+        orelse kzd_accounts:is_superduper_admin(AuthAccountDoc).

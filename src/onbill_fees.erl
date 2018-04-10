@@ -167,7 +167,7 @@ process_per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Ca
     process_per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
 process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
-    Timezone = kz_account:timezone(ResellerId),
+    Timezone = kzd_accounts:timezone(ResellerId),
     JObjs = get_period_per_minute_jobjs(AccountId, Year, Month, Day),
     Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
     {_, CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc, Timezone) end, {[], 0,0}, JObjs),
@@ -190,7 +190,7 @@ per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Carrier) -
     per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
 per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
     ResellerId = kz_services:find_reseller_id(AccountId),
-    Timezone = kz_account:timezone(ResellerId),
+    Timezone = kzd_accounts:timezone(ResellerId),
     JObjs = get_period_per_minute_jobjs(AccountId, Year, Month, Day),
     Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
     lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc, Timezone) end, {[], 0,0}, JObjs).

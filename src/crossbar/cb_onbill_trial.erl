@@ -54,7 +54,7 @@ validate_trial(Context, ?HTTP_POST) ->
                 'undefined' ->
                     cb_context:add_system_error('forbidden', Context);
                 NewTS ->
-                    {'ok', Doc} = kz_account:fetch(AccountId),
+                    {'ok', Doc} = kzd_accounts:fetch(AccountId),
                     NewDoc = kz_json:set_value(?KEY_TRIAL_EXPIRATION, kz_term:to_integer(NewTS), Doc),
                     Context1 = cb_context:set_doc(Context, NewDoc),
                     RespCtx = cb_context:set_resp_status(crossbar_doc:save(Context1),'success'),

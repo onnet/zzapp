@@ -189,8 +189,8 @@ maybe_continious_numbering(AccountId, Carrier, DocType, Year) ->
     end.
 
 alert_doc_numbering_problem(AccountId, Carrier, DocType, Year, Month, Reason) ->
-    {'ok', AccountJObj} = kz_account:fetch(AccountId),
-    Subj = io_lib:format("Doc numbering problem! Account: ~s", [kz_account:name(AccountJObj)]),
+    {'ok', AccountJObj} = kzd_accounts:fetch(AccountId),
+    Subj = io_lib:format("Doc numbering problem! Account: ~s", [kzd_accounts:name(AccountJObj)]),
     Msg = io_lib:format("Reason: ~s
                          <br />
                          <br />

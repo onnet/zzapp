@@ -176,8 +176,8 @@ format_datetime_tz(TStamp, Timezone) ->
 
 -spec is_billable(kz_term:ne_binary()) -> boolean().
 is_billable(AccountId) ->
-    {'ok', JObj} = kz_account:fetch(AccountId),
-    kz_account:is_enabled(JObj).
+    {'ok', JObj} = kzd_accounts:fetch(AccountId),
+    kzd_accounts:is_enabled(JObj).
 
 -spec validate_relationship(kz_term:ne_binary(), kz_term:ne_binary()) -> boolean().
 validate_relationship(ChildId, ResellerId) ->
@@ -458,14 +458,14 @@ set_billing_day(BillingDay, AccountId) ->
 
 -spec account_creation_date(kz_term:ne_binary()) -> {kz_time:year(), kz_time:month(), kz_time:day()}.
 account_creation_date(AccountId) ->
-    {'ok', AccountDoc} = kz_account:fetch(AccountId),
+    {'ok', AccountDoc} = kzd_accounts:fetch(AccountId),
     Timestamp = kz_json:get_value(<<"pvt_created">>, AccountDoc),
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     {Year, Month, Day}.
 
 -spec account_creation_ts(kz_term:ne_binary()) -> integer().
 account_creation_ts(AccountId) ->
-    {'ok', AccountDoc} = kz_account:fetch(AccountId),
+    {'ok', AccountDoc} = kzd_accounts:fetch(AccountId),
     kz_json:get_value(<<"pvt_created">>, AccountDoc).
 
 -spec maybe_allow_postpay(kz_term:ne_binary()) -> boolean().
@@ -476,19 +476,19 @@ maybe_allow_postpay(AccountId) ->
         'true' -> {'true', j5_limits:max_postpay(Limits)}
     end.
 
--spec trial_has_expired(kz_term:ne_binary() | kz_account:doc()) -> boolean().
+-spec trial_has_expired(kz_term:ne_binary() | kzd_accounts:doc()) -> boolean().
 trial_has_expired(AccountId) when is_binary(AccountId) ->
-    {'ok', AccountJObj} = kz_account:fetch(AccountId),
+    {'ok', AccountJObj} = kzd_accounts:fetch(AccountId),
     trial_has_expired(AccountJObj);
 trial_has_expired(AccountJObj) ->
-    kz_account:trial_has_expired(AccountJObj).
+    kzd_accounts:trial_has_expired(AccountJObj).
 
--spec is_trial_account(kz_term:ne_binary() | kz_account:doc()) -> boolean().
+-spec is_trial_account(kz_term:ne_binary() | kzd_accounts:doc()) -> boolean().
 is_trial_account(AccountId) when is_binary(AccountId) ->
-    {'ok', AccountJObj} = kz_account:fetch(AccountId),
+    {'ok', AccountJObj} = kzd_accounts:fetch(AccountId),
     is_trial_account(AccountJObj);
 is_trial_account(AccountJObj) ->
-    case kz_account:trial_expiration(AccountJObj) of
+    case kzd_accounts:trial_expiration(AccountJObj) of
         'undefined' -> 'false';
         _ -> 'true'
     end.
@@ -579,7 +579,7 @@ default_service_plan(AccountId) ->
 transit_to_full_subscription_state(AccountId) ->
     _ = ensure_service_plan(AccountId),
     set_billing_day(AccountId),
-    {'ok', Doc} = kz_account:fetch(AccountId),
+    {'ok', Doc} = kzd_accounts:fetch(AccountId),
     NewDoc = kz_json:delete_key(?KEY_TRIAL_EXPIRATION, Doc),
     AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
     {'ok', JObj} = kz_datamgr:ensure_saved(AccountDb, NewDoc),

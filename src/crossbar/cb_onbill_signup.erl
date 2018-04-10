@@ -100,7 +100,7 @@ validate(Context, ResellerId) ->
 -spec put(cb_context:context(), path_token()) -> cb_context:context().
 put(Context, ResellerId) ->
     Tree = crossbar_util:get_tree(ResellerId) ++ [ResellerId],
-    Props = [{<<"pvt_type">>, kz_account:type()}
+    Props = [{<<"pvt_type">>, kzd_accounts:type()}
             ,{<<"pvt_tree">>, Tree}
             ],
     Ctx1 = cb_context:set_account_id(Context, ResellerId),

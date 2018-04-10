@@ -93,7 +93,7 @@ maybe_process_account(<<AccountId:32/binary>>) ->
     case kz_datamgr:open_doc(?KZ_ACCOUNTS_DB, AccountId) of
         {'ok', AccountJObj} ->
             case kz_doc:is_soft_deleted(AccountJObj)
-                orelse not kz_account:is_enabled(AccountJObj)
+                orelse not kzd_accounts:is_enabled(AccountJObj)
                 orelse not kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded'))
             of
                 'false' ->
@@ -107,14 +107,14 @@ maybe_process_account(<<AccountId:32/binary>>) ->
 maybe_process_account(_) ->
     {'error', 'invalid_doc_id'}.
 
--spec process_account (kz_term:ne_binary(), kz_account:doc()) -> 'ok'.
+-spec process_account (kz_term:ne_binary(), kzd_accounts:doc()) -> 'ok'.
 process_account(AccountId, AccountJObj) ->
     case  not kapps_util:is_master_account(AccountId) 
            andalso onbill_util:is_service_plan_assigned(AccountId)
            andalso onbill_bk_util:today_dailyfee_absent(AccountId)
     of
         'true' ->
-            lager:debug("crawler - saving account ~p (~p) as dirty", [AccountId, kz_account:name(AccountJObj)]),
+            lager:debug("crawler - saving account ~p (~p) as dirty", [AccountId, kzd_accounts:name(AccountJObj)]),
             case onbill_util:current_service_status(AccountId) of
                 <<"delinquent">> ->
                     ProcessNewPeriod = onbill_util:maybe_process_new_billing_period(AccountId),
@@ -125,7 +125,7 @@ process_account(AccountId, AccountJObj) ->
             end,
             {'ok', 'account_processed'};
         'false' ->
-            lager:debug("crawler - no need to process account ~p (~p)", [AccountId, kz_account:name(AccountJObj)]),
+            lager:debug("crawler - no need to process account ~p (~p)", [AccountId, kzd_accounts:name(AccountJObj)]),
             {'ok', 'no_need_to_process'}
     end.
 
