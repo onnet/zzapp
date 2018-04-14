@@ -110,6 +110,7 @@ set_pvt_values(AccountId, Context) ->
             ,{<<"pvt_inbound_trunks">>,kz_json:get_integer_value(<<"inbound_trunks">>, ReqData)}
             ,{<<"pvt_bundled_twoway_trunks">>,kz_json:get_integer_value(<<"bundled_twoway_trunks">>, ReqData)}
             ,{<<"pvt_bundled_outbound_trunks">>,kz_json:get_integer_value(<<"bundled_outbound_trunks">>, ReqData)}
+            ,{<<"pvt_bundled_inbound_trunks">>,kz_json:get_integer_value(<<"bundled_inbound_trunks">>, ReqData)}
             ,{<<"pvt_inbound_channels_per_did">>,kz_json:get_value(<<"inbound_channels_per_did">>, ReqData)}
             ]),
     case kz_datamgr:ensure_saved(AccountDb, kz_json:set_values(Values, Doc)) of
