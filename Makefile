@@ -1,5 +1,6 @@
 ROOT = ../..
 PROJECT = onbill
+KZ_VERSION = $(shell grep vsn src/onbill.app.src | awk -F\" '{print $$2}')
 
 all: compile copy_templates
 

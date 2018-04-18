@@ -1,7 +1,7 @@
 {application, onbill,
  [
   {description, "Skel - A onbilleton application useful for quickly creating services"},
-  {vsn, "4.0.0"},
+  {vsn,"0.4.2"},
   {modules, []},
   {registered, [onbill_listener, onbill_sup]},
   {applications, [ kernel
