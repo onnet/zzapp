@@ -22,7 +22,8 @@
 -define(TRANSACTION_ID(TxnId, Year, Month), <<(?TO_BIN(Year))/binary, (kz_date:pad_month(Month))/binary, "-", TxnId/binary>>).
 
 -include_lib("crossbar/src/crossbar.hrl").
--include_lib("onbill/src/onbill.hrl").
+-include_lib("onbill.hrl").
+%-include_lib("onbill/src/onbill.hrl").
 
 -spec init() -> ok.
 init() ->

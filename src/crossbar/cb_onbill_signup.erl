@@ -45,7 +45,8 @@
     ]}).
 
 -include_lib("crossbar/src/crossbar.hrl").
--include_lib("onbill/src/onbill.hrl").
+-include_lib("onbill.hrl").
+%-include_lib("onbill/src/onbill.hrl").
 
 -spec init() -> ok.
 init() ->
