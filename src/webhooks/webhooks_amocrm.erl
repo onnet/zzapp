@@ -33,7 +33,7 @@ bindings_and_responders() ->
                ]
       }
      ]
-    ,[{{?MODULE, 'handle'} %,[{<<"*">>,<<"*">>}]
+    ,[{{?MODULE, 'handle'}
       ,[{<<"call_event">>, <<"CHANNEL_CREATE">>}
        ,{<<"call_event">>, <<"CHANNEL_ANSWER">>}
        ,{<<"call_event">>, <<"CHANNEL_DESTROY">>}
@@ -44,19 +44,21 @@ bindings_and_responders() ->
 
 -spec handle(kz_json:object(), kz_term:proplist()) -> 'ok'.
 handle(JObj, _Props) ->
-  lager:info("IAM webhook JObj: ~p",[JObj]),
-  lager:info("IAM webhook _Props: ~p",[_Props]),
     'true' = kapi_call:event_v(JObj),
     AccountId = kz_json:get_value([<<"Custom-Channel-Vars">>, <<"Account-ID">>], JObj),
-  lager:info("IAM webhook AccountId: ~p",[AccountId]),
     maybe_send_event(AccountId, format(JObj)).
 
 -spec maybe_send_event(kz_term:api_binary(), kz_json:object()) -> 'ok'.
 maybe_send_event('undefined', _JObj) -> 'ok';
 maybe_send_event(AccountId, JObj) ->
+  lager:info("IAM webhook JObj: ~p",[JObj]),
+  lager:info("IAM webhook AccountId: ~p",[AccountId]),
     case webhooks_util:find_webhooks(?HOOK_NAME, AccountId) of
-        [] -> lager:debug("no hooks to handle for ~s", [AccountId]);
-        Hooks -> webhooks_util:fire_hooks(JObj, Hooks)
+        [] ->
+            lager:debug("no hooks to handle for ~s", [AccountId]);
+        Hooks ->
+            lager:info("IAM webhook maybe_send_event Hooks: ~p",[Hooks]),
+            webhooks_util:fire_hooks(JObj, Hooks)
     end.
 
 -spec format(kz_json:object()) -> kz_json:object().
@@ -68,6 +70,6 @@ format(JObj) ->
                  ,<<"App-Version">>
                  ,<<"App-Name">>
                  ,<<"Event-Category">>
-                 ,<<"Custom-Channel-Vars">>
+              %   ,<<"Custom-Channel-Vars">>
                  ],
     kz_json:normalize_jobj(JObj1, RemoveKeys, []).
