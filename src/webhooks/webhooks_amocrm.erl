@@ -10,11 +10,11 @@
         ,handle/2
         ]).
 
--include("webhooks.hrl").
+-include_lib("webhooks/src/webhooks.hrl").
 
 -define(ID, kz_term:to_binary(?MODULE)).
 -define(HOOK_NAME, <<"amocrm">>).
--define(NAME, <<"Hook to AmoCRM">>).
+-define(NAME, <<"amocrm">>).
 -define(DESC, <<"This webhook notifies AmoCRM about call events">>).
 -define(METADATA
        ,kz_json:from_list([{<<"_id">>, ?ID}
@@ -33,7 +33,7 @@ bindings_and_responders() ->
                ]
       }
      ]
-    ,[{{?MODULE, 'handle'}
+    ,[{{?MODULE, 'handle'} %,[{<<"*">>,<<"*">>}]
       ,[{<<"call_event">>, <<"CHANNEL_CREATE">>}
        ,{<<"call_event">>, <<"CHANNEL_ANSWER">>}
        ,{<<"call_event">>, <<"CHANNEL_DESTROY">>}
@@ -44,8 +44,11 @@ bindings_and_responders() ->
 
 -spec handle(kz_json:object(), kz_term:proplist()) -> 'ok'.
 handle(JObj, _Props) ->
+  lager:info("IAM webhook JObj: ~p",[JObj]),
+  lager:info("IAM webhook _Props: ~p",[_Props]),
     'true' = kapi_call:event_v(JObj),
     AccountId = kz_json:get_value([<<"Custom-Channel-Vars">>, <<"Account-ID">>], JObj),
+  lager:info("IAM webhook AccountId: ~p",[AccountId]),
     maybe_send_event(AccountId, format(JObj)).
 
 -spec maybe_send_event(kz_term:api_binary(), kz_json:object()) -> 'ok'.
@@ -68,4 +71,3 @@ format(JObj) ->
                  ,<<"Custom-Channel-Vars">>
                  ],
     kz_json:normalize_jobj(JObj1, RemoveKeys, []).
-
