@@ -1,4 +1,4 @@
-{application, onbill,
+{application, zzapp,
  [
   {description, "Skel - A onbilleton application useful for quickly creating services"},
   {vsn,"0.4.2"},
@@ -19,5 +19,5 @@
 
                  , lager
                  ]},
-  {mod, {onbill_app, []}}
+  {mod, {zzapp_app, []}}
  ]}.
