@@ -58,8 +58,22 @@ maybe_send_event(AccountId, JObj) ->
             lager:debug("no hooks to handle for ~s", [AccountId]);
         Hooks ->
             lager:info("IAM webhook maybe_send_event Hooks: ~p",[Hooks]),
-            webhooks_util:fire_hooks(JObj, Hooks)
+            filter_hooks(Hooks)
     end.
+
+filter_hooks([]) -> 'ok';
+filter_hooks([#webhook{hook_event = <<"amocrm">>
+                      ,custom_data = CustomData
+                      }=Hook|T]) ->
+    lager:info("=================================================="),
+    lager:info("IAM print_hooks Hook: ~p", [Hook]),
+    lager:info("IAM print_hooks webhook.hook_event: ~p", [Hook#webhook.hook_event]),
+    lager:info("IAM print_hooks CustomData: ~p", [CustomData]),
+    lager:info("=================================================="),
+    filter_hooks(T);
+filter_hooks([_|T]) ->
+    filter_hooks(T).
+    
 
 -spec format(kz_json:object()) -> kz_json:object().
 format(JObj) ->
