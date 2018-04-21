@@ -76,8 +76,14 @@ handle_event(<<"CHANNEL_ANSWER">>, JObj, Hook) ->
     lager:info("=================================================="),
     {'ok', Cookie} = amocrm_auth_cookie(Hook),
     case contact_lookup(Cookie, JObj, Hook) of
-        {'ok', Contact} ->
         {'ok', 'contact_not_found'} ->
+            'ok';
+        {'ok', Contact} ->
+            Note = compose_note(JObj, Contact),
+            lager:info("IAM print_hooks Note: ~p", [Note]),
+          Res =  set_note(Cookie, Note, Hook),
+            lager:info("IAM print_hooks set_note Res: ~p", [Res]),
+            'ok';
         {'error', 'contact_lookup_failed'} ->
             'ok'
     end;
@@ -95,9 +101,23 @@ compose_note(JObj, Contact) ->
                    ,{<<"company">>, 3}
                    ,{<<"task">>, 4}
                    ],
-    Values = [{<<"element_id">>, kz_json:get_value(<<"id">>, Contact)}
-             ,{<<"element_type">>, kz_json:get_value(kz_json:get_value(<<"type">>, Contact), ElementTypes, 1)}
-             ],
+    NoteTypes = [{<<"inbound">>, 10}
+                ,{<<"outbound">>, 11}
+                ],
+    Values = props:filter_empty(
+        [{<<"element_id">>, kz_json:get_value(<<"id">>, Contact)}
+        ,{<<"element_type">>, kz_json:get_value(kz_json:get_value(<<"type">>, Contact), ElementTypes, 1)}
+        ,{<<"date_create">>, kz_json:get_value(<<"timestamp">>, JObj)}
+        ,{<<"element_type">>, kz_json:get_value(kz_json:get_value(<<"call_direction">>, JObj), NoteTypes, 0)}
+        ,{<<"text">>, {[{<<"UNIQ">>, kz_json:get_value(<<"call_id">>, JObj)}
+                       ,{<<"PHONE">>, caller_number(JObj)}
+                       ,{<<"DURATION">>, 7}
+                       ,{<<"SRC">>, <<"kazoo">>}
+                       ]
+                      }
+         }
+        ]),
+    kz_json:set_values(Values, kz_json:new()).
 
 filter_hooks(_, []) -> 'ok';
 filter_hooks(JObj, [#webhook{hook_event = <<"amocrm">>}=Hook|T]) ->
