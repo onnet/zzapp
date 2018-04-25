@@ -69,8 +69,18 @@ handle_event(<<"CHANNEL_ANSWER">>, JObj, Hook) ->
         {'ok', 'contact_not_found'} ->
             'ok';
         {'ok', Contact} ->
-            DataBag = kz_json:set_value(<<"add">>, [compose_note(JObj, Contact)], kz_json:new()),
-            set_note(Cookie, DataBag, Hook);
+            Note = compose_note(JObj, Contact),
+            case note_lookup(kz_json:get_value(<<"call_id">>, JObj), list_notes(Cookie, Hook)) of
+                'undefined' ->
+                    DataBag = kz_json:set_value(<<"add">>, [Note], kz_json:new()),
+                    set_note(Cookie, DataBag, Hook);
+                NoteId ->
+                    UpdValues =
+                        [{<<"id">>, NoteId}
+                        ,{<<"updated_at">>, kz_time:current_unix_tstamp()}], 
+                    DataBag = kz_json:set_value(<<"update">>, [kz_json:set_values(UpdValues, Note)], kz_json:new()),
+                    set_note(Cookie, DataBag, Hook)
+            end;
         {'error', 'contact_lookup_failed'} ->
             'ok'
     end;
@@ -80,13 +90,21 @@ handle_event(<<"CHANNEL_DESTROY">>, JObj, Hook) ->
     {'ok', Cookie, AccountId, _UserId} = amocrm_auth(Hook),
     case contact_lookup(Cookie, JObj, Hook) of
         {'ok', 'contact_not_found'} ->
+            call_add(AccountId, JObj),
             'ok';
         {'ok', Contact} ->
-            DataBag = kz_json:set_value(<<"add">>, [compose_note(JObj, Contact)], kz_json:new()),
-            set_note(Cookie, DataBag, Hook),
-          Res2 =  call_add(AccountId, JObj),
-            lager:info("IAM print_hooks call_add Res2: ~p", [Res2]),
-            'ok';
+            Note = compose_note(JObj, Contact),
+            case note_lookup(kz_json:get_value(<<"call_id">>, JObj), list_notes(Cookie, Hook)) of
+                'undefined' ->
+                    DataBag = kz_json:set_value(<<"add">>, [Note], kz_json:new()),
+                    set_note(Cookie, DataBag, Hook);
+                NoteId ->
+                    UpdValues =
+                        [{<<"id">>, NoteId}
+                        ,{<<"updated_at">>, kz_time:current_unix_tstamp()}], 
+                    DataBag = kz_json:set_value(<<"update">>, [kz_json:set_values(UpdValues, Note)], kz_json:new()),
+                    set_note(Cookie, DataBag, Hook)
+            end;
         {'error', 'contact_lookup_failed'} ->
             'ok'
     end.
@@ -109,22 +127,14 @@ amocrm_auth(#webhook{uri = URL
                      ,{[{<<"USER_LOGIN">>,UserLogin},{<<"USER_HASH">>,UserHash}]})
     of
         {'ok', 200, Headers, Body} ->
-            lager:info("IAM amocrm_auth: Headers, ~p",[Headers]),
-            lager:info("IAM amocrm_auth: Body, ~p",[Body]),
             DecodedBody = kz_json:decode(Body),
-            lager:info("IAM amocrm_auth: decoded Body, ~p",[DecodedBody]),
             [Account|_] = kz_json:get_value([<<"response">>, <<"accounts">>], DecodedBody),
             AccountId = kz_json:get_value(<<"id">>, Account),
             UserId = kz_json:get_value([<<"response">>, <<"user">>, <<"id">>], DecodedBody),
-            lager:info("IAM amocrm_auth: AccountId, ~p",[AccountId]),
-            lager:info("IAM amocrm_auth: UserId, ~p",[UserId]),
             Cookie = props:get_value("set-cookie", Headers),
-            lager:info("IAM amocrm_auth: Cookie, ~p",[Cookie]),
             {'ok', Cookie, AccountId, UserId};
-        {_, Code, Headers, Body} ->
-            lager:info("IAM amocrm_auth Failed Code: ~p",[Code]),
-            lager:info("IAM amocrm_auth Failed Headers: ~p",[Headers]),
-            lager:info("IAM amocrm_auth Failed Body: ~p",[Body]),
+        {_, Code, _Headers, Body} ->
+            lager:info("IAM amocrm_auth Failed Code: ~p Body: ~p",[Code, kz_json:decode(Body)]),
             {'error', 'auth_failed'}
     end.
 
@@ -139,18 +149,30 @@ contact_lookup(Cookie, JObj, #webhook{uri = URL}) ->
                     )
     of
         {'ok', 200, _Headers, Body} ->
-            lager:info("IAM contact_lookup successful Body: ~p",[kz_json:decode(Body)]),
             [Contact|_] = kz_json:get_value([<<"response">>,<<"contacts">>], kz_json:decode(Body)),
             lager:info("IAM contact_lookup successful Contact: ~p",[Contact]),
             {'ok', Contact};
         {'ok', 204, _Headers, _Body} ->
             lager:info("IAM contact_lookup returned empty result."),
             {'ok', 'contact_not_found'};
-        {_, Code, Headers, Body} ->
-            lager:info("IAM contact_lookup Failed Code: ~p",[Code]),
-            lager:info("IAM contact_lookup Failed Headers: ~p",[Headers]),
-            lager:info("IAM contact_lookup Failed Body: ~p",[Body]),
+        {_, Code, _Headers, Body} ->
+            lager:info("IAM contact_lookup Failed Code: ~p Body: ~p",[Code, kz_json:decode(Body)]),
             {'error', 'contact_lookup_failed'}
+    end.
+
+list_notes(Cookie, #webhook{uri = URL}) ->
+    IfMS = httpd_util:rfc1123_date(calendar:gregorian_seconds_to_datetime(kz_time:current_tstamp()-10800)),
+    case kz_http:get(<<URL/binary, "/api/v2/notes?type=contact">>
+                     ,[{<<"Cookie">>, Cookie}
+                      ,{<<"If-Modified-Since">>, IfMS}
+                      ]
+                     )
+    of
+        {'ok', 200, _Headers, Body} ->
+            kz_json:get_value([<<"_embedded">>,<<"items">>], kz_json:decode(Body), []);
+        {_, Code, _Headers, Body} ->
+            lager:info("IAM list_notes Failed Code: ~p Body: ~p",[Code, kz_json:decode(Body)]),
+            []
     end.
 
 set_note(Cookie, DataBag, #webhook{uri = URL}) ->
@@ -159,18 +181,15 @@ set_note(Cookie, DataBag, #webhook{uri = URL}) ->
                      ,DataBag
                      )
     of
-        {'ok', 200, Headers, Body} ->
-            lager:info("IAM set_note successful Headers: ~p",[Headers]),
-            lager:info("IAM set_note successful Body: ~p",[kz_json:decode(Body)]),
+        {'ok', 200, _Headers, _Body} ->
             ok;
-        {_, Code, Headers, Body} ->
-            lager:info("IAM set_note Failed Code: ~p",[Code]),
-            lager:info("IAM set_note Failed Headers: ~p",[Headers]),
-            lager:info("IAM set_note Failed Body: ~p",[Body]),
+        {_, Code, _Headers, Body} ->
+            lager:info("IAM set_note Failed Code: ~p Body: ~p",[Code, kz_json:decode(Body)]),
             {'error', 'set_note_failed'}
     end.
 
 compose_note(JObj, Contact) ->
+    AccountId = kz_json:get_value([<<"custom_channel_vars">>, <<"account_id">>], JObj),
     ElementTypes = [{<<"contact">>, 1}
                    ,{<<"lead">>, 2}
                    ,{<<"company">>, 3}
@@ -179,6 +198,16 @@ compose_note(JObj, Contact) ->
     NoteTypes = [{<<"inbound">>, 10}
                 ,{<<"outbound">>, 11}
                 ],
+    Link = 
+        case kz_json:get_value([<<"custom_channel_vars">>,<<"media_recording_id">>], JObj) of
+            'undefined' -> 'undefined';
+            MediaId ->
+                <<"https://beta.onnet.su/kzattachment"
+                 ,"?account_id=", AccountId/binary
+                 ,"&doc_type=call_recording"
+                 ,"&recording_id=", MediaId/binary
+                 ,"&auth_token=recording">>
+        end,
     Values = props:filter_empty(
         [{<<"element_id">>, kz_json:get_value(<<"id">>, Contact)}
         ,{<<"element_type">>, props:get_value(kz_json:get_value(<<"type">>, Contact), ElementTypes, 1)}
@@ -188,14 +217,22 @@ compose_note(JObj, Contact) ->
         ,{[<<"params">>,<<"UNIQ">>], kz_json:get_value(<<"call_id">>, JObj)}
         ,{[<<"params">>,<<"PHONE">>], caller_number(JObj)}
         ,{[<<"params">>,<<"DURATION">>], kz_json:get_value(<<"billing_seconds">>, JObj)}
+        ,{[<<"params">>,<<"LINK">>], Link}
         ,{[<<"params">>,<<"SRC">>], <<"kzonnet">>}
         ]),
     kz_json:set_values(Values, kz_json:new()).
 
+note_lookup(_CallId, []) ->
+    'undefined';
+note_lookup(CallId, [Note|T]) ->
+    case kz_json:get_value([<<"params">>,<<"UNIQ">>], Note) of
+        CallId -> kz_json:get_value(<<"id">>, Note);
+        _ -> note_lookup(CallId, T)
+    end.
 
 call_add(AmoAccountId, JObj) ->
     Code = <<"kzonnet">>,
-    Key = <<"cf87ea38decf7141244997f1e3acd8e3edc42ad93f55c6150b425e5d776bf582">>,
+    Key = <<"3f55c6150b425e5d776bf582">>,
     case kz_http:post(<<"https://sip.amocrm.ru/api/calls/add/"
                        ,"?code=", Code/binary
                        ,"&key=", Key/binary
@@ -204,19 +241,15 @@ call_add(AmoAccountId, JObj) ->
                      ,kz_json:set_value([<<"request">>,<<"add">>], [call_add_databag(JObj)], kz_json:new())
                      )
     of
-        {'ok', 200, Headers, Body} ->
-            lager:info("IAM call_add successful Headers: ~p",[Headers]),
+        {'ok', 200, _Headers, Body} ->
             lager:info("IAM call_add successful Body: ~p",[kz_json:decode(Body)]),
             ok;
-        {_, Code, Headers, Body} ->
-            lager:info("IAM call_add Failed Code: ~p",[Code]),
-            lager:info("IAM call_add Failed Headers: ~p",[Headers]),
-            lager:info("IAM call_add Failed Body: ~p",[kz_json:decode(Body)]),
+        {_, Code, _Headers, Body} ->
+            lager:info("IAM call_add Failed Code: ~p Body: ~p",[Code, kz_json:decode(Body)]),
             {'error', 'call_add_failed'}
     end.
 
 call_add_databag(JObj) ->
-            lager:info("IAM call_add_databag JObj: ~p",[JObj]),
     Values =
         [{<<"uuid">>, kz_json:get_value(<<"call_id">>, JObj)}
         ,{<<"caller">>, 173}
@@ -230,13 +263,10 @@ call_add_databag(JObj) ->
 
 -spec format(kz_json:object()) -> kz_json:object().
 format(JObj) ->
-    AccountId = kz_json:get_ne_binary_value([<<"Custom-Channel-Vars">>, <<"Account-ID">>], JObj),
-    JObj1 = kz_json:set_value(<<"Account-ID">>, AccountId, JObj),
     RemoveKeys = [<<"Node">>
                  ,<<"Msg-ID">>
                  ,<<"App-Version">>
                  ,<<"App-Name">>
                  ,<<"Event-Category">>
-                 ,<<"Custom-Channel-Vars">>
                  ],
-    kz_json:normalize_jobj(JObj1, RemoveKeys, []).
+    kz_json:normalize_jobj(JObj, RemoveKeys, []).
