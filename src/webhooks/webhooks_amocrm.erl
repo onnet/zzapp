@@ -141,6 +141,10 @@ amocrm_auth(#webhook{uri = URL
 caller_number(JObj) ->
     kz_json:get_first_defined([<<"caller_id_number">>], JObj).
 
+callee_number(JObj) ->
+    [Number|_] = binary:split(kz_json:get_first_defined([<<"to_uri">>,<<"to">>,<<"request">>], JObj), <<"@">>),
+    Number.
+
 contact_lookup(Cookie, JObj, #webhook{uri = URL}) ->
     CallerNumber = caller_number(JObj),
     lager:info("IAM contact_lookup CallerNumber: ~p",[CallerNumber]),
@@ -189,7 +193,6 @@ set_note(Cookie, DataBag, #webhook{uri = URL}) ->
     end.
 
 compose_note(JObj, Contact) ->
-    AccountId = kz_json:get_value([<<"custom_channel_vars">>, <<"account_id">>], JObj),
     ElementTypes = [{<<"contact">>, 1}
                    ,{<<"lead">>, 2}
                    ,{<<"company">>, 3}
@@ -198,16 +201,6 @@ compose_note(JObj, Contact) ->
     NoteTypes = [{<<"inbound">>, 10}
                 ,{<<"outbound">>, 11}
                 ],
-    Link = 
-        case kz_json:get_value([<<"custom_channel_vars">>,<<"media_recording_id">>], JObj) of
-            'undefined' -> 'undefined';
-            MediaId ->
-                <<"https://beta.onnet.su/kzattachment"
-                 ,"?account_id=", AccountId/binary
-                 ,"&doc_type=call_recording"
-                 ,"&recording_id=", MediaId/binary
-                 ,"&auth_token=recording">>
-        end,
     Values = props:filter_empty(
         [{<<"element_id">>, kz_json:get_value(<<"id">>, Contact)}
         ,{<<"element_type">>, props:get_value(kz_json:get_value(<<"type">>, Contact), ElementTypes, 1)}
@@ -217,7 +210,7 @@ compose_note(JObj, Contact) ->
         ,{[<<"params">>,<<"UNIQ">>], kz_json:get_value(<<"call_id">>, JObj)}
         ,{[<<"params">>,<<"PHONE">>], caller_number(JObj)}
         ,{[<<"params">>,<<"DURATION">>], kz_json:get_value(<<"billing_seconds">>, JObj)}
-        ,{[<<"params">>,<<"LINK">>], Link}
+        ,{[<<"params">>,<<"LINK">>], recording_link(JObj)}
         ,{[<<"params">>,<<"SRC">>], <<"kzonnet">>}
         ]),
     kz_json:set_values(Values, kz_json:new()).
@@ -230,36 +223,82 @@ note_lookup(CallId, [Note|T]) ->
         _ -> note_lookup(CallId, T)
     end.
 
-call_add(AmoAccountId, JObj) ->
-    Code = <<"kzonnet">>,
-    Key = <<"3f55c6150b425e5d776bf582">>,
-    case kz_http:post(<<"https://sip.amocrm.ru/api/calls/add/"
-                       ,"?code=", Code/binary
-                       ,"&key=", Key/binary
-                       ,"&account_id=", AmoAccountId/binary>>
-                     ,[]
-                     ,kz_json:set_value([<<"request">>,<<"add">>], [call_add_databag(JObj)], kz_json:new())
+call_add(_AmoAccountId, JObj) ->
+    AccountId = kz_json:get_value([<<"custom_channel_vars">>, <<"account_id">>], JObj),
+    ResellerId = kz_services:find_reseller_id(AccountId),
+    Code = kapps_account_config:get(ResellerId, <<"amocrm">>, <<"code">>),
+    API_Key = kapps_account_config:get(ResellerId, <<"amocrm">>, <<"api_key">>),
+    Url = <<"https://2megarts.amocrm.ru/api/v2/incoming_leads/sip"
+           ,"?login=", Code/binary
+           ,"&api_key=", API_Key/binary>>,
+    DataBag = call_urlencoded_form(JObj),
+    case kz_http:post(Url
+                     ,[{<<"Content-Type">>, <<"application/x-www-form-urlencoded">>}]
+                     ,DataBag
                      )
     of
-        {'ok', 200, _Headers, Body} ->
-            lager:info("IAM call_add successful Body: ~p",[kz_json:decode(Body)]),
+        {'ok', 200, _Headers, _Body} ->
             ok;
         {_, Code, _Headers, Body} ->
-            lager:info("IAM call_add Failed Code: ~p Body: ~p",[Code, kz_json:decode(Body)]),
+            lager:info("IAM call_add Failed. Code: ~p Body: ~p",[Code, kz_json:decode(Body)]),
             {'error', 'call_add_failed'}
     end.
 
-call_add_databag(JObj) ->
+call_urlencoded_form(JObj) ->
     Values =
-        [{<<"uuid">>, kz_json:get_value(<<"call_id">>, JObj)}
-        ,{<<"caller">>, 173}
-        ,{<<"to">>, <<"79493786247">>}
-        ,{<<"date">>, kz_time:gregorian_seconds_to_unix_seconds(kz_json:get_value(<<"timestamp">>, JObj))}
-        ,{<<"billsec">>, 49}
-        ,{<<"type">>, <<"inbound">>}
-        ,{<<"link">>, <<"http://www.example.net/call_66cadef07c67a314389a824fd8fa0cd1.mp3">>}
+        [kz_http_util:urlencode(<<"add[0][source_name]">>)
+        ,<<"=">>
+        ,<<"incoming_call">>
+        ,<<"&">>
+        ,kz_http_util:urlencode(<<"add[0][source_uid]">>)
+        ,<<"=">>
+        ,kz_json:get_value(<<"call_id">>, JObj)
+        ,<<"&">>
+        ,kz_http_util:urlencode(<<"add[0][incoming_entities][leads][0][name]">>)
+        ,<<"=">>
+        ,<<"maybe_a_deal">>
+        ,<<"&">>
+        ,kz_http_util:urlencode(<<"add[0][incoming_lead_info][to]">>)
+        ,<<"=">>
+        ,callee_number(JObj)
+        ,<<"&">>
+        ,kz_http_util:urlencode(<<"add[0][incoming_lead_info][from]">>)
+        ,<<"=">>
+        ,caller_number(JObj)
+        ,<<"&">>
+        ,kz_http_util:urlencode(<<"add[0][incoming_lead_info][date_call]">>)
+        ,<<"=">>
+        ,kz_time:gregorian_seconds_to_unix_seconds(kz_json:get_value(<<"timestamp">>, JObj))
+        ,<<"&">>
+        ,kz_http_util:urlencode(<<"add[0][incoming_lead_info][duration]">>)
+        ,<<"=">>
+        ,kz_json:get_value(<<"billing_seconds">>, JObj)
+        ,<<"&">>
+        ,kz_http_util:urlencode(<<"add[0][incoming_lead_info][link]">>)
+        ,<<"=">>
+        ,kz_http_util:urlencode(recording_link(JObj))
+        ,<<"&">>
+        ,kz_http_util:urlencode(<<"add[0][incoming_lead_info][service_code]">>)
+        ,<<"=">>
+        ,<<"kzonnet">>
+        ,<<"&">>
+        ,kz_http_util:urlencode(<<"add[0][incoming_lead_info][uniq]">>)
+        ,<<"=">>
+        ,kz_json:get_value(<<"call_id">>, JObj)
         ],
-    kz_json:set_values(Values, kz_json:new()).
+    kz_binary:join(Values, <<>>).
+
+recording_link(JObj) ->
+    AccountId = kz_json:get_value([<<"custom_channel_vars">>, <<"account_id">>], JObj),
+    case kz_json:get_value([<<"custom_channel_vars">>,<<"media_recording_id">>], JObj) of
+        'undefined' -> 'undefined';
+        MediaId ->
+            <<"https://beta.onnet.su/kzattachment"
+             ,"?account_id=", AccountId/binary
+             ,"&doc_type=call_recording"
+             ,"&recording_id=", MediaId/binary
+             ,"&auth_token=recording">>
+    end.
 
 -spec format(kz_json:object()) -> kz_json:object().
 format(JObj) ->
