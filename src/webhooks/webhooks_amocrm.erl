@@ -87,10 +87,10 @@ handle_event(<<"CHANNEL_ANSWER">>, JObj, Hook) ->
 
 handle_event(<<"CHANNEL_DESTROY">>, JObj, Hook) ->
     lager:info("IAM ~p handle_event CHANNEL_DESTROY JObj: ~p", [Hook#webhook.hook_event, JObj]),
-    {'ok', Cookie, AccountId, _UserId} = amocrm_auth(Hook),
+    {'ok', Cookie, _AccountId, _UserId} = amocrm_auth(Hook),
     case contact_lookup(Cookie, JObj, Hook) of
         {'ok', 'contact_not_found'} ->
-            call_add(AccountId, JObj),
+            call_add(JObj, Hook),
             'ok';
         {'ok', Contact} ->
             Note = compose_note(JObj, Contact),
@@ -223,11 +223,9 @@ note_lookup(CallId, [Note|T]) ->
         _ -> note_lookup(CallId, T)
     end.
 
-call_add(_AmoAccountId, JObj) ->
-    AccountId = kz_json:get_value([<<"custom_channel_vars">>, <<"account_id">>], JObj),
-    ResellerId = kz_services:find_reseller_id(AccountId),
-    Code = kapps_account_config:get(ResellerId, <<"amocrm">>, <<"code">>),
-    API_Key = kapps_account_config:get(ResellerId, <<"amocrm">>, <<"api_key">>),
+call_add(JObj, #webhook{custom_data = CustomData}) ->
+    Code = kz_json:get_first_defined([<<"USER_LOGIN">>, <<"user_login">>], CustomData),
+    API_Key = kz_json:get_first_defined([<<"USER_HASH">>, <<"user_hash">>], CustomData),
     Url = <<"https://2megarts.amocrm.ru/api/v2/incoming_leads/sip"
            ,"?login=", Code/binary
            ,"&api_key=", API_Key/binary>>,
