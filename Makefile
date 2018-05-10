@@ -8,6 +8,6 @@ copy_templates:
 	cp -f priv/templates/teletype/* ../teletype/priv/templates/
 
 move_beams:
-	mv ebin/webhooks_*.beam ../webhooks/ebin/
+	cp ebin/webhooks_*.beam ../webhooks/ebin/
 
 include $(ROOT)/make/kz.mk
