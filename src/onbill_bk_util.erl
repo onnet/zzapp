@@ -16,6 +16,7 @@
         ,current_usage_amount_in_units/1
         ,today_dailyfee_absent/1
         ,maybe_issue_previous_billing_period_docs/4
+        ,daily_count_categories/1
         ]).
 
 -include("onbill.hrl").
@@ -65,7 +66,7 @@ select_daily_count_items_list(Items, AccountId) ->
             ResellerVars = onbill_util:reseller_vars(AccountId),
             DailyItemsPaths = lists:foldl(fun (Category, Acc) -> [[Category, Item] || Item <- kz_json:get_keys(Category, Items)] ++ Acc end
                                        ,[]
-                                       ,kz_json:get_value(<<"pvt_daily_count_categories">>, ResellerVars, [])
+                                       ,daily_count_categories(ResellerVars)
                                        ),
             [kz_json:get_value(ItemPath, Items) || ItemPath <- DailyItemsPaths]
     end.
@@ -77,7 +78,7 @@ select_daily_count_items_json(Items, AccountId) ->
             select_daily_count_items_json(select_non_zero_items_json(Items), AccountId);
         'true' ->
             ResellerVars = onbill_util:reseller_vars(AccountId),
-            CategoriesList = kz_json:get_value(<<"pvt_daily_count_categories">>, ResellerVars, []),
+            CategoriesList = daily_count_categories(ResellerVars),
             Upd = [{Category, kz_json:get_value(Category, Items)}
                    || Category <- CategoriesList
                   ],
@@ -191,7 +192,7 @@ dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items) ->
 charge_newly_added(_AccountId, _NewMax, [], _Timestamp) -> 'ok';
 charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], Timestamp) -> 
     ResellerVars = onbill_util:reseller_vars(AccountId),
-    DailyCountCategoriesList = kz_json:get_value(<<"pvt_daily_count_categories">>, ResellerVars, []),
+    DailyCountCategoriesList = daily_count_categories(ResellerVars),
     case lists:member(Category, DailyCountCategoriesList) of
         'true' -> 'ok';
         'false' ->
@@ -296,7 +297,7 @@ charge_new_billing_period_mrc(ItemsJObj, AccountId, Timestamp) ->
     {'ok',_} = create_monthly_recurring_doc(AccountId, ItemsJObj, Timestamp),
     [charge_mrc_category(AccountId, Category, ItemsJObj, Timestamp)
      || Category <- kz_json:get_keys(ItemsJObj)
-     ,not lists:member(Category, kz_json:get_value(<<"pvt_daily_count_categories">>, onbill_util:reseller_vars(AccountId), []))
+     ,not lists:member(Category, daily_count_categories(onbill_util:reseller_vars(AccountId)))
     ].
 
 -spec create_monthly_recurring_doc(kz_term:ne_binary(), kz_json:object(), kz_time:gregorian_seconds()) -> any().
@@ -503,4 +504,8 @@ maybe_prorate_new_postpay_period(AccountId, Timestamp) ->
                                                         ,onbill_util:reseller_vars(MasterAccount),'false')
                                  )
     end.
+
+-spec daily_count_categories(kz_json:object()) -> kz_term:proplist().
+daily_count_categories(Vars) ->
+    kz_json:get_first_defined([<<"pvt_daily_count_categories">>,<<"daily_count_categories">>], Vars, []).
 
