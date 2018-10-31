@@ -81,7 +81,7 @@ authenticate_nouns(_Nouns) -> 'false'.
 
 -spec validate(cb_context:context(), path_token()) -> cb_context:context().
 validate(Context, ResellerId) ->
-    case kz_services:is_reseller(ResellerId)
+    case kz_services_reseller:is_reseller(ResellerId)
          orelse
          cb_context:is_superduper_admin(ResellerId)
     of
