@@ -14,9 +14,10 @@
         ]).
 
 -include("onbill.hrl").
--include_lib("/opt/kazoo/core/braintree/include/braintree.hrl").
+%%-include_lib("/opt/kazoo/core/braintree/include/braintree.hrl").
+-include_lib("/opt/kazoo/applications/braintree/src/braintree.hrl").
 -include_lib("/opt/kazoo/core/kazoo_stdlib/include/kz_databases.hrl").
--include_lib("/opt/kazoo/core/kazoo_transactions/include/kazoo_transactions.hrl").
+%-include_lib("/opt/kazoo/core/kazoo_transactions/include/kazoo_transactions.hrl").
 
 -spec sync(kz_service_item:items(), kz_term:ne_binary()) -> 'ok'|'delinquent'|'retry'.
 sync(Items, AccountId) ->

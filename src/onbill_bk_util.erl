@@ -20,9 +20,11 @@
         ]).
 
 -include("onbill.hrl").
--include_lib("/opt/kazoo/core/braintree/include/braintree.hrl").
+%%-include_lib("/opt/kazoo/core/braintree/include/braintree.hrl").
+-include_lib("/opt/kazoo/applications/braintree/src/braintree.hrl").
 -include_lib("/opt/kazoo/core/kazoo_stdlib/include/kz_databases.hrl").
--include_lib("/opt/kazoo/core/kazoo_transactions/include/kazoo_transactions.hrl").
+%%-include_lib("/opt/kazoo/core/kazoo_transactions/include/kazoo_transactions.hrl").
+%%-include_lib("/opt/kazoo/core/kazoo_transactions/src/kazoo_transactions.hrl").
 
 -spec max_daily_usage_exceeded(kz_service_item:items(), kz_term:ne_binary(), integer()) -> any().
 max_daily_usage_exceeded(Items, AccountId, Timestamp) ->
