@@ -59,7 +59,7 @@ authenticate_nouns(_Nouns) -> 'false'.
 -spec validate(cb_context:context(), path_token()) -> cb_context:context().
 validate(Context, BeneficiaryId) ->
     lager:info("CB_PayPal validate BeneficiaryId: ~p",[BeneficiaryId]),
-    case kz_services:is_reseller(BeneficiaryId) of
+    case kz_services_reseller:is_reseller(BeneficiaryId) of
         'true' ->
             ReqJSON = cb_context:req_json(Context),
             lager:info("CB_PayPal post req_json: ~p",[ReqJSON]),

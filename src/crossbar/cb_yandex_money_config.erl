@@ -83,7 +83,7 @@ maybe_valid_relationship(Context) ->
     AccountId = cb_context:account_id(Context),
     AuthAccountId = cb_context:auth_account_id(Context),
     cb_context:is_superduper_admin(AuthAccountId)
-      orelse (kz_services:is_reseller(AuthAccountId)
+      orelse (kz_services_reseller:is_reseller(AuthAccountId)
                 andalso AuthAccountId == AccountId).
 
 -spec maybe_handle_load_failure(cb_context:context()) -> cb_context:context().

@@ -260,7 +260,7 @@ validate_current_services(Context, _) ->
 validate_billing_status(Context, ?HTTP_GET) ->
     AccountId = cb_context:account_id(Context),
     Vars =
-        case kz_services:is_reseller(AccountId) of
+        case kz_services_reseller:is_reseller(AccountId) of
             'true' -> onbill_util:account_vars(AccountId);
             'false' -> onbill_util:reseller_vars(AccountId)
         end,

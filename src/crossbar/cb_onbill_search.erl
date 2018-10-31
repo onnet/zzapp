@@ -474,9 +474,9 @@ normalize_view_results(JObj, Acc) ->
 maybe_valid_relationship(Context) ->
     AccountId = cb_context:account_id(Context),
     AuthAccountId = cb_context:auth_account_id(Context),
-    (kz_services:is_reseller(AccountId) andalso AccountId == AuthAccountId)
+    (kz_services_reseller:is_reseller(AccountId) andalso AccountId == AuthAccountId)
     orelse
-    (kz_services:is_reseller(AccountId) andalso onbill_util:validate_relationship(AccountId, AuthAccountId))
+    (kz_services_reseller:is_reseller(AccountId) andalso onbill_util:validate_relationship(AccountId, AuthAccountId))
     orelse
     cb_context:is_superduper_admin(AuthAccountId).
 
