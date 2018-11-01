@@ -166,7 +166,7 @@ monthly_fees(AccountId, Year, Month, Day) ->
 process_per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Carrier) ->
     process_per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
 process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
-    ResellerId = kz_services:find_reseller_id(AccountId),
+    ResellerId = onbill_util:find_reseller_id(AccountId),
     Timezone = kzd_accounts:timezone(ResellerId),
     JObjs = get_period_per_minute_jobjs(AccountId, Year, Month, Day),
     Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
@@ -189,7 +189,7 @@ process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
 per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Carrier) ->
     per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
 per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
-    ResellerId = kz_services:find_reseller_id(AccountId),
+    ResellerId = onbill_util:find_reseller_id(AccountId),
     Timezone = kzd_accounts:timezone(ResellerId),
     JObjs = get_period_per_minute_jobjs(AccountId, Year, Month, Day),
     Regexes = get_per_minute_regexes(AccountId, CarrierDoc),

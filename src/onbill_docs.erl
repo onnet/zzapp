@@ -95,7 +95,7 @@ generate_docs(AccountId, Year, Month, Day, Carrier, VatUpdatedFeesList, {TotalNe
         ].
 
 get_template(TemplateId, Carrier, AccountId) ->
-    ResellerId = kz_services:find_reseller_id(AccountId),
+    ResellerId = onbill_util:find_reseller_id(AccountId),
     CountryOfResidence = onbill_util:reseller_country_of_residence(AccountId),
     DbName = kz_util:format_account_id(ResellerId,'encoded'),
     case kz_datamgr:fetch_attachment(DbName, ?CARRIER_DOC(Carrier), <<(?DOC_NAME_FORMAT(Carrier, TemplateId))/binary, ".tpl">>) of

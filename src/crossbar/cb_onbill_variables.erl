@@ -128,7 +128,7 @@ save_variables_attachment(Context, DocId, AName) ->
                                           {'error', any()}.
 replicate_onbill_doc_definition(Context) ->
     AccountId = cb_context:account_id(Context),
-    ResellerId = kz_services:find_reseller_id(AccountId),
+    ResellerId = onbill_util:find_reseller_id(AccountId),
     JObj0 = kz_json:set_value(<<"_id">>, AccountId, cb_context:doc(Context)),
     JObj = kz_json:delete_key(<<"_attachments">>, JObj0),
 lager:info("IAM replicate_onbill_doc_definition JObj: ~p",[JObj]),

@@ -43,7 +43,7 @@ validate(Context) ->
 -spec validate(cb_context:context(), path_token()) -> cb_context:context().
 validate(Context, ?MERCHANT_INFO) ->
     AccountId = cb_context:account_id(Context),
-    ResellerId = kz_services:find_reseller_id(AccountId),
+    ResellerId = onbill_util:find_reseller_id(AccountId),
     ResellerDb = kz_util:format_account_id(ResellerId, 'encoded'),
     crossbar_doc:load(?PAYPAL_CONFIG_ID, cb_context:set_account_db(Context, ResellerDb));
 validate(Context, _) ->

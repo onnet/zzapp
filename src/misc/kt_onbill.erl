@@ -182,7 +182,7 @@ generate_docs(_, [SubAccountId | DescendantsIds]) ->
 
 -spec sync_onbills(kz_tasks:extra_args(), kz_tasks:iterator()) -> kz_tasks:iterator().
 sync_onbills(#{account_id := AccountId}, init) ->
-    ResellerId = kz_services:find_reseller_id(AccountId),
+    ResellerId = onbill_util:find_reseller_id(AccountId),
     DbName = ?ONBILL_DB(ResellerId),
     _ = onbill_util:maybe_add_design_doc(DbName, <<"search">>),
     {'ok', get_children(AccountId)};

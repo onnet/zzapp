@@ -156,7 +156,7 @@ send_account_update(AccountId, TemplateId, DataBag) ->
 
 -spec build_customer_update_payload(kz_term:ne_binary(), kz_term:ne_binary(), kz_json:object()) -> kz_term:proplist().
 build_customer_update_payload(AccountId, TemplateId, DataBag) ->
-    ResellerId = kz_services:find_reseller_id(AccountId),
+    ResellerId = onbill_util:find_reseller_id(AccountId),
     RecipientId =
         case onbill_notification_enabled(AccountId) of
             'true' -> AccountId;
@@ -233,7 +233,7 @@ customer_update_databag(AccountId) ->
 
 -spec reseller_info_databag(kz_term:ne_binary()) -> kz_json:object().
 reseller_info_databag(AccountId) ->
-    ResellerId = kz_services:find_reseller_id(AccountId),
+    ResellerId = onbill_util:find_reseller_id(AccountId),
     {'ok', ResellerDoc} = kzd_accounts:fetch(ResellerId),
     Values = [{<<"name">>, kzd_accounts:name(ResellerDoc)}
              ],

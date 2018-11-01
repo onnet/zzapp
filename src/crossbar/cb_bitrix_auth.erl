@@ -102,7 +102,7 @@ validate(Context, BitrixIntegrationAccountId) ->
     case kz_auth_jwt:decode(cb_context:auth_token(Context)) of
         {ok,_,Proplist} ->
             AuthTokenAccountId = props:get_value(<<"account_id">>, Proplist),
-            ResellerId = kz_services:find_reseller_id(BitrixIntegrationAccountId),
+            ResellerId = onbill_util:find_reseller_id(BitrixIntegrationAccountId),
             case AuthTokenAccountId == BitrixIntegrationAccountId 
                  orelse AuthTokenAccountId == ResellerId
             of

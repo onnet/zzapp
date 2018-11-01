@@ -58,7 +58,7 @@ get_new_binary_number(AccountId, Carrier, DocType0) ->
     end.
 
 get_number(AccountId, Carrier, DocType, Year, Month) ->
-    ResellerId = kz_services:find_reseller_id(AccountId),
+    ResellerId = onbill_util:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
     _ = onbill_util:check_db(DbName),
     onbill_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
@@ -71,7 +71,7 @@ get_number(AccountId, Carrier, DocType, Year, Month) ->
 -spec number_lookup(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), integer(), integer()) -> {'ok', integer()}|{'error', atom()}.
 number_lookup(AccountId, Carrier, DocType0, Year, Month) ->
     DocType = maybe_doc_number_follows(AccountId, Carrier, DocType0),
-    ResellerId = kz_services:find_reseller_id(AccountId),
+    ResellerId = onbill_util:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
     _ = onbill_util:check_db(DbName),
     onbill_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
@@ -107,7 +107,7 @@ maybe_get_new_number(AccountId, Carrier, DocType0, Year, Month) ->
     end.
 
 no_docs_in_year_since_month(AccountId, Carrier, DocType, Year, Month) ->
-    ResellerId = kz_services:find_reseller_id(AccountId),
+    ResellerId = onbill_util:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
     _ = onbill_util:check_db(DbName),
     onbill_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
@@ -127,7 +127,7 @@ get_new_number(AccountId, Carrier, DocType, Year, Month) ->
 
 reserve_number(AccountId, Carrier, DocType, Year, Month, ReserveCandidate, Attempt) when Attempt < 3 ->
     NumberToReserve = maybe__start_number(AccountId, Carrier, DocType, ReserveCandidate),
-    ResellerId = kz_services:find_reseller_id(AccountId),
+    ResellerId = onbill_util:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
     Values = [{<<"_id">>, ?NUMBER_DOC_ID(Carrier, DocType, NumberToReserve)}
              ,{<<"carrier">>, Carrier}
@@ -159,7 +159,7 @@ get_recent_number(AccountId, Carrier, DocType, Year) ->
     end.
 
 get_year_recent_number(AccountId, Carrier, DocType, Year) ->
-    ResellerId = kz_services:find_reseller_id(AccountId),
+    ResellerId = onbill_util:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
     _ = onbill_util:check_db(DbName),
     onbill_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
@@ -177,7 +177,7 @@ get_year_recent_number(AccountId, Carrier, DocType, Year) ->
 maybe_continious_numbering(AccountId, Carrier, DocType, Year) ->
     case kz_json:is_true(<<"continious_doc_numbering">>, onbill_util:carrier_doc(Carrier, AccountId)) of
         'true' ->
-            ResellerId = kz_services:find_reseller_id(AccountId),
+            ResellerId = onbill_util:find_reseller_id(AccountId),
             case kz_datamgr:db_exists(?DOCS_NUMBER_DB(ResellerId, Year-1)) of
                 'true' ->
                     get_year_recent_number(AccountId, Carrier, DocType, Year-1);
