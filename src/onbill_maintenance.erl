@@ -3,7 +3,7 @@
 -export([populate_modb_day_with_fee/4
         ,populate_modb_with_fees/3
         ,refresh/0
-        ,correct_billing_id/0
+%        ,correct_billing_id/0
         ,set_billing_day/1
         ,set_billing_day/2
         ,set_rate_value/5
@@ -67,35 +67,37 @@ get_database_sort(Db1, Db2) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%u%%%%  Manipulate account billing_id handling %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
--spec correct_billing_id() -> 'no_return'.
--spec correct_billing_id(kz_term:ne_binaries(), non_neg_integer()) -> 'no_return'.
-correct_billing_id() ->
-    Databases = get_databases(),
-    correct_billing_id(Databases, length(Databases) + 1).
-
-correct_billing_id([], _) -> 'no_return';
-correct_billing_id([Database|Databases], Total) ->
-    case kz_datamgr:db_classification(Database) of
-        'account' ->
-            AccountId = kz_util:format_account_id(Database, 'raw'),
-            EncodedDb = kz_util:format_account_id(Database, 'encoded'),
-            onbill_util:process_documents([<<"billing_id">>], [], EncodedDb, [AccountId]),
-            onbill_util:process_documents([<<"billing_id">>], [], <<"accounts">>, [AccountId]),
-            case kz_services:set_billing_id(AccountId, AccountId) of
-                'undefined' ->
-                    io:format("(~p/~p) skipping account database '~s' (~p) ~n",[length(Databases) + 1, Total, Database, AccountId]);
-                Services ->
-                    io:format("(~p/~p) updating account database '~s' (~p) ~n",[length(Databases) + 1, Total, Database, AccountId]),
-                    kz_datamgr:save_doc(<<"services">>, kz_services:to_json(Services)),
-                    timer:sleep(?PAUSE)
-            end;
-        _Else ->
-            io:format("(~p/~p) skipping database '~s'~n",[length(Databases) + 1, Total, Database]),
-            'ok'
-    end,
-    correct_billing_id(Databases, Total).
-
+%%%%%%%%%%%%%%%%%%% Looks like deprecated in 4.3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%-spec correct_billing_id() -> 'no_return'.
+%-spec correct_billing_id(kz_term:ne_binaries(), non_neg_integer()) -> 'no_return'.
+%correct_billing_id() ->
+%    Databases = get_databases(),
+%    correct_billing_id(Databases, length(Databases) + 1).
+%
+%correct_billing_id([], _) -> 'no_return';
+%correct_billing_id([Database|Databases], Total) ->
+%    case kz_datamgr:db_classification(Database) of
+%        'account' ->
+%            AccountId = kz_util:format_account_id(Database, 'raw'),
+%            EncodedDb = kz_util:format_account_id(Database, 'encoded'),
+%            onbill_util:process_documents([<<"billing_id">>], [], EncodedDb, [AccountId]),
+%            onbill_util:process_documents([<<"billing_id">>], [], <<"accounts">>, [AccountId]),
+%            case kz_services:set_billing_id(AccountId, AccountId) of
+%                'undefined' ->
+%                    io:format("(~p/~p) skipping account database '~s' (~p) ~n",[length(Databases) + 1, Total, Database, AccountId]);
+%                Services ->
+%                    io:format("(~p/~p) updating account database '~s' (~p) ~n",[length(Databases) + 1, Total, Database, AccountId]),
+%                    kz_datamgr:save_doc(<<"services">>, kz_services:to_json(Services)),
+%                    timer:sleep(?PAUSE)
+%            end;
+%        _Else ->
+%            io:format("(~p/~p) skipping database '~s'~n",[length(Databases) + 1, Total, Database]),
+%            'ok'
+%    end,
+%    correct_billing_id(Databases, Total).
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%  Set account billing day %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

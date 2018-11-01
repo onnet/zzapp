@@ -240,7 +240,7 @@ onbills_modb_summary(Context) ->
 validate_current_services(Context, ?HTTP_GET) ->
     AccountId = cb_context:account_id(Context),
     Services = kz_services:fetch(AccountId),
-    ServicesJObj = kz_services:services_json(Services),
+    ServicesJObj = kz_services:services_jobj(Services),
     {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
     ItemsList = onbill_bk_util:select_non_zero_items_list(Items, AccountId),
     ItemsCalculatedList = [onbill_bk_util:calc_item(ItemJObj, AccountId) || ItemJObj <- ItemsList],

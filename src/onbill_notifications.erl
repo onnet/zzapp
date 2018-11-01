@@ -249,7 +249,7 @@ account_info_databag(AccountId) ->
 -spec services_info_databag(kz_term:ne_binary()) -> kz_json:object().
 services_info_databag(AccountId) ->
     Services = kz_services:fetch(AccountId),
-    ServicesJObj = kz_services:services_json(Services),
+    ServicesJObj = kz_services:services_jobj(Services),
     {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
     ItemsList = onbill_bk_util:select_non_zero_items_list(Items, AccountId),
     ItemsCalculatedList = [onbill_bk_util:calc_item(ItemJObj, AccountId) || ItemJObj <- ItemsList],

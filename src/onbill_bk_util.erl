@@ -441,7 +441,7 @@ calc_item(ItemJObj, AccountId) ->
 -spec current_items(kz_term:ne_binary()) -> kz_service_item:items().
 current_items(AccountId) -> 
     Services = kz_services:fetch(AccountId),
-    ServicesJObj = kz_services:services_json(Services),
+    ServicesJObj = kz_services:services_jobj(Services),
     case kz_service_plans:create_items(ServicesJObj) of
         {'ok', Items} -> Items;
         E -> E

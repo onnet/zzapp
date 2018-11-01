@@ -522,7 +522,7 @@ maybe_below_waterline(AccountId) ->
 
 -spec maybe_administratively_convicted(kz_term:ne_binary()) -> boolean().
 maybe_administratively_convicted(AccountId) ->
-    {ok, ServicesJObj} = kz_services:fetch_services_doc(AccountId,'false'),
+    {ok, ServicesJObj} = kz_datamgr:open_cache_doc(?KZ_SERVICES_DB, AccountId),
     case kzd_services:status(ServicesJObj) of
         <<"good_standing">> -> 'false';
         _ ->
@@ -534,13 +534,13 @@ maybe_administratively_convicted(AccountId) ->
 
 -spec current_service_status(kz_term:ne_binary()) -> kz_term:ne_binary().
 current_service_status(AccountId) ->
-    {'ok', ServicesJObj} = kz_services:fetch_services_doc(AccountId,'false'),
+    {'ok', ServicesJObj} = kz_datamgr:open_cache_doc(?KZ_SERVICES_DB, AccountId),
     kzd_services:status(ServicesJObj).
 
 -spec is_service_plan_assigned(kz_term:ne_binary()) -> boolean().
 is_service_plan_assigned(AccountId) ->
     Services = kz_services:fetch(AccountId),
-    ServicesJObj = kz_services:services_json(Services),
+    ServicesJObj = kz_services:services_jobj(Services),
     Plans = kz_service_plans:plan_summary(ServicesJObj),
     not kz_term:is_empty(Plans).
 
