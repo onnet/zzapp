@@ -1,7 +1,8 @@
 {application, zzapp,
  [
   {description, "Skel - A onbilleton application useful for quickly creating services"},
-  {vsn,"0.4.2"},
+  {env,[{is_kazoo_app,true}]},
+  {vsn,"0.4.3"},
   {modules, []},
   {registered, [onbill_listener, onbill_sup]},
   {applications, [ kernel
