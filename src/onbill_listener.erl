@@ -37,7 +37,9 @@
                   ]).
 -define(RESPONDERS, [{{'onbill_handlers', 'handle_doc_created'}, [{<<"configuration">>, <<"doc_created">>}]}
                     ,{{'onbill_handlers', 'handle_doc_edited'}, [{<<"configuration">>, <<"doc_edited">>}]}
-                    ,{{'onbill_handlers', 'handle_bookkeepers'}, [{<<"bookkeepers">>, <<"*">>}]}
+                    ,{'onbill_sale', [{<<"bookkeepers">>, <<"sale_req">>}]}
+                    ,{'onbill_refund', [{<<"bookkeepers">>, <<"refund_req">>}]}
+                    ,{'onbill_update_req', [{<<"bookkeepers">>, <<"update_req">>}]}
                     ,{{'onbill_handlers', 'handle_logger'}, [{<<"*">>, <<"*">>}]}
                     ]).
 %%-define(QUEUE_NAME, <<>>).
