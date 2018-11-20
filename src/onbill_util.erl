@@ -540,8 +540,7 @@ current_service_status(AccountId) ->
 -spec is_service_plan_assigned(kz_term:ne_binary()) -> boolean().
 is_service_plan_assigned(AccountId) ->
     Services = kz_services:fetch(AccountId),
-    ServicesJObj = kz_services:services_jobj(Services),
-    Plans = kz_service_plans:plan_summary(ServicesJObj),
+    Plans = kz_services_plans:assigned(Services),
     not kz_term:is_empty(Plans).
 
 -spec ensure_service_plan(kz_term:ne_binary()) -> 'ok'.
@@ -605,7 +604,7 @@ reconcile_and_maybe_sync(AccountId) ->
     Services = kz_services:reconcile(AccountId),
     case kz_services:is_dirty(Services) of
         'true' ->
-            kz_service_sync:sync(AccountId);
+            kz_services_bookkeeper:sync(AccountId);
         'false' ->
             'ok'
     end.
@@ -613,7 +612,7 @@ reconcile_and_maybe_sync(AccountId) ->
 -spec reconcile_and_sync(kz_term:ne_binary()) -> any().
 reconcile_and_sync(AccountId) ->
     _ = kz_services:reconcile(AccountId),
-    kz_service_sync:sync(AccountId).
+    kz_services_bookkeeper:sync(AccountId).
 
 -spec maybe_save_as_dirty(kz_term:ne_binary()) -> any().
 maybe_save_as_dirty(AccountId) ->

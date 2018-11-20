@@ -33,6 +33,7 @@ stop(_State) ->
 
 -spec declare_exchanges() -> 'ok'.
 declare_exchanges() ->
+lager:debug("IAM start zzapp_app"),
     _ = kapi_resource:declare_exchanges(),
     _ = kapi_conf:declare_exchanges(),
     _ = kapi_notifications:declare_exchanges(),

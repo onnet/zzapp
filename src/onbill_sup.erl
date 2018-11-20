@@ -19,7 +19,7 @@
 %% Helper macro for declaring children of supervisor
 -define(CHILDREN, [?CACHE('onbill_cache')
                    ,?WORKER('onbill_listener')
-         %          ,?WORKER('onbill_daily_sync')
+                %   ,?WORKER('onbill_daily_sync')
                   ]).
 
 %% ===================================================================
