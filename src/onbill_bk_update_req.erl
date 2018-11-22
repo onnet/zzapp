@@ -3,9 +3,10 @@
 %%% @doc
 %%% @end
 %%%-----------------------------------------------------------------------------
--module(onbill_update_req).
+-module(onbill_bk_update_req).
 
 -export([handle_req/2]).
+-export([sync/1]).
 
 -include("onbill.hrl").
 
@@ -43,15 +44,18 @@ handle_req(JObj, _Props) ->
     lager:debug("received service update notification for ~s", [AccountId]),
     case kz_json:get_value(<<"Bookkeeper-Type">>, JObj) =:= ?OB_APP_NAME of
         'false' ->
-            lager:debug("skipping service update for another bookkeeper");
+  lager:info("IAM inside onbill_update_req false"),
+            lager:debug("IAM skipping service update for another bookkeeper");
         'true' ->
-            sync(#request{request_jobj=JObj
-                         ,account_id=AccountId
-                         ,items=kz_json:get_value(<<"Items">>, JObj, [])
-                         ,vendor_id=kz_json:get_value(<<"Vendor-ID">>, JObj)
-                         ,bookkeeper_id=kz_json:get_value(<<"Bookkeeper-ID">>, JObj)
-                         }
-                )
+  lager:info("IAM inside onbill_update_req true"),
+  lager:info("IAM inside onbill_update_req AccountId: ~p",[AccountId]),
+  lager:info("IAM inside onbill_update_req Items: ~p",[kz_json:get_value(<<"Items">>, JObj, [])]),
+  lager:info("IAM inside onbill_update_req Vendor-ID: ~p",[kz_json:get_value(<<"Vendor-ID">>, JObj, [])]),
+  lager:info("IAM inside onbill_update_req Bookkeeper-ID: ~p",[kz_json:get_value(<<"Bookkeeper-ID">>, JObj, [])]),
+  lager:info("IAM inside onbill_update_req JObj: ~p",[JObj]),
+            Items = kz_json:get_value(<<"Items">>, JObj, []),
+            Result = kz_bookkeeper_onbill:sync(Items, AccountId),
+            lager:info("IAM inside onbill_bk_update_req Result: ~p",[Result])
     end.
 
 %%------------------------------------------------------------------------------
@@ -103,20 +107,26 @@ reply(#request{request_jobj=JObj}, Reply) ->
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
+-spec sync(request()) -> 'ok'.
 sync(#request{bookkeeper_jobj='undefined'
              ,items=[]
              }=Request) ->
+lager:info("IAM onbill_bk_update_req sync 1"),
     reply(Request);
 sync(#request{bookkeeper_jobj='undefined'
              ,vendor_id=VendorId
              ,bookkeeper_id=BookkeeperId
              }=Request) ->
+lager:info("IAM onbill_bk_update_req sync 2"),
     lager:debug("fetching bookkeeper document ~s/~s"
                ,[VendorId, BookkeeperId]
                ),
     VendorDb = kz_util:format_account_db(VendorId),
+lager:info("IAM onbill_bk_update_req BookkeeperId: ~p", [BookkeeperId]),
+lager:info("IAM onbill_bk_update_req VendorDb: ~p", [VendorDb]),
     case kz_datamgr:open_cache_doc(VendorDb, BookkeeperId) of
         {'ok', BookkeeperJObj} ->
+lager:info("IAM onbill_bk_update_req BookkeeperJObj: ~p", [BookkeeperJObj]),
             ?OB_APP_NAME = kzd_bookkeeper:bookkeeper_type(BookkeeperJObj),
             sync(
               Request#request{bookkeeper_jobj=BookkeeperJObj}
@@ -134,6 +144,7 @@ sync(#request{bookkeeper_jobj='undefined'
 sync(#request{customer='undefined'
              ,account_id=AccountId
              }=Request) ->
+lager:info("IAM onbill_bk_update_req sync 3"),
     lager:debug("requesting braintree customer ~s", [AccountId]),
     try braintree_customer:find(AccountId) of
         Customer ->
@@ -145,6 +156,7 @@ sync(#request{customer='undefined'
 sync(#request{items=[]
              ,updates=Updates
              }=Request) ->
+lager:info("IAM onbill_bk_update_req sync 4"),
     Results = [update_subscription(Subscription)
                || {_, Subscription} <- dict:to_list(Updates)
               ],
@@ -153,6 +165,7 @@ sync(#request{items=[Item|Items]
              ,bookkeeper_jobj=BookkeeperJObj
              ,updates=Updates
              }=Request) ->
+lager:info("IAM onbill_bk_update_req sync 5"),
     CategoryName = kz_json:get_value(<<"category">>, Item),
     ItemName = kz_json:get_value(<<"item">>, Item),
     Mapping = kzd_bookkeeper:mapping(BookkeeperJObj, CategoryName, ItemName),

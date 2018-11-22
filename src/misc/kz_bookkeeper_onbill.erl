@@ -288,6 +288,7 @@ populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
                                    Modb = kazoo_modb:get_modb(AccountId, Y, M),
                                    kazoo_modb:open_doc(Modb, <<"services_bom">>)
                            end,
+lager:info("IAM populate_modb_day_with_fee ServicesJObj: ~p",[ServicesJObj]),
     {'ok', Items} = kz_service_plans:create_items(ServicesJObj),
     NewMax = onbill_bk_util:select_non_zero_items_json(Items),
     DailyCountItems = onbill_bk_util:select_daily_count_items_list(NewMax, AccountId),

@@ -3,7 +3,7 @@
 %%% @doc
 %%% @end
 %%%-----------------------------------------------------------------------------
--module(onbill_refund).
+-module(onbill_bk_refund_req).
 
 -export([handle_req/2]).
 
@@ -11,6 +11,7 @@
 
 -spec handle_req(kz_json:object(), kz_term:proplist()) -> 'ok'.
 handle_req(JObj, _Props) ->
+  lager:info("IAM inside onbill_bk_refund_req"),
     'true' = kapi_bookkeepers:refund_req_v(JObj),
     case kz_json:get_ne_binary_value(<<"Bookkeeper-Type">>, JObj) =:= <<"braintree">> of
         'false' -> 'ok';
