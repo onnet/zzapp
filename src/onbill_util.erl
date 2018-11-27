@@ -624,17 +624,11 @@ maybe_save_as_dirty(AccountId) ->
 
 -spec current_balance(kz_term:ne_binary()) -> number().
 current_balance(AccountId) ->
-    case wht_util:current_balance(AccountId) of
-        {'ok', Balance} -> Balance;
-        _ -> 0
-    end.
+    kz_currency:available_units(AccountId, 0).
 
 -spec current_account_dollars(kz_term:ne_binary()) -> number().
 current_account_dollars(AccountId) ->
-    case wht_util:current_account_dollars(AccountId) of
-        {'ok', Balance} -> Balance;
-        _ -> 0
-    end.
+    kz_currency:available_dollars(AccountId, 0).
 
 -spec maybe_process_new_billing_period(kz_term:ne_binary()) -> boolean().
 maybe_process_new_billing_period(AccountId) ->
@@ -685,7 +679,7 @@ day_start_balance(AccountId, Year, Month, 1) ->
         {'ok', JObj} -> get_amount(JObj);
         {'error', 'not_found'} -> 
             {PrevYear, PrevMonth} = kazoo_modb_util:prev_year_month(Year, Month),
-            case wht_util:previous_balance(AccountId, PrevYear, PrevMonth) of
+            case kz_currency:past_available_units(AccountId, PrevYear, PrevMonth) of
                 {'ok', Balance} ->
                     Balance;
                 {'error', _E} = Error ->
