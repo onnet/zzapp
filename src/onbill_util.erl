@@ -674,7 +674,7 @@ period_openning_balance(AccountId, Year, Month, Day) ->
 period_openning_balance_dollars(AccountId, Year, Month, Day) ->
     case period_openning_balance(AccountId, Year, Month, Day) of
         Balance when is_number(Balance) ->
-            wht_util:units_to_dollars(Balance);
+            kz_currency:units_to_dollars(Balance);
         Balance ->
             Balance
     end.
@@ -716,7 +716,7 @@ day_start_balance(AccountId, Year, Month, Day) ->
 day_start_balance_dollars(AccountId, Year, Month, Day) ->
     case day_start_balance(AccountId, Year, Month, Day) of
         Balance when is_number(Balance) ->
-            wht_util:units_to_dollars(Balance);
+            kz_currency:units_to_dollars(Balance);
         Balance ->
             Balance
     end.

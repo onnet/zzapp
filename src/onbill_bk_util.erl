@@ -1,5 +1,7 @@
 -module(onbill_bk_util).
 
+-export([current_items/1]).
+
 -export([max_daily_usage_exceeded/3
         ,prepare_dailyfee_doc_name/3
         ,select_daily_count_items_list/2
@@ -186,8 +188,8 @@ dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items) ->
     [{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"all_items">>], select_non_zero_items_json(Items)}
      ,{[<<"pvt_metadata">>,<<"max_usage">>,<<"all_items">>], MaxUsage}
      ,{[<<"pvt_metadata">>,<<"max_usage">>,<<"daily_calculated_items">>] ,select_daily_count_items_json(MaxUsage, AccountId) }
-     ,{[<<"pvt_metadata">>,<<"max_usage">>,<<"monthly_amount_of_daily_calculated_items">>], wht_util:dollars_to_units(Amount)}
-     ,{<<"pvt_amount">>, wht_util:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
+     ,{[<<"pvt_metadata">>,<<"max_usage">>,<<"monthly_amount_of_daily_calculated_items">>], kz_currency:dollars_to_units(Amount)}
+     ,{<<"pvt_amount">>, kz_currency:dollars_to_units(Amount) div calendar:last_day_of_the_month(Year, Month)}
      ,{<<"pvt_modified">>, Timestamp}
     ].
 
@@ -347,7 +349,7 @@ charge_mrc_item(AccountId, ItemJObj, Timestamp) ->
 create_debit_tansaction(AccountId, ItemJObj, Timestamp, Reason, Ratio) ->
     CItem = calc_item(ItemJObj, AccountId),
     DiscountedItemCost = kz_json:get_float_value(<<"discounted_item_cost">>, CItem),
-    UnitsAmount = wht_util:dollars_to_units(DiscountedItemCost) * Ratio,
+    UnitsAmount = kz_currency:dollars_to_units(DiscountedItemCost) * Ratio,
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     MonthStr = httpd_util:month(Month),
 
@@ -442,15 +444,20 @@ calc_item(ItemJObj, AccountId) ->
 -spec current_items(kz_term:ne_binary()) -> kz_services_item:items().
 current_items(AccountId) -> 
     Services = kz_services:fetch(AccountId),
-    ServicesJObj = kz_services:services_jobj(Services),
-    case kz_service_plans:create_items(ServicesJObj) of
-        {'ok', Items} -> Items;
-        E -> E
-    end.
+    Plans = kz_services_plans:fetch(Services),
+ %   PlansList = [Plan || {_, Plan} <- dict:to_list(Plans) ],
+    [PlansList|_] = [Plan || {_, Plan} <- dict:to_list(Plans) ],
+    Plan = kz_services_plans:merge(PlansList),
+    kz_services_items:create(Services, Plan).
+%    ServicesJObj = kz_services:services_jobj(Services),
+%    case kz_service_plans:create_items(ServicesJObj) of
+%        {'ok', Items} -> Items;
+%        E -> E
+%    end.
 
 -spec current_usage_amount_in_units(kz_term:ne_binary()) -> float().
 current_usage_amount_in_units(AccountId) ->
-    wht_util:dollars_to_units(current_usage_amount(AccountId)).
+    kz_currency:dollars_to_units(current_usage_amount(AccountId)).
 
 -spec current_usage_amount(kz_term:ne_binary()) -> float().
 current_usage_amount(AccountId) ->

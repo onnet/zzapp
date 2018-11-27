@@ -230,7 +230,7 @@ handle_topup(BillingId, Transaction) ->
             Props = [{<<"purchase_order">>, ?CODE_TOPUP}],
             BT = braintree_transaction:quick_sale(
                    BillingId
-                   ,wht_util:units_to_dollars(Amount)
+                   ,kz_currency:units_to_dollars(Amount)
                    ,Props
                   ),
             Success = handle_quick_sale_response(BT),
@@ -244,7 +244,7 @@ handle_topup(BillingId, Transaction) ->
 -spec send_topup_notification(boolean(), kz_term:ne_binary(), bt_transaction()) -> boolean().
 send_topup_notification(Success, BillingId, BtTransaction) ->
     Transaction = braintree_transaction:record_to_json(BtTransaction),
-    Amount = wht_util:dollars_to_units(kz_json:get_float_value(<<"amount">>, Transaction, 0.0)),
+    Amount = kz_currency:dollars_to_units(kz_json:get_float_value(<<"amount">>, Transaction, 0.0)),
     Props = [{<<"Account-ID">>, BillingId}
              ,{<<"Amount">>, Amount}
              ,{<<"Success">>, Success}

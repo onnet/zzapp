@@ -130,7 +130,7 @@ generate_transaction_based_invoice(Context, AccountId, <<Year:4/binary, Month:2/
   try
     {'ok', TransactionJobj} =
         kazoo_modb:open_doc(AccountId, TransctionId),
-    Amount = wht_util:units_to_dollars(kz_json:get_value(<<"pvt_amount">>, TransactionJobj)),
+    Amount = kz_currency:units_to_dollars(kz_json:get_value(<<"pvt_amount">>, TransactionJobj)),
     {{InvYear, InvMonth, InvDay}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     {'ok', DocNumber} =
         onbill_docs_numbering:maybe_get_new_number(AccountId

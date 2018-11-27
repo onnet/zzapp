@@ -136,7 +136,7 @@ current_state(_, [SubAccountId | DescendantsIds]) ->
      ,onbill_util:billing_day(SubAccountId)
      ,onbill_util:current_service_status(SubAccountId)
      ,AllowPostpay
-     ,wht_util:units_to_dollars(MaxPostpay)
+     ,kz_currency:units_to_dollars(MaxPostpay)
      ,onbill_util:current_account_dollars(SubAccountId)
      ,estimated_monthly_total(SubAccountId)
      ,kz_services:category_quantity(<<"users">>, Services)

@@ -245,7 +245,7 @@ get_carrier_regexes(CarrierDoc,_) ->
 maybe_count_call(Regexes, JObj, {JObjs, AccSec, AccAmount}, Timezone) ->
     case maybe_interesting_call(Regexes, JObj) of
         'true' ->
-            CallCost = wht_util:units_to_dollars(kz_json:get_integer_value([<<"value">>,<<"cost">>], JObj, 0)),
+            CallCost = kz_currency:units_to_dollars(kz_json:get_integer_value([<<"value">>,<<"cost">>], JObj, 0)),
             CallDuration = kz_json:get_integer_value([<<"value">>,<<"duration">>], JObj, 0),
             Values = [{[<<"value">>,<<"cost">>], CallCost}
                      ,{[<<"value">>,<<"duration_min">>], CallDuration/60}
@@ -284,7 +284,7 @@ process_one_time_fee(JObj, Modb) ->
     {Year, Month, Day} = kz_term:to_date(kz_json:get_value(<<"pvt_created">>, DFDoc)),
     DaysInMonth = calendar:last_day_of_the_month(Year, Month),
     Reason = kz_json:get_value(<<"pvt_reason">>, DFDoc),
-    Amount = wht_util:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, DFDoc)),
+    Amount = kz_currency:units_to_dollars(kz_json:get_integer_value(<<"pvt_amount">>, DFDoc)),
     {Reason
     ,kz_json:get_value([<<"metadata">>, <<"description">>], DFDoc)
     ,kz_json:get_value([<<"metadata">>, <<"rate">>], DFDoc, Amount) * kz_json:get_value([<<"metadata">>, <<"ratio">>], DFDoc, 1.0)

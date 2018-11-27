@@ -267,7 +267,7 @@ add_transaction(ReqJSON) ->
     Timestamp = kz_time:current_tstamp(),
     Values = [{<<"_id">>, ?TRANSACTION_ID(TxnId)}
              ,{<<"aviso_databag">>, ReqJSON}
-             ,{<<"pvt_amount">>, wht_util:dollars_to_units(kz_json:get_value(<<"orderSumAmount">>, ReqJSON))}
+             ,{<<"pvt_amount">>, kz_currency:dollars_to_units(kz_json:get_value(<<"orderSumAmount">>, ReqJSON))}
              ,{<<"pvt_type">>, <<"credit">>}
              ,{<<"pvt_created">>, Timestamp}
              ,{<<"pvt_modified">>, Timestamp}
