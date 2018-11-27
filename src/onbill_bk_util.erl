@@ -26,7 +26,7 @@
 %%-include_lib("/opt/kazoo/core/kazoo_transactions/include/kazoo_transactions.hrl").
 %%-include_lib("/opt/kazoo/core/kazoo_transactions/src/kazoo_transactions.hrl").
 
--spec max_daily_usage_exceeded(kz_service_item:items(), kz_term:ne_binary(), integer()) -> any().
+-spec max_daily_usage_exceeded(kz_services_item:items(), kz_term:ne_binary(), integer()) -> any().
 max_daily_usage_exceeded(Items, AccountId, Timestamp) ->
     {{Year, Month, Day}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     DailyFeeId = prepare_dailyfee_doc_name(Year, Month, Day),
@@ -59,7 +59,7 @@ prepare_dailyfee_doc_name(Y, M, D) ->
     Day = kz_date:pad_month(D),
     <<Year/binary, Month/binary, Day/binary, "-dailyfee">>.
 
--spec select_daily_count_items_list(kz_service_item:items(), kz_term:ne_binary()) -> kz_term:proplist().
+-spec select_daily_count_items_list(kz_services_item:items(), kz_term:ne_binary()) -> kz_term:proplist().
 select_daily_count_items_list(Items, AccountId) ->
     case kz_json:is_json_object(Items) of
         'false' ->
@@ -73,7 +73,7 @@ select_daily_count_items_list(Items, AccountId) ->
             [kz_json:get_value(ItemPath, Items) || ItemPath <- DailyItemsPaths]
     end.
 
--spec select_daily_count_items_json(kz_service_item:items()|kz_json:object(), kz_term:ne_binary()) -> kz_json:object().
+-spec select_daily_count_items_json(kz_services_item:items()|kz_json:object(), kz_term:ne_binary()) -> kz_json:object().
 select_daily_count_items_json(Items, AccountId) ->
     case kz_json:is_json_object(Items) of
         'false' ->
@@ -87,15 +87,16 @@ select_daily_count_items_json(Items, AccountId) ->
             kz_json:set_values(Upd, kz_json:new())
     end.
 
--spec select_non_zero_items_json(kz_service_item:items()) -> kz_json:object().
+-spec select_non_zero_items_json(kz_services_item:items()) -> kz_json:object().
 select_non_zero_items_json(Items) ->
-    Upd = [{[kz_service_item:category(Item), kz_service_item:item(Item)], kz_service_item:public_json(Item)}
-           || Item <- kz_service_items:to_list(Items)
-           ,kz_service_item:quantity(Item) > 0
+    Upd = [{[kz_services_item:category_name(Item), kz_services_item:item_name(Item)], kz_services_item:public_json(Item)}
+           || Item <- Items
+   %%        || Item <- kz_services_items:to_list(Items)
+           ,kz_services_item:quantity(Item) > 0
     ],
     kz_json:set_values(Upd, kz_json:new()).
 
--spec select_non_zero_items_list(kz_service_item:items()|kz_json:object(), kz_term:ne_binary()) -> kz_term:proplist().
+-spec select_non_zero_items_list(kz_services_item:items()|kz_json:object(), kz_term:ne_binary()) -> kz_term:proplist().
 select_non_zero_items_list(Items, AccountId) ->
     case kz_json:is_json_object(Items) of
         'false' ->
@@ -179,7 +180,7 @@ update_dailyfee_doc(Timestamp, AccountId, Amount, MaxUsage, Items, DFDoc) ->
     {{Year, Month, _}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     kazoo_modb:save_doc(AccountId, NewDoc, Year, Month).
 
--spec dailyfee_doc_update_routines(kz_time:gregorian_seconds(), kz_term:ne_binary(), number(), kz_json:object(), kz_service_item:items()) -> any().
+-spec dailyfee_doc_update_routines(kz_time:gregorian_seconds(), kz_term:ne_binary(), number(), kz_json:object(), kz_services_item:items()) -> any().
 dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items) ->
     {{Year, Month, _}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
     [{[<<"pvt_metadata">>,<<"items_history">>, ?TO_BIN(Timestamp),<<"all_items">>], select_non_zero_items_json(Items)}
@@ -438,7 +439,7 @@ calc_item(ItemJObj, AccountId) ->
             ]}
     end.
 
--spec current_items(kz_term:ne_binary()) -> kz_service_item:items().
+-spec current_items(kz_term:ne_binary()) -> kz_services_item:items().
 current_items(AccountId) -> 
     Services = kz_services:fetch(AccountId),
     ServicesJObj = kz_services:services_jobj(Services),

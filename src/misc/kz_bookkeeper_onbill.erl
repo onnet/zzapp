@@ -19,7 +19,7 @@
 -include_lib("/opt/kazoo/core/kazoo_stdlib/include/kz_databases.hrl").
 %-include_lib("/opt/kazoo/core/kazoo_transactions/include/kazoo_transactions.hrl").
 
--spec sync(kz_service_item:items(), kz_term:ne_binary()) -> 'ok'|'delinquent'|'retry'.
+-spec sync(kz_services_item:items(), kz_term:ne_binary()) -> 'ok'|'delinquent'|'retry'.
 sync(Items, AccountId) ->
     case kz_datamgr:db_exists(kz_util:format_account_id(AccountId, 'encoded')) of
         'true' ->
@@ -28,7 +28,7 @@ sync(Items, AccountId) ->
             'delinquent'
     end.
 
--spec maybe_sync(kz_service_item:items(), kz_term:ne_binary()) -> 'ok'|'delinquent'|'retry'.
+-spec maybe_sync(kz_services_item:items(), kz_term:ne_binary()) -> 'ok'|'delinquent'|'retry'.
 maybe_sync(Items, AccountId) ->
     lager:info("onbill_trace:maybe_sync attempt to sync AccountId: ~p",[AccountId]), 
     case onbill_util:is_trial_account(AccountId) of
@@ -93,7 +93,7 @@ maybe_billing_period_starts(Items, AccountId) ->
             end
     end.
 
--spec run_sync(kz_service_item:items(), kz_term:ne_binary(), kz_time:gregorian_seconds()) -> 'ok'|'delinquent'|'retry'.
+-spec run_sync(kz_services_item:items(), kz_term:ne_binary(), kz_time:gregorian_seconds()) -> 'ok'|'delinquent'|'retry'.
 run_sync(Items, AccountId, Timestamp) ->
     case onbill_bk_util:max_daily_usage_exceeded(Items, AccountId, Timestamp) of
         {'true', NewMax, ExcessDets} ->
