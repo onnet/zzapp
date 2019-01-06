@@ -94,7 +94,7 @@ maybe_add_design_doc(DbName, ViewName) ->
         {'error', 'not_found'} ->
             lager:warning("adding onbill views to db: ~s", [DbName]),
             kz_datamgr:revise_doc_from_file(DbName
-                                           ,'onbill'
+                                           ,'zzapp'
                                            ,<<"views/", ViewName/binary, ".json">>
                                           );
         {'ok', _ } -> 'ok'
