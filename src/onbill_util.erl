@@ -565,7 +565,9 @@ add_service_plan(AccountId) ->
 
 add_service_plan(PlanId, AccountId) ->
     Services = kz_services:fetch(AccountId),
-    kz_services:save(kz_services:add_service_plan(PlanId, Services)).
+    kz_services:save_services_jobj(kz_services_plan:assign(Services, PlanId)).
+ %   kz_services:commit(kz_services_plan:assign(Services, PlanId)).
+ %   kz_services:save(kz_services:add_service_plan(PlanId, Services)).
 
 -spec default_service_plan(kz_term:ne_binary()) -> kz_term:ne_binary().
 default_service_plan(AccountId) ->
