@@ -6,8 +6,9 @@
 -include_lib("kazoo_documents/include/kazoo_documents.hrl").
 -include_lib("kazoo/include/kz_api_literals.hrl").
 
-%%-define(APP, 'onbill').
--define(OB_APP_NAME, <<"onbill">>).
+%%-define(APP, 'zzapp').
+-define(OB_APP_NAME, <<"zzapp">>).
+%%-define(OB_APP_NAME, <<"onbill">>).
 -define(OB_APP_VERSION, <<"4.0.0">> ).
 
 -define(SERVICES_DB, <<"services">>).
