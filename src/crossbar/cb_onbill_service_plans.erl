@@ -110,6 +110,7 @@ remove_ratedeck_prefix(NoPref) -> NoPref.
 create_rd_serviceplan(RDeckId, Context) ->
     ResellerId = kz_services_reseller:get_id(cb_context:account_id(Context)),
     ResellerDb = kz_util:format_account_id(ResellerId, 'encoded'),
+    lager:info("creating service plan doc for ratedeck ~p",[RDeckId]),
     Context1 = cb_context:set_doc(Context, ?RATE_SP_DOC(RDeckId)),
     crossbar_doc:save(cb_context:set_account_db(Context1, ResellerDb)).
 
