@@ -8,6 +8,7 @@
 -module(cb_onbill_service_plans).
 
 -export([init/0
+         ,authorize/1
          ,allowed_methods/1
          ,resource_exists/1
          ,content_types_provided/2
@@ -15,15 +16,35 @@
         ]).
 
 -include("/opt/kazoo/applications/crossbar/src/crossbar.hrl").
+-type authorize_return() :: boolean() | {'stop', cb_context:context()}.
 
+-define(CB_LIST, <<"services/plans">>).
 -define(SERVICE_PLAN_DOC_TYPE, <<"service_plan">>).
+-define(SYNC_RATEDECKS_PLANS, <<"sync_ratedeck_plans">>).
+-define(RATE_SP_DOC(RDeckId),
+    {[{<<"_id">>,RDeckId},
+      {<<"plan">>,{[]}},
+      {<<"pvt_type">>,<<"service_plan">>},
+      {<<"name">>,<<"Ratedeck ", RDeckId/binary, " Service Plan">>},
+      {<<"applications">>,{[]}},
+      {<<"ratedeck">>,
+       {[{<<"id">>, RDeckId}]}}]}
+).
 
 -spec init() -> 'ok'.
 init() ->
+    _ = crossbar_bindings:bind(<<"*.authorize.onbill_service_plans">>, ?MODULE, 'authorize'),
     _ = crossbar_bindings:bind(<<"*.allowed_methods.onbill_service_plans">>, ?MODULE, 'allowed_methods'),
     _ = crossbar_bindings:bind(<<"*.resource_exists.onbill_service_plans">>, ?MODULE, 'resource_exists'),
     _ = crossbar_bindings:bind(<<"*.content_types_provided.onbill_service_plans">>, ?MODULE, 'content_types_provided'),
     _ = crossbar_bindings:bind(<<"*.validate.onbill_service_plans">>, ?MODULE, 'validate').
+
+-spec authorize(cb_context:context()) -> authorize_return().
+authorize(Context) ->
+    case cb_context:is_superduper_admin(Context) of
+        'true' -> 'true';
+        'false' -> {'stop', cb_context:add_system_error('forbidden', Context)}
+    end.
 
 -spec allowed_methods(path_token()) -> http_methods().
 allowed_methods(_) ->
@@ -43,6 +64,22 @@ validate(Context, Id) ->
 -spec validate_onbill(cb_context:context(), path_token(), http_method()) -> cb_context:context().
 validate_onbill(Context, Id, ?HTTP_GET) ->
     crossbar_doc:load(Id, Context, [{'expected_type', ?SERVICE_PLAN_DOC_TYPE}]);
+validate_onbill(Context, ?SYNC_RATEDECKS_PLANS, ?HTTP_POST) ->
+    Ratedecks = [remove_ratedeck_prefix(Ratedeck)
+                 || Ratedeck <- kz_services_ratedecks:ratedecks() -- [<<"ratedeck">>]
+                ], 
+    AccountId = cb_context:account_id(Context),
+    ResellerId = kz_services_reseller:get_id(AccountId),
+    ResellerDb = kz_util:format_account_id(ResellerId, 'encoded'),
+    C1 = crossbar_doc:load_view(?CB_LIST
+                               ,[]
+                               ,cb_context:set_account_db(Context, ResellerDb)
+                               ,fun normalize_available_view_results/2
+                               ),
+    PlanIds = [kz_json:get_value(<<"id">>, JObj) || JObj <- cb_context:doc(C1)],
+    [create_rd_serviceplan(RD, Context) || RD <- Ratedecks, not lists:member(RD, PlanIds)],
+    cb_context:set_resp_status(Context, 'success');
+
 validate_onbill(Context, Id, ?HTTP_POST) ->
     save(Id, kz_util:format_account_id(cb_context:account_id(Context),'encoded'), Context).
 
@@ -61,3 +98,18 @@ save(Id, DbName, Context) ->
     NewDoc = kz_json:set_values(Values, ReqData),
     Context1 = cb_context:set_doc(Context, NewDoc),
     crossbar_doc:save(cb_context:set_account_db(Context1, DbName)).
+
+-spec normalize_available_view_results(kz_json:object(), kz_json:objects()) ->
+                                              kz_json:objects().
+normalize_available_view_results(JObj, Acc) ->
+    [kz_json:get_json_value(<<"value">>, JObj)|Acc].
+
+remove_ratedeck_prefix(<<"ratedeck%2F", N/binary>>) -> N;
+remove_ratedeck_prefix(NoPref) -> NoPref.
+
+create_rd_serviceplan(RDeckId, Context) ->
+    ResellerId = kz_services_reseller:get_id(cb_context:account_id(Context)),
+    ResellerDb = kz_util:format_account_id(ResellerId, 'encoded'),
+    Context1 = cb_context:set_doc(Context, ?RATE_SP_DOC(RDeckId)),
+    crossbar_doc:save(cb_context:set_account_db(Context1, ResellerDb)).
+
