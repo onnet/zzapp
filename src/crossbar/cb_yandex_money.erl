@@ -23,9 +23,9 @@
 -export([add_transaction/1]).
 -export([maybe_transaction_exists/1]).
 
--define(XML_CONTENT_TYPES, [{<<"application">>, <<"xml">>}
-                           ,{<<"text">>, <<"xml">>}
-                           ]).
+%%-define(XML_CONTENT_TYPES, [{<<"application">>, <<"xml">>}
+%%                           ,{<<"text">>, <<"xml">>}
+%%                           ]).
 
 -define(XML_HEAD, <<"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n">>).
 -define(CATEGORY, <<"yandex_money">>).
