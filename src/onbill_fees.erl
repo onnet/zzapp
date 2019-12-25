@@ -5,6 +5,7 @@
         ,per_minute_calls/5
         ,get_period_per_minute_jobjs/4
         ,vatify_amount/3
+        ,vatify_amount/4
         ,dates_sequence_reduce/1
         ,days_sequence_reduce/1
         ]).
@@ -438,8 +439,10 @@ aggregated_service_to_line(_, _) ->
     [].
 
 -spec vatify_amount(kz_term:ne_binary(), number(), kz_json:object()) -> 'ok'.
+-spec vatify_amount(kz_term:ne_binary(), number(), kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok'.
 vatify_amount(AmountName, Amount, OnbillResellerVars) ->
-    VatRate = kz_json:get_value(<<"vat_rate">>, OnbillResellerVars),
+  lager:debug("OnbillResellerVars: ~p",[OnbillResellerVars]),
+    VatRate = kz_json:get_float_value(<<"vat_rate">>, OnbillResellerVars),
     VatDisposition = kz_json:get_value(<<"vat_disposition">>, OnbillResellerVars),
     vatify_amount(AmountName, Amount, VatRate, VatDisposition).
 
@@ -451,6 +454,10 @@ vatify_amount(AmountName, Netto, VatRate, VatDisposition) when VatDisposition ==
     ,{<<AmountName/binary, "_vat">>, Vat}
     ];
 vatify_amount(AmountName, Brutto, VatRate, VatDisposition) when VatDisposition == <<"brutto">> ->
+  lager:debug("AmountName: ~p",[AmountName]),
+  lager:debug("Brutto: ~p",[Brutto]),
+  lager:debug("VatRate: ~p",[VatRate]),
+  lager:debug("VatDisposition: ~p",[VatDisposition]),
     Vat = onbill_util:price_round(Brutto * VatRate / (100 + VatRate)),
     Netto = onbill_util:price_round(Brutto) - Vat,
     [{<<AmountName/binary, "_netto">>, onbill_util:price_round(Netto)}

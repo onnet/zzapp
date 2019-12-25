@@ -131,17 +131,28 @@ default_template(TemplateId, Carrier, CountryOfResidence) ->
     case file:read_file(CarrierFilePath) of
         {'ok', CarrierData} -> CarrierData;
         _ ->
-            FilePath = <<"applications/onbill/priv/templates/"
+            FilePath = <<"applications/"
+                        ,?OB_APP_NAME/binary
+                        ,"/priv/templates/"
                         ,CountryOfResidence/binary
                         ,"/"
                         ,TemplateId/binary
                         ,".tpl">>,
+            lager:debug("default_template FilePath: ~p",[FilePath]),
             {'ok', Data} = file:read_file(FilePath),
+            lager:debug("default_template Data: ~p",[Data]),
             Data
     end.
 
 prepare_tpl(Vars, TemplateId, Carrier, AccountId) ->
+  lager:debug("prepare_tpl Vars: ~p",[Vars]),
+  lager:debug("prepare_tpl TemplateId: ~p",[TemplateId]),
+  lager:debug("prepare_tpl Carrier: ~p",[Carrier]),
+  lager:debug("prepare_tpl AccountId: ~p",[AccountId]),
+  lager:debug("prepare_tpl DOC_NAME_FORMAT(Carrier, TemplateId): ~p",[?DOC_NAME_FORMAT(Carrier, TemplateId)]),
+  lager:debug("prepare_tpl get_template(TemplateId, Carrier, AccountId): ~p",[get_template(TemplateId, Carrier, AccountId)]),
     ErlyMod = erlang:binary_to_atom(?DOC_NAME_FORMAT(Carrier, TemplateId), 'latin1'),
+  lager:debug("prepare_tpl ErlyMod: ~p",[ErlyMod]),
     try erlydtl:compile_template(get_template(TemplateId, Carrier, AccountId), ErlyMod
                                 ,[{libraries, [{onbill_dtl, onbill_dtl_lib}]}
                                  ,{'out_dir', 'false'}
