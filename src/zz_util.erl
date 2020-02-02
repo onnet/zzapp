@@ -1,6 +1,8 @@
 -module(zz_util).
 
--export([check_db/1
+-export([init/0
+        ,db_classify/1
+        ,check_db/1
         ,maybe_add_design_doc/2
         ,get_attachment/2
         ,price_round/1
@@ -72,12 +74,20 @@
         ,process_documents_case/5
         ,replicate_onbill_doc/1
         ,find_reseller_id/1
-        ,create_account/2
         ]).
 
 -include("onbill.hrl").
 
 -define(KEY_TRIAL_EXPIRATION, <<"pvt_trial_expires">>).
+
+-spec init() -> 'ok'.
+init() ->
+    kzs_util:bind_db_classify(<<"zzapp-", _/binary>>, ?MODULE, 'db_classify').
+
+-spec db_classify(kz_term:ne_binary()) -> 'ok'.
+db_classify(DbName) ->
+  lager:info("classifying zzapp db: ~p", [DbName]),
+  'aggregate'.
 
 -spec check_db(kz_term:ne_binary()) -> 'ok'.
 check_db(Db) when is_binary(Db) ->
@@ -791,7 +801,3 @@ replicate_onbill_doc(AccountId) ->
 
 -spec find_reseller_id(kz_term:ne_binary()) -> kz_term:ne_binary().
 find_reseller_id(AccountId) -> kz_services_reseller:get_id(AccountId).
-
--spec create_account(cb_context:context(), kz_json:object()) -> cb_context:context().
-create_account(_Ctx, _JObj) ->
-  ok.
