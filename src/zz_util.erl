@@ -82,12 +82,14 @@
 
 -spec init() -> 'ok'.
 init() ->
-    kzs_util:bind_db_classify(<<"zzapp-", _/binary>>, ?MODULE, 'db_classify').
+    kzs_util:bind_db_classify(<<"*">>, ?MODULE, 'db_classify').
 
 -spec db_classify(kz_term:ne_binary()) -> 'ok'.
-db_classify(DbName) ->
+db_classify(<<"zzapp-", _/binary>> = DbName) ->
   lager:info("classifying zzapp db: ~p", [DbName]),
-  'aggregate'.
+  'aggregate';
+db_classify(_) ->
+  'undefined'.
 
 -spec check_db(kz_term:ne_binary()) -> 'ok'.
 check_db(Db) when is_binary(Db) ->
