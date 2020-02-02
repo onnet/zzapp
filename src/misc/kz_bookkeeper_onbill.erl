@@ -31,15 +31,15 @@ sync(Items, AccountId) ->
 -spec maybe_sync(kz_services_item:items(), kz_term:ne_binary()) -> 'ok'|'delinquent'|'retry'.
 maybe_sync(Items, AccountId) ->
     lager:info("onbill_trace:maybe_sync attempt to sync AccountId: ~p",[AccountId]), 
-    case onbill_util:is_trial_account(AccountId) of
+    case zz_util:is_trial_account(AccountId) of
         'true' ->
             CurrentUsage = onbill_bk_util:current_usage_amount_in_units(AccountId),
-            CurrentBalance = onbill_util:current_balance(AccountId),
+            CurrentBalance = zz_util:current_balance(AccountId),
             lager:info("onbill_trace:maybe_sync -> trial account ->  CurrentBalance:~p, CurrentUsage: ~p"
                       ,[CurrentBalance, CurrentUsage]), 
             case CurrentBalance > CurrentUsage of
                 'true' ->
-                    case onbill_util:transit_to_full_subscription_state(AccountId) of
+                    case zz_util:transit_to_full_subscription_state(AccountId) of
                         {'ok', _} ->
                             lager:info("onbill_trace:maybe_sync moved to full_suscription_state"),
                             sync(Items, AccountId);
@@ -48,7 +48,7 @@ maybe_sync(Items, AccountId) ->
                             'retry'
                     end;
                 'false' ->
-                    case onbill_util:trial_has_expired(AccountId) of
+                    case zz_util:trial_has_expired(AccountId) of
                         'true'->
                             lager:info("onbill_trace:maybe_sync detected trial expiration"), 
                             onbill_notifications:maybe_send_trial_has_expired_update(AccountId),
@@ -66,7 +66,7 @@ maybe_sync(Items, AccountId) ->
 
 maybe_billing_period_starts(Items, AccountId) ->
     Timestamp = kz_time:current_tstamp(),
-    {Year, Month, Day} = onbill_util:period_start_date(AccountId, Timestamp),
+    {Year, Month, Day} = zz_util:period_start_date(AccountId, Timestamp),
     case kazoo_modb:open_doc(AccountId, ?MRC_DOC, Year, Month) of
         {'ok', _} ->
             lager:info("onbill_trace:maybe_billing_period_starts ~p exists, going to execute run_sync/3"
@@ -105,12 +105,12 @@ run_sync(Items, AccountId, Timestamp) ->
         'false' ->
             lager:debug("onbill_trace:run_sync max usage not exceeded, no sync needed")
     end,
-    case onbill_util:maybe_administratively_convicted(AccountId) of
+    case zz_util:maybe_administratively_convicted(AccountId) of
         'true' ->
             lager:debug("onbill_trace:run_sync administratively_convicted, return delinquent"),
             'delinquent';
         'false' ->
-            case onbill_util:maybe_convicted(AccountId) of
+            case zz_util:maybe_convicted(AccountId) of
                 'true' ->
                     lager:debug("onbill_trace:run_sync convicted, return delinquent"),
                     'delinquent';
@@ -135,8 +135,8 @@ sync(Timestamp, ServiceItems, AccountId, NewMax, Items) ->
 
 -spec is_good_standing(kz_term:ne_binary()) -> boolean().
 is_good_standing(AccountId) ->
-    lager:debug("is_good_standing/1 ~p: ~p",[AccountId, not onbill_util:maybe_convicted(AccountId)]),
-    not onbill_util:maybe_convicted(AccountId).
+    lager:debug("is_good_standing/1 ~p: ~p",[AccountId, not zz_util:maybe_convicted(AccountId)]),
+    not zz_util:maybe_convicted(AccountId).
 
 -spec is_good_standing(kz_term:ne_binary(), kz_term:ne_binary()) -> boolean().
 is_good_standing(AccountId, _Status) ->
@@ -249,7 +249,7 @@ send_topup_notification(Success, BillingId, BtTransaction) ->
              ,{<<"Amount">>, Amount}
              ,{<<"Success">>, Success}
              ,{<<"Response">>, kz_json:get_value(<<"processor_response_text">>, Transaction)}
-             | kz_api:default_headers(?OB_APP_NAME, ?OB_APP_VERSION)
+             | kz_api:default_headers(?ZZ_APP_NAME, ?ZZ_APP_VERSION)
             ],
     _ = case
             kapps_util:amqp_pool_send(
@@ -284,7 +284,7 @@ populate_modb_day_with_fee(AccountId, Year, Month, Day) ->
                                {CurrYear, CurrMonth} ->
                                    kz_datamgr:open_doc(<<"services">>, AccountId);
                                _ ->
-                                   {Y, M} = onbill_util:next_month(Year, Month),
+                                   {Y, M} = zz_util:next_month(Year, Month),
                                    Modb = kazoo_modb:get_modb(AccountId, Y, M),
                                    kazoo_modb:open_doc(Modb, <<"services_bom">>)
                            end,

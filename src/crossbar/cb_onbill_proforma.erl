@@ -70,10 +70,10 @@ summary(Context) ->
     {Year, Month, _} = erlang:date(),
     AccountId = cb_context:account_id(Context),
     Modb = kazoo_modb:get_modb(AccountId, kz_term:to_integer(Year), kz_term:to_integer(Month)),
-    onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
+    zz_util:maybe_add_design_doc(Modb, <<"onbills">>),
     crossbar_doc:load_view(?CB_PROFORMA_INVOICE, []
                           ,cb_context:set_account_db(Context, Modb)
-                          ,fun onbill_util:normalize_view_results/2).
+                          ,fun zz_util:normalize_view_results/2).
 
 -spec create(cb_context:context()) -> cb_context:context().
 create(Context) ->

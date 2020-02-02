@@ -1,4 +1,4 @@
--module(onbill_util).
+-module(zz_util).
 
 -export([check_db/1
         ,maybe_add_design_doc/2
@@ -72,6 +72,7 @@
         ,process_documents_case/5
         ,replicate_onbill_doc/1
         ,find_reseller_id/1
+        ,create_account/2
         ]).
 
 -include("onbill.hrl").
@@ -117,7 +118,7 @@ account_carriers_list(AccountId) ->
 
 -spec carrier_doc(kz_term:ne_binary(), kz_term:ne_binary()) -> any().
 carrier_doc(Carrier, AccountId) ->
-    ResellerId = onbill_util:find_reseller_id(AccountId),
+    ResellerId = zz_util:find_reseller_id(AccountId),
     DbName = kz_util:format_account_id(ResellerId,'encoded'),
     {'ok', CarrierDoc} =  kz_datamgr:open_doc(DbName, ?CARRIER_DOC(Carrier)),
     CarrierDoc.
@@ -135,7 +136,7 @@ account_vars(AccountId) ->
 
 -spec reseller_vars(kz_term:ne_binary()) -> kz_json:object().
 reseller_vars(AccountId) ->
-    ResellerId = onbill_util:find_reseller_id(AccountId),
+    ResellerId = zz_util:find_reseller_id(AccountId),
     account_vars(ResellerId).
 
 -spec reseller_country_of_residence(kz_term:ne_binary()) -> kz_term:proplist().
@@ -774,10 +775,10 @@ replicate_onbill_doc(AccountId) ->
     AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
     case kz_datamgr:open_doc(AccountDb, ?ONBILL_DOC) of
         {ok, Doc} ->
-            ResellerId = onbill_util:find_reseller_id(AccountId),
+            ResellerId = zz_util:find_reseller_id(AccountId),
             DbName = ?ONBILL_DB(ResellerId),
             JObj = kz_json:set_value(<<"_id">>, AccountId, Doc),
-            onbill_util:check_db(DbName),
+            zz_util:check_db(DbName),
             case kz_datamgr:lookup_doc_rev(DbName, AccountId) of
                 {'ok', Rev} ->
                     kz_datamgr:ensure_saved(DbName, kz_doc:set_revision(JObj, Rev));
@@ -791,3 +792,6 @@ replicate_onbill_doc(AccountId) ->
 -spec find_reseller_id(kz_term:ne_binary()) -> kz_term:ne_binary().
 find_reseller_id(AccountId) -> kz_services_reseller:get_id(AccountId).
 
+-spec create_account(cb_context:context(), kz_json:object()) -> cb_context:context().
+create_account(_Ctx, _JObj) ->
+  ok.

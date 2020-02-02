@@ -110,17 +110,17 @@ maybe_process_account(_) ->
 -spec process_account (kz_term:ne_binary(), kzd_accounts:doc()) -> 'ok'.
 process_account(AccountId, AccountJObj) ->
     case  not kapps_util:is_master_account(AccountId) 
-           andalso onbill_util:is_service_plan_assigned(AccountId)
+           andalso zz_util:is_service_plan_assigned(AccountId)
            andalso onbill_bk_util:today_dailyfee_absent(AccountId)
     of
         'true' ->
             lager:debug("crawler - saving account ~p (~p) as dirty", [AccountId, kzd_accounts:name(AccountJObj)]),
-            case onbill_util:current_service_status(AccountId) of
+            case zz_util:current_service_status(AccountId) of
                 <<"delinquent">> ->
-                    ProcessNewPeriod = onbill_util:maybe_process_new_billing_period(AccountId),
+                    ProcessNewPeriod = zz_util:maybe_process_new_billing_period(AccountId),
                     maybe_remove_subscriptions(AccountId, ProcessNewPeriod);
                 _ ->
-                    onbill_util:maybe_save_as_dirty(AccountId),
+                    zz_util:maybe_save_as_dirty(AccountId),
                     onbill_notifications:maybe_send_account_updates(AccountId, AccountJObj)
             end,
             {'ok', 'account_processed'};

@@ -43,7 +43,7 @@ validate(Context) ->
 -spec validate(cb_context:context(), path_token()) -> cb_context:context().
 validate(Context, ?PAYMENT_URL) ->
     AccountId = cb_context:account_id(Context),
-    ResellerId = onbill_util:find_reseller_id(AccountId),
+    ResellerId = zz_util:find_reseller_id(AccountId),
     ResellerDb = kz_util:format_account_id(ResellerId, 'encoded'),
     Ctx = crossbar_doc:load(?YANDEX_MONEY_CONFIG_ID, cb_context:set_account_db(Context, ResellerDb)),
     case kz_json:is_true(<<"enabled">>, cb_context:doc(Ctx)) of

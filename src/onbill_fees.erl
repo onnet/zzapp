@@ -18,8 +18,8 @@
 shape_fees(AccountId, Year, Month, Carrier) ->
     shape_fees(AccountId, Year, Month, 1, Carrier).
 shape_fees(AccountId, Year, Month, Day, Carrier) ->
-    CarrierDoc =  onbill_util:carrier_doc(Carrier, AccountId),
-    OnbillResellerVars = onbill_util:reseller_vars(AccountId),
+    CarrierDoc =  zz_util:carrier_doc(Carrier, AccountId),
+    OnbillResellerVars = zz_util:reseller_vars(AccountId),
     shape_fees(AccountId, Year, Month, Day, CarrierDoc, OnbillResellerVars).
 
 shape_fees(AccountId, Year, Month, Day, CarrierDoc, OnbillResellerVars) ->
@@ -46,14 +46,14 @@ enhance_no_or_zero_vat(FeeLine, _OnbillResellerVars) ->
     Cost = props:get_value(<<"cost">>, FeeLine),
     Discount = props:get_value(<<"discount">>, FeeLine),
     DiscountedCost = Cost - Discount,
-    NewValues = [{<<"rate_netto">>, onbill_util:price_round(Rate)}
-                ,{<<"cost_netto">>, onbill_util:price_round(Cost)}
-                ,{<<"discount_netto">>, onbill_util:price_round(Discount)}
-                ,{<<"discounted_cost_netto">>, onbill_util:price_round(DiscountedCost)}
-                ,{<<"rate_brutto">>, onbill_util:price_round(Rate)}
-                ,{<<"cost_brutto">>, onbill_util:price_round(Cost)}
-                ,{<<"discount_brutto">>, onbill_util:price_round(Discount)}
-                ,{<<"discounted_cost_brutto">>, onbill_util:price_round(DiscountedCost)}
+    NewValues = [{<<"rate_netto">>, zz_util:price_round(Rate)}
+                ,{<<"cost_netto">>, zz_util:price_round(Cost)}
+                ,{<<"discount_netto">>, zz_util:price_round(Discount)}
+                ,{<<"discounted_cost_netto">>, zz_util:price_round(DiscountedCost)}
+                ,{<<"rate_brutto">>, zz_util:price_round(Rate)}
+                ,{<<"cost_brutto">>, zz_util:price_round(Cost)}
+                ,{<<"discount_brutto">>, zz_util:price_round(Discount)}
+                ,{<<"discounted_cost_brutto">>, zz_util:price_round(DiscountedCost)}
                 ,{<<"vat_line_total">>, 0.0}
                 ,{<<"vat_line_discounted_total">>, 0.0}
                 ],
@@ -65,20 +65,20 @@ enhance_vat_netto(FeeLine, OnbillResellerVars) ->
     Cost = props:get_value(<<"cost">>, FeeLine),
     Discount = props:get_value(<<"discount">>, FeeLine),
     DiscountedCost = Cost - Discount,
-    VatLineTotal = onbill_util:price_round(Cost * VatRate / 100),
-    VatLineDiscountedTotal = onbill_util:price_round(DiscountedCost * VatRate / 100),
+    VatLineTotal = zz_util:price_round(Cost * VatRate / 100),
+    VatLineDiscountedTotal = zz_util:price_round(DiscountedCost * VatRate / 100),
     BruttoRate = Rate * (100 + VatRate) / 100,
     BruttoCost = Cost + VatLineTotal,
     BruttoDiscountedCost = DiscountedCost + VatLineDiscountedTotal,
     BruttoDiscount = BruttoCost - BruttoDiscountedCost,
-    NewValues = [{<<"rate_netto">>, onbill_util:price_round(Rate)}
-                ,{<<"cost_netto">>, onbill_util:price_round(Cost)}
-                ,{<<"discount_netto">>, onbill_util:price_round(Discount)}
-                ,{<<"discounted_cost_netto">>, onbill_util:price_round(DiscountedCost)}
-                ,{<<"rate_brutto">>, onbill_util:price_round(BruttoRate)}
-                ,{<<"cost_brutto">>, onbill_util:price_round(BruttoCost)}
-                ,{<<"discount_brutto">>, onbill_util:price_round(BruttoDiscount)}
-                ,{<<"discounted_cost_brutto">>, onbill_util:price_round(BruttoDiscountedCost)}
+    NewValues = [{<<"rate_netto">>, zz_util:price_round(Rate)}
+                ,{<<"cost_netto">>, zz_util:price_round(Cost)}
+                ,{<<"discount_netto">>, zz_util:price_round(Discount)}
+                ,{<<"discounted_cost_netto">>, zz_util:price_round(DiscountedCost)}
+                ,{<<"rate_brutto">>, zz_util:price_round(BruttoRate)}
+                ,{<<"cost_brutto">>, zz_util:price_round(BruttoCost)}
+                ,{<<"discount_brutto">>, zz_util:price_round(BruttoDiscount)}
+                ,{<<"discounted_cost_brutto">>, zz_util:price_round(BruttoDiscountedCost)}
                 ,{<<"vat_line_total">>, VatLineTotal}
                 ,{<<"vat_line_discounted_total">>, VatLineDiscountedTotal}
                 ],
@@ -90,27 +90,27 @@ enhance_vat_brutto(FeeLine, OnbillResellerVars) ->
     Cost = props:get_value(<<"cost">>, FeeLine),
     Discount = props:get_value(<<"discount">>, FeeLine),
     DiscountedCost = Cost - Discount,
-    VatLineTotal = onbill_util:price_round(Cost * VatRate / (100 + VatRate)),
-    VatLineDiscountedTotal = onbill_util:price_round(DiscountedCost * VatRate / (100 + VatRate)),
+    VatLineTotal = zz_util:price_round(Cost * VatRate / (100 + VatRate)),
+    VatLineDiscountedTotal = zz_util:price_round(DiscountedCost * VatRate / (100 + VatRate)),
     NetRate = Rate / (100 + VatRate) * 100,
     NetCost = Cost - VatLineTotal,
     NetDiscountedCost = DiscountedCost - VatLineDiscountedTotal,
     NetDiscount = NetCost - NetDiscountedCost,
-    NewValues = [{<<"rate_netto">>, onbill_util:price_round(NetRate)}
-                ,{<<"cost_netto">>, onbill_util:price_round(NetCost)}
-                ,{<<"discount_netto">>, onbill_util:price_round(NetDiscount)}
-                ,{<<"discounted_cost_netto">>, onbill_util:price_round(NetDiscountedCost)}
-                ,{<<"rate_brutto">>, onbill_util:price_round(Rate)}
-                ,{<<"cost_brutto">>, onbill_util:price_round(Cost)}
-                ,{<<"discount_brutto">>, onbill_util:price_round(Discount)}
-                ,{<<"discounted_cost_brutto">>, onbill_util:price_round(DiscountedCost)}
+    NewValues = [{<<"rate_netto">>, zz_util:price_round(NetRate)}
+                ,{<<"cost_netto">>, zz_util:price_round(NetCost)}
+                ,{<<"discount_netto">>, zz_util:price_round(NetDiscount)}
+                ,{<<"discounted_cost_netto">>, zz_util:price_round(NetDiscountedCost)}
+                ,{<<"rate_brutto">>, zz_util:price_round(Rate)}
+                ,{<<"cost_brutto">>, zz_util:price_round(Cost)}
+                ,{<<"discount_brutto">>, zz_util:price_round(Discount)}
+                ,{<<"discounted_cost_brutto">>, zz_util:price_round(DiscountedCost)}
                 ,{<<"vat_line_total">>, VatLineTotal}
                 ,{<<"vat_line_discounted_total">>, VatLineDiscountedTotal}
                 ],
     props:set_values(NewValues, FeeLine).
 
 maybe_monthly_fees(AccountId, CarrierDoc, Year, Month, Day) ->
-    case onbill_util:maybe_main_carrier(CarrierDoc, AccountId) of
+    case zz_util:maybe_main_carrier(CarrierDoc, AccountId) of
         'true' -> monthly_fees(AccountId, Year, Month, Day) ++ process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc);
         _ -> process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc)
     end.
@@ -118,12 +118,12 @@ maybe_monthly_fees(AccountId, CarrierDoc, Year, Month, Day) ->
 monthly_fees(AccountId, Year, Month, Day) ->
     RawTableId = ets:new(erlang:binary_to_atom(<<AccountId/binary, "-raw">>, 'latin1'), [duplicate_bag]),
     ResultTableId = ets:new(erlang:binary_to_atom(<<AccountId/binary, "-result">>, 'latin1'), [bag]),
-    {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
-    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
+    {SYear, SMonth, SDay} = zz_util:period_start_date(AccountId, Year, Month, Day),
+    {EYear, EMonth, EDay} = zz_util:period_end_date(AccountId, Year, Month, Day),
     case SMonth == EMonth of
         'true' ->
             Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-            _ = onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
+            _ = zz_util:maybe_add_design_doc(Modb, <<"onbills">>),
             case kz_datamgr:get_results(Modb, <<"onbills/daily_fees">>, []) of
                 {'error', 'not_found'} ->
                     lager:warning("unable to process monthly fee calculaton for Modb: ~s, skipping", [Modb]);
@@ -133,7 +133,7 @@ monthly_fees(AccountId, Year, Month, Day) ->
             OneTimeFees = process_one_time_fees(Modb, []);
         'false' ->
             SModb = kazoo_modb:get_modb(AccountId, SYear, SMonth),
-            _ = onbill_util:maybe_add_design_doc(SModb, <<"onbills">>),
+            _ = zz_util:maybe_add_design_doc(SModb, <<"onbills">>),
             case kz_datamgr:get_results(SModb
                                        ,<<"onbills/daily_fees">>
                                        ,[{'startkey', ?DAILY_FEE_DOC_NAME(SMonth, SYear, SDay)}])
@@ -144,7 +144,7 @@ monthly_fees(AccountId, Year, Month, Day) ->
                     [process_daily_fee(JObj, SModb, RawTableId) || JObj <- SJObjs] 
             end,
             EModb = kazoo_modb:get_modb(AccountId, EYear, EMonth),
-            _ = onbill_util:maybe_add_design_doc(EModb, <<"onbills">>),
+            _ = zz_util:maybe_add_design_doc(EModb, <<"onbills">>),
             case kz_datamgr:get_results(EModb
                                        ,<<"onbills/daily_fees">>
                                        ,[{'endkey', ?DAILY_FEE_DOC_NAME(EMonth, EYear, EDay)}])
@@ -165,14 +165,14 @@ monthly_fees(AccountId, Year, Month, Day) ->
     services_to_proplist(AccountId, ServicesList, EYear, EMonth, EDay).
 
 process_per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Carrier) ->
-    process_per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
+    process_per_minute_calls(AccountId, Year, Month, Day, zz_util:carrier_doc(Carrier, AccountId));
 process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
-    ResellerId = onbill_util:find_reseller_id(AccountId),
+    ResellerId = zz_util:find_reseller_id(AccountId),
     Timezone = kzd_accounts:timezone(ResellerId),
     JObjs = get_period_per_minute_jobjs(AccountId, Year, Month, Day),
     Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
     {_, CallsTotalSec, CallsTotalSumm} = lists:foldl(fun(X, Acc) -> maybe_count_call(Regexes, X, Acc, Timezone) end, {[], 0,0}, JObjs),
-    DaysInPeriod = onbill_util:days_in_period(AccountId, Year, Month, Day),
+    DaysInPeriod = zz_util:days_in_period(AccountId, Year, Month, Day),
     aggregated_service_to_line({<<"per-minute-voip">>
                                ,<<"description">>
                                ,CallsTotalSumm
@@ -188,9 +188,9 @@ process_per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
 
 -spec per_minute_calls(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day(), kz_term:ne_binary()) -> ok.
 per_minute_calls(AccountId, Year, Month, Day, Carrier) when is_binary(Carrier) ->
-    per_minute_calls(AccountId, Year, Month, Day, onbill_util:carrier_doc(Carrier, AccountId));
+    per_minute_calls(AccountId, Year, Month, Day, zz_util:carrier_doc(Carrier, AccountId));
 per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
-    ResellerId = onbill_util:find_reseller_id(AccountId),
+    ResellerId = zz_util:find_reseller_id(AccountId),
     Timezone = kzd_accounts:timezone(ResellerId),
     JObjs = get_period_per_minute_jobjs(AccountId, Year, Month, Day),
     Regexes = get_per_minute_regexes(AccountId, CarrierDoc),
@@ -198,18 +198,18 @@ per_minute_calls(AccountId, Year, Month, Day, CarrierDoc) ->
 
 -spec get_period_per_minute_jobjs(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> kz_json:objects().
 get_period_per_minute_jobjs(AccountId, Year, Month, Day) ->
-    {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, Year, Month, Day),
-    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
+    {SYear, SMonth, SDay} = zz_util:period_start_date(AccountId, Year, Month, Day),
+    {EYear, EMonth, EDay} = zz_util:period_end_date(AccountId, Year, Month, Day),
     case SMonth == EMonth of
         'true' ->
             Modb = kazoo_modb:get_modb(AccountId, Year, Month),
-            _ = onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
+            _ = zz_util:maybe_add_design_doc(Modb, <<"onbills">>),
             get_per_minute_jobjs(Modb, []);
         'false' ->
             SModb = kazoo_modb:get_modb(AccountId, SYear, SMonth),
-            _ = onbill_util:maybe_add_design_doc(SModb, <<"onbills">>),
+            _ = zz_util:maybe_add_design_doc(SModb, <<"onbills">>),
             EModb = kazoo_modb:get_modb(AccountId, EYear, EMonth),
-            _ = onbill_util:maybe_add_design_doc(EModb, <<"onbills">>),
+            _ = zz_util:maybe_add_design_doc(EModb, <<"onbills">>),
             get_per_minute_jobjs(SModb, [{'startkey', ?BEGIN_DAY_TS(SMonth, SYear, SDay)}])
             ++ get_per_minute_jobjs(EModb, [{'endkey', ?END_DAY_TS(EMonth, EYear, EDay)}])
     end.
@@ -223,21 +223,21 @@ get_per_minute_jobjs(Modb, Opts) ->
     end.
 
 get_per_minute_regexes(AccountId, CarrierDoc) ->
-    case onbill_util:maybe_main_carrier(CarrierDoc, AccountId) of
+    case zz_util:maybe_main_carrier(CarrierDoc, AccountId) of
         'true' ->
-            Carriers = onbill_util:account_carriers_list(AccountId),
+            Carriers = zz_util:account_carriers_list(AccountId),
             get_other_carriers_regexes(Carriers, AccountId);
         _ -> 
             get_carrier_regexes(CarrierDoc, AccountId)
     end.
 
 get_other_carriers_regexes(Carriers, AccountId) when length(Carriers) > 1 ->
-    [get_carrier_regexes(Carrier, AccountId) || Carrier <- Carriers, not onbill_util:maybe_main_carrier(Carrier, AccountId)];
+    [get_carrier_regexes(Carrier, AccountId) || Carrier <- Carriers, not zz_util:maybe_main_carrier(Carrier, AccountId)];
 get_other_carriers_regexes(_,_) ->
     {<<"^\\d*$">>, <<"^\\d*$">>}.
 
 get_carrier_regexes(Carrier, AccountId) when is_binary(Carrier) ->    
-    get_carrier_regexes(onbill_util:carrier_doc(Carrier, AccountId), AccountId);    
+    get_carrier_regexes(zz_util:carrier_doc(Carrier, AccountId), AccountId);    
 get_carrier_regexes(CarrierDoc,_) ->    
     {kz_json:get_value(<<"caller_number_regex">>, CarrierDoc, <<"^\\d*$">>)
     ,kz_json:get_value(<<"called_number_regex">>, CarrierDoc, <<"^\\d*$">>)
@@ -251,7 +251,7 @@ maybe_count_call(Regexes, JObj, {JObjs, AccSec, AccAmount}, Timezone) ->
             Values = [{[<<"value">>,<<"cost">>], CallCost}
                      ,{[<<"value">>,<<"duration_min">>], CallDuration/60}
                      ,{[<<"value">>,<<"start_datetime">>]
-                      ,onbill_util:format_datetime_tz(kz_json:get_integer_value([<<"value">>,<<"start">>], JObj), Timezone)
+                      ,zz_util:format_datetime_tz(kz_json:get_integer_value([<<"value">>,<<"start">>], JObj), Timezone)
                       }
                      ],
             {[kz_json:set_values(Values, JObj)] ++ JObjs
@@ -290,7 +290,7 @@ process_one_time_fee(JObj, Modb) ->
     ,kz_json:get_value([<<"metadata">>, <<"description">>], DFDoc)
     ,kz_json:get_value([<<"metadata">>, <<"rate">>], DFDoc, Amount) * kz_json:get_value([<<"metadata">>, <<"ratio">>], DFDoc, 1.0)
     ,kz_json:get_value([<<"metadata">>, <<"quantity">>], DFDoc, 1)
-    ,onbill_util:date_json(Year, Month, Day)
+    ,zz_util:date_json(Year, Month, Day)
     ,DaysInMonth
     ,one_time_fee_name(Reason, DFDoc)
     ,<<"non_daily_calculated">>
@@ -368,7 +368,7 @@ dates_sequence_reduce(DatesList) ->
 
 format_days_of_month(Year, Month, DatesList) ->
     Days = [?TO_INT(D) || {Y,M,D} <- DatesList, Year == Y  andalso Month == M],
-    onbill_util:period_json(Year, Month, days_sequence_reduce(Days)).
+    zz_util:period_json(Year, Month, days_sequence_reduce(Days)).
 
 -spec days_sequence_reduce(kz_term:proplist()) -> kz_term:proplist().
 days_sequence_reduce([Digit]) ->
@@ -405,7 +405,7 @@ days_glue(L) ->
     lists:foldl(fun(X,Acc) -> case Acc of <<>> -> X; _ -> <<Acc/binary, ",", X/binary>> end end, <<>>, L).
 
 services_to_proplist(AccountId, ServicesList, Year, Month, Day) ->
-    DaysInPeriod = onbill_util:days_in_period(AccountId, Year, Month, Day),
+    DaysInPeriod = zz_util:days_in_period(AccountId, Year, Month, Day),
     lists:foldl(fun(ServiceLine, Acc) -> service_to_line(ServiceLine, DaysInPeriod, Acc) end, [], ServicesList).
 
 service_to_line({ServiceType, Item, Rate, Quantity, Period, DaysQty, Name, Type, Discount}, DaysInPeriod, Acc) ->
@@ -447,10 +447,10 @@ vatify_amount(AmountName, Amount, OnbillResellerVars) ->
     vatify_amount(AmountName, Amount, VatRate, VatDisposition).
 
 vatify_amount(AmountName, Netto, VatRate, VatDisposition) when VatDisposition == <<"netto">> ->
-    Vat = onbill_util:price_round(Netto * VatRate / 100),
+    Vat = zz_util:price_round(Netto * VatRate / 100),
     Brutto = Netto + Vat,
-    [{<<AmountName/binary, "_netto">>, onbill_util:price_round(Netto)}
-    ,{<<AmountName/binary, "_brutto">>, onbill_util:price_round(Brutto)}
+    [{<<AmountName/binary, "_netto">>, zz_util:price_round(Netto)}
+    ,{<<AmountName/binary, "_brutto">>, zz_util:price_round(Brutto)}
     ,{<<AmountName/binary, "_vat">>, Vat}
     ];
 vatify_amount(AmountName, Brutto, VatRate, VatDisposition) when VatDisposition == <<"brutto">> ->
@@ -458,10 +458,10 @@ vatify_amount(AmountName, Brutto, VatRate, VatDisposition) when VatDisposition =
   lager:debug("Brutto: ~p",[Brutto]),
   lager:debug("VatRate: ~p",[VatRate]),
   lager:debug("VatDisposition: ~p",[VatDisposition]),
-    Vat = onbill_util:price_round(Brutto * VatRate / (100 + VatRate)),
-    Netto = onbill_util:price_round(Brutto) - Vat,
-    [{<<AmountName/binary, "_netto">>, onbill_util:price_round(Netto)}
-    ,{<<AmountName/binary, "_brutto">>, onbill_util:price_round(Brutto)}
+    Vat = zz_util:price_round(Brutto * VatRate / (100 + VatRate)),
+    Netto = zz_util:price_round(Brutto) - Vat,
+    [{<<AmountName/binary, "_netto">>, zz_util:price_round(Netto)}
+    ,{<<AmountName/binary, "_brutto">>, zz_util:price_round(Brutto)}
     ,{<<AmountName/binary, "_vat">>, Vat}
     ];
 vatify_amount(AmountName, Amount, _, _) ->

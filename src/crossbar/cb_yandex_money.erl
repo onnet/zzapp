@@ -223,7 +223,7 @@ is_key_valid(Context) ->
     case kz_json:get_binary_value(<<"kz_account_id">>, ReqJSON) of
         'undefined' -> 'false';
         AccountId ->
-            ResellerId = onbill_util:find_reseller_id(AccountId),
+            ResellerId = zz_util:find_reseller_id(AccountId),
             ShopPassword = kapps_account_config:get(ResellerId, ?CATEGORY, <<"shop_pwd">>),
             ControlString = io_lib:format("~s;~s;~s;~s;~s;~s;~s;~s", (get_request_vars(ReqJSON) ++ [ShopPassword])),
             Md5Hash = lists:flatten([io_lib:format("~2.16.0b", [C]) || <<C>> <= erlang:md5(ControlString)]),

@@ -7,9 +7,8 @@
 -include_lib("kazoo/include/kz_api_literals.hrl").
 
 %%-define(APP, 'zzapp').
--define(OB_APP_NAME, <<"zzapp">>).
-%%-define(OB_APP_NAME, <<"onbill">>).
--define(OB_APP_VERSION, <<"4.0.0">> ).
+-define(ZZ_APP_NAME, <<"zzapp">>).
+-define(ZZ_APP_VERSION, <<"4.0.0">> ).
 
 -define(SERVICES_DB, <<"services">>).
 -define(ONBILL_DOC, <<"onbill">>).
@@ -20,10 +19,10 @@
 -define(TO_INT(Var), kz_term:to_integer(Var)).
 -define(TO_FLT(Var), kz_term:to_float(Var)).
 -define(CARRIER_DOC(CarrierName), <<"onbill_carrier.", CarrierName/binary>>).
--define(MOD_CONFIG_CRAWLER, <<(?OB_APP_NAME)/binary, ".account_crawler">>).
--define(ONBILL_DB(ResellerId), <<(?OB_APP_NAME)/binary, "-", ResellerId/binary>>).
+-define(MOD_CONFIG_CRAWLER, <<(?ZZ_APP_NAME)/binary, ".account_crawler">>).
+-define(ONBILL_DB(ResellerId), <<(?ZZ_APP_NAME)/binary, "-", ResellerId/binary>>).
 -define(DOCS_NUMBER_DB(ResellerId, Year)
-       ,<<(?OB_APP_NAME)/binary
+       ,<<(?ZZ_APP_NAME)/binary
          ,"-"
          ,ResellerId/binary
          ,"-"

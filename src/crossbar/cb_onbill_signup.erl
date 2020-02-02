@@ -163,8 +163,8 @@ collect_onbill_data(Context) ->
     ReqData = cb_context:req_data(Context),
     lager:debug("We are about to create onbill doc. ReqData: ~p",[ReqData]),
     AccountId = kz_doc:id(cb_context:doc(Context)),
-    ResellerId = onbill_util:find_reseller_id(AccountId),
-    onbill_util:check_db(?ONBILL_DB(ResellerId)),
+    ResellerId = zz_util:find_reseller_id(AccountId),
+    zz_util:check_db(?ONBILL_DB(ResellerId)),
     Props = props:filter_empty([{<<"account_name">>, kz_json:get_value(<<"companyname">>, ReqData)}
                                ]),
     lager:info("We are about to create onbill doc. Props: ~p",[Props]),

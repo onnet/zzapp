@@ -42,7 +42,7 @@ handle_req(JObj, _Props) ->
     'true' = kapi_bookkeepers:update_req_v(JObj),
     AccountId = kz_json:get_value(<<"Account-ID">>, JObj),
     lager:debug("received service update notification for ~s", [AccountId]),
-    case kz_json:get_value(<<"Bookkeeper-Type">>, JObj) =:= ?OB_APP_NAME of
+    case kz_json:get_value(<<"Bookkeeper-Type">>, JObj) =:= ?ZZ_APP_NAME of
         'false' ->
   lager:info("IAM inside onbill_update_req false"),
             lager:debug("IAM skipping service update for another bookkeeper");
@@ -98,7 +98,7 @@ reply(#request{request_jobj=JObj}, Reply) ->
     Response = kz_json:from_list_recursive(
                  [{<<"Msg-ID">>, MessageId}
                   | Reply
-                 ] ++ kz_api:default_headers(?OB_APP_NAME, ?OB_APP_VERSION)
+                 ] ++ kz_api:default_headers(?ZZ_APP_NAME, ?ZZ_APP_VERSION)
                 ),
     RespQ = kz_json:get_value(<<"Server-ID">>, JObj),
     kz_amqp_worker:cast(Response, fun(P) -> kapi_bookkeepers:publish_update_resp(RespQ, P) end).
@@ -127,7 +127,7 @@ lager:info("IAM onbill_bk_update_req VendorDb: ~p", [VendorDb]),
     case kz_datamgr:open_cache_doc(VendorDb, BookkeeperId) of
         {'ok', BookkeeperJObj} ->
 lager:info("IAM onbill_bk_update_req BookkeeperJObj: ~p", [BookkeeperJObj]),
-            ?OB_APP_NAME = kzd_bookkeeper:bookkeeper_type(BookkeeperJObj),
+            ?ZZ_APP_NAME = kzd_bookkeeper:bookkeeper_type(BookkeeperJObj),
             sync(
               Request#request{bookkeeper_jobj=BookkeeperJObj}
              );

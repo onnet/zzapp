@@ -67,7 +67,7 @@ select_daily_count_items_list(Items, AccountId) ->
         'false' ->
             select_daily_count_items_list(select_non_zero_items_json(Items), AccountId);
         'true' ->
-            ResellerVars = onbill_util:reseller_vars(AccountId),
+            ResellerVars = zz_util:reseller_vars(AccountId),
             DailyItemsPaths = lists:foldl(fun (Category, Acc) -> [[Category, Item] || Item <- kz_json:get_keys(Category, Items)] ++ Acc end
                                        ,[]
                                        ,daily_count_categories(ResellerVars)
@@ -81,7 +81,7 @@ select_daily_count_items_json(Items, AccountId) ->
         'false' ->
             select_daily_count_items_json(select_non_zero_items_json(Items), AccountId);
         'true' ->
-            ResellerVars = onbill_util:reseller_vars(AccountId),
+            ResellerVars = zz_util:reseller_vars(AccountId),
             CategoriesList = daily_count_categories(ResellerVars),
             Upd = [{Category, kz_json:get_value(Category, Items)}
                    || Category <- CategoriesList
@@ -165,7 +165,7 @@ create_dailyfee_doc(Timestamp, AccountId, Amount, MaxUsage, Items) ->
                ,{<<"pvt_type">>, <<"debit">>}
                ,{<<"description">>,<<(?TO_BIN(Day))/binary," ",MonthStrBin/binary," ",(?TO_BIN(Year))/binary," daily fee">>}
                ,{<<"pvt_reason">>, <<"daily_fee">>}
-               ,{[<<"pvt_metadata">>,<<"days_in_period">>], onbill_util:days_in_period(AccountId, Year, Month, Day)}
+               ,{[<<"pvt_metadata">>,<<"days_in_period">>], zz_util:days_in_period(AccountId, Year, Month, Day)}
                ,{<<"pvt_created">>, Timestamp}
                ,{<<"pvt_modified">>, Timestamp}
                ,{<<"pvt_account_id">>, AccountId}
@@ -196,13 +196,13 @@ dailyfee_doc_update_routines(Timestamp, AccountId, Amount, MaxUsage, Items) ->
 -spec charge_newly_added(kz_term:ne_binary(), kz_json:object(), kz_term:proplist(), integer()) -> 'ok'|kz_term:proplist(). 
 charge_newly_added(_AccountId, _NewMax, [], _Timestamp) -> 'ok';
 charge_newly_added(AccountId, NewMax, [{[Category,_] = Path, Qty}|ExcessDets], Timestamp) -> 
-    ResellerVars = onbill_util:reseller_vars(AccountId),
+    ResellerVars = zz_util:reseller_vars(AccountId),
     DailyCountCategoriesList = daily_count_categories(ResellerVars),
     case lists:member(Category, DailyCountCategoriesList) of
         'true' -> 'ok';
         'false' ->
-            DaysInPeriod = onbill_util:days_in_period(AccountId, Timestamp),
-            DaysLeft = onbill_util:days_left_in_period(AccountId, Timestamp),
+            DaysInPeriod = zz_util:days_in_period(AccountId, Timestamp),
+            DaysLeft = zz_util:days_left_in_period(AccountId, Timestamp),
             Ratio = DaysLeft / DaysInPeriod,
             ItemJObj = kz_json:get_value(Path, NewMax),
 	    Reason =
@@ -252,7 +252,7 @@ discount_newly_added(Qty, ItemJObj) ->
 -spec process_new_billing_period_mrc(kz_term:ne_binary(), kz_time:gregorian_seconds()) -> 'ok'|kz_term:proplist(). 
 process_new_billing_period_mrc(AccountId, Timestamp) ->
     case onbill_bk_util:current_usage_amount_in_units(AccountId)
-        > (onbill_util:current_balance(AccountId) + abs(j5_limits:max_postpay(j5_limits:get(AccountId))))
+        > (zz_util:current_balance(AccountId) + abs(j5_limits:max_postpay(j5_limits:get(AccountId))))
     of
         'true' ->
             lager:debug("not sufficient amount of funds for charging monthly_recurring services"),
@@ -302,17 +302,17 @@ charge_new_billing_period_mrc(ItemsJObj, AccountId, Timestamp) ->
     {'ok',_} = create_monthly_recurring_doc(AccountId, ItemsJObj, Timestamp),
     [charge_mrc_category(AccountId, Category, ItemsJObj, Timestamp)
      || Category <- kz_json:get_keys(ItemsJObj)
-     ,not lists:member(Category, daily_count_categories(onbill_util:reseller_vars(AccountId)))
+     ,not lists:member(Category, daily_count_categories(zz_util:reseller_vars(AccountId)))
     ].
 
 -spec create_monthly_recurring_doc(kz_term:ne_binary(), kz_json:object(), kz_time:gregorian_seconds()) -> any().
 create_monthly_recurring_doc(AccountId, NewMax, Timestamp) ->
-    {Year, Month, Day} = onbill_util:period_start_date(AccountId, Timestamp),
+    {Year, Month, Day} = zz_util:period_start_date(AccountId, Timestamp),
     MonthStrBin = kz_term:to_binary(httpd_util:month(Month)),
     Routines = [{<<"_id">>, <<"monthly_recurring">>}
                ,{<<"description">>,<<"MRC info for period start: ",(?TO_BIN(Day))/binary," ",MonthStrBin/binary," ",(?TO_BIN(Year))/binary>>}
                ,{[<<"pvt_metadata">>,<<"items">>], NewMax}
-               ,{<<"pvt_period_openning_balance">>, onbill_util:day_start_balance(AccountId, Year, Month, Day)}
+               ,{<<"pvt_period_openning_balance">>, zz_util:day_start_balance(AccountId, Year, Month, Day)}
                ,{<<"pvt_created">>, Timestamp}
                ,{<<"pvt_modified">>, Timestamp}
                ,{<<"pvt_account_id">>, AccountId}
@@ -332,8 +332,8 @@ charge_mrc_category(AccountId, Category, NewMax, Timestamp) ->
 charge_mrc_item(AccountId, ItemJObj, Timestamp) ->
     case maybe_prorate_new_period(AccountId, Timestamp) of
         'true' ->
-            DaysInPeriod = onbill_util:days_in_period(AccountId, Timestamp),
-            DaysLeft = onbill_util:days_left_in_period(AccountId, Timestamp),
+            DaysInPeriod = zz_util:days_in_period(AccountId, Timestamp),
+            DaysLeft = zz_util:days_left_in_period(AccountId, Timestamp),
             Ratio = DaysLeft / DaysInPeriod,
 	        Reason =
     	        case Ratio of
@@ -389,7 +389,7 @@ item_cost(ItemJObj, AccountId) ->
 -spec calc_item(kz_json:object(), kz_term:ne_binary()) -> number().
 calc_item(ItemJObj, AccountId) ->
     try
-        ResellerVars = onbill_util:reseller_vars(AccountId),
+        ResellerVars = zz_util:reseller_vars(AccountId),
         CurrencySign = kz_json:get_value(<<"currency_sign">>, ResellerVars, <<"£"/utf8>>),
         Quantity = kz_json:get_value(<<"quantity">>, ItemJObj),
         Rate = kz_json:get_value(<<"rate">>, ItemJObj),
@@ -480,12 +480,12 @@ today_dailyfee_absent(AccountId) ->
 
 -spec maybe_issue_previous_billing_period_docs(kz_term:ne_binary(), kz_time:year(), kz_time:month(), kz_time:day()) -> any().
 maybe_issue_previous_billing_period_docs(AccountId, Year, Month, Day) ->
-    {PYear, PMonth, PDay} = onbill_util:previous_period_start_date(AccountId, Year, Month, Day),
+    {PYear, PMonth, PDay} = zz_util:previous_period_start_date(AccountId, Year, Month, Day),
     _ = kz_util:spawn(fun onbill_docs:generate_docs/4, [AccountId, PYear, PMonth, PDay]).
 
 -spec maybe_prorate_new_period(kz_term:ne_binary(), kz_time:gregorian_seconds()) -> boolean().
 maybe_prorate_new_period(AccountId, Timestamp) ->
-    case onbill_util:maybe_allow_postpay(AccountId) of
+    case zz_util:maybe_allow_postpay(AccountId) of
         {'true', _} ->
             maybe_prorate_new_postpay_period(AccountId, Timestamp);
         'false' ->
@@ -496,22 +496,22 @@ maybe_prorate_new_period(AccountId, Timestamp) ->
 maybe_prorate_new_prepay_period(AccountId) ->
     {'ok', MasterAccount} = kapps_util:get_master_account_id(),
     kz_json:get_atom_value(<<"prepay_prorate_new_period">>
-                          ,onbill_util:reseller_vars(AccountId)
+                          ,zz_util:reseller_vars(AccountId)
                           ,kz_json:get_atom_value(<<"prepay_prorate_new_period">>
-                                                 ,onbill_util:reseller_vars(MasterAccount),'false')
+                                                 ,zz_util:reseller_vars(MasterAccount),'false')
                           ).
 
 -spec maybe_prorate_new_postpay_period(kz_term:ne_binary(), kz_time:gregorian_seconds()) -> boolean().
 maybe_prorate_new_postpay_period(AccountId, Timestamp) ->
     {'ok', MasterAccount} = kapps_util:get_master_account_id(),
     {{Year, Month, _}, _} = calendar:gregorian_seconds_to_datetime(Timestamp),
-    case onbill_util:account_creation_date(AccountId) of
+    case zz_util:account_creation_date(AccountId) of
         {Year, Month, _} -> 'true';
         _ ->
            kz_json:get_atom_value(<<"postpay_prorate_new_period">>
-                                 ,onbill_util:reseller_vars(AccountId)
+                                 ,zz_util:reseller_vars(AccountId)
                                  ,kz_json:get_atom_value(<<"postpay_prorate_new_period">>
-                                                        ,onbill_util:reseller_vars(MasterAccount),'false')
+                                                        ,zz_util:reseller_vars(MasterAccount),'false')
                                  )
     end.
 

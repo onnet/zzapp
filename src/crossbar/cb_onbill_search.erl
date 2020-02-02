@@ -476,7 +476,7 @@ maybe_valid_relationship(Context) ->
     AuthAccountId = cb_context:auth_account_id(Context),
     (kz_services_reseller:is_reseller(AccountId) andalso AccountId == AuthAccountId)
     orelse
-    (kz_services_reseller:is_reseller(AccountId) andalso onbill_util:validate_relationship(AccountId, AuthAccountId))
+    (kz_services_reseller:is_reseller(AccountId) andalso zz_util:validate_relationship(AccountId, AuthAccountId))
     orelse
     cb_context:is_superduper_admin(AuthAccountId).
 
@@ -486,11 +486,11 @@ search_db(Context) ->
     case cb_context:account_id(Context) of
         'undefined' ->
             DbName = ?ONBILL_DB(AuthAccountId),
-            _ = onbill_util:maybe_add_design_doc(DbName, <<"search">>),
+            _ = zz_util:maybe_add_design_doc(DbName, <<"search">>),
             DbName;
         AccountId ->
             DbName = ?ONBILL_DB(AccountId),
-            _ = onbill_util:maybe_add_design_doc(DbName, <<"search">>),
+            _ = zz_util:maybe_add_design_doc(DbName, <<"search">>),
             DbName
     end.
 

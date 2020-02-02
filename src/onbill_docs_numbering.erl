@@ -31,7 +31,7 @@ get_binary_number(AccountId, Carrier, DocType, Year, Month, TReq, TNow) when TRe
     Reason;
 get_binary_number(AccountId, Carrier, DocType, Year, Month, TReq, TReq) ->
     {_, _, DNow} = erlang:date(),
-    case DNow >= onbill_util:billing_day(AccountId) of
+    case DNow >= zz_util:billing_day(AccountId) of
         'true' ->
             binary_number(AccountId, Carrier, DocType, Year, Month);
         'false' ->
@@ -58,10 +58,10 @@ get_new_binary_number(AccountId, Carrier, DocType0) ->
     end.
 
 get_number(AccountId, Carrier, DocType, Year, Month) ->
-    ResellerId = onbill_util:find_reseller_id(AccountId),
+    ResellerId = zz_util:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
-    _ = onbill_util:check_db(DbName),
-    onbill_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
+    _ = zz_util:check_db(DbName),
+    zz_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
     case number_lookup(AccountId, Carrier, DocType, Year, Month) of
         {'ok', Number} -> {'ok', Number};
         {'error', 'not_found'} -> maybe_get_new_number(AccountId, Carrier, DocType, Year, Month);
@@ -71,10 +71,10 @@ get_number(AccountId, Carrier, DocType, Year, Month) ->
 -spec number_lookup(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), integer(), integer()) -> {'ok', integer()}|{'error', atom()}.
 number_lookup(AccountId, Carrier, DocType0, Year, Month) ->
     DocType = maybe_doc_number_follows(AccountId, Carrier, DocType0),
-    ResellerId = onbill_util:find_reseller_id(AccountId),
+    ResellerId = zz_util:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
-    _ = onbill_util:check_db(DbName),
-    onbill_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
+    _ = zz_util:check_db(DbName),
+    zz_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
     Opts = [{'startkey', [Carrier, DocType, Month, AccountId]}
            ,{'endkey', [Carrier, DocType, Month, AccountId]}
            ],
@@ -91,14 +91,14 @@ number_lookup(AccountId, Carrier, DocType0, Year, Month) ->
 %%
 -spec maybe_get_new_number(kz_term:ne_binary(), kz_term:ne_binary(), kz_time:year(), kz_time:month()) -> {'ok', integer()}|{'error', atom()}.
 maybe_get_new_number(AccountId, DocType, Year, Month) ->
-    Carriers = onbill_util:account_carriers_list(AccountId),
-    MainCarrier = onbill_util:get_main_carrier(Carriers, AccountId),
+    Carriers = zz_util:account_carriers_list(AccountId),
+    MainCarrier = zz_util:get_main_carrier(Carriers, AccountId),
     maybe_get_new_number(AccountId, MainCarrier, DocType, Year, Month).
 
 -spec maybe_get_new_number(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_time:year(), kz_time:month()) -> {'ok', integer()}|{'error', atom()}.
 maybe_get_new_number(AccountId, Carrier, DocType0, Year, Month) ->
     DocType = maybe_doc_number_follows(AccountId, Carrier, DocType0),
-    {NextMonthYear,NextMonth} = onbill_util:next_month(Year, Month),
+    {NextMonthYear,NextMonth} = zz_util:next_month(Year, Month),
     case no_docs_in_year_since_month(AccountId, Carrier, DocType, NextMonthYear, NextMonth)
            andalso no_docs_in_year_since_month(AccountId, Carrier, DocType, NextMonthYear+1, 1)
     of
@@ -107,10 +107,10 @@ maybe_get_new_number(AccountId, Carrier, DocType0, Year, Month) ->
     end.
 
 no_docs_in_year_since_month(AccountId, Carrier, DocType, Year, Month) ->
-    ResellerId = onbill_util:find_reseller_id(AccountId),
+    ResellerId = zz_util:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
-    _ = onbill_util:check_db(DbName),
-    onbill_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
+    _ = zz_util:check_db(DbName),
+    zz_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
     Opts = [{'startkey', [Carrier, DocType, Month]}
            ,{'endkey', [Carrier, DocType, 12]}],
     case kz_datamgr:get_results(DbName, ?DOCS_LOOKUP_VIEW, Opts) of
@@ -127,7 +127,7 @@ get_new_number(AccountId, Carrier, DocType, Year, Month) ->
 
 reserve_number(AccountId, Carrier, DocType, Year, Month, ReserveCandidate, Attempt) when Attempt < 3 ->
     NumberToReserve = maybe__start_number(AccountId, Carrier, DocType, ReserveCandidate),
-    ResellerId = onbill_util:find_reseller_id(AccountId),
+    ResellerId = zz_util:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
     Values = [{<<"_id">>, ?NUMBER_DOC_ID(Carrier, DocType, NumberToReserve)}
              ,{<<"carrier">>, Carrier}
@@ -159,10 +159,10 @@ get_recent_number(AccountId, Carrier, DocType, Year) ->
     end.
 
 get_year_recent_number(AccountId, Carrier, DocType, Year) ->
-    ResellerId = onbill_util:find_reseller_id(AccountId),
+    ResellerId = zz_util:find_reseller_id(AccountId),
     DbName = ?DOCS_NUMBER_DB(ResellerId, Year),
-    _ = onbill_util:check_db(DbName),
-    onbill_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
+    _ = zz_util:check_db(DbName),
+    zz_util:maybe_add_design_doc(DbName, ?VIEW_NAME),
     Opts = [{'startkey', [Carrier,DocType, 999999]}
            ,{'endkey', [Carrier,DocType, 0]}
            ,'descending'
@@ -175,9 +175,9 @@ get_year_recent_number(AccountId, Carrier, DocType, Year) ->
     end.
 
 maybe_continious_numbering(AccountId, Carrier, DocType, Year) ->
-    case kz_json:is_true(<<"continious_doc_numbering">>, onbill_util:carrier_doc(Carrier, AccountId)) of
+    case kz_json:is_true(<<"continious_doc_numbering">>, zz_util:carrier_doc(Carrier, AccountId)) of
         'true' ->
-            ResellerId = onbill_util:find_reseller_id(AccountId),
+            ResellerId = zz_util:find_reseller_id(AccountId),
             case kz_datamgr:db_exists(?DOCS_NUMBER_DB(ResellerId, Year-1)) of
                 'true' ->
                     get_year_recent_number(AccountId, Carrier, DocType, Year-1);
@@ -206,11 +206,11 @@ alert_doc_numbering_problem(AccountId, Carrier, DocType, Year, Month, Reason) ->
     kz_notify:system_alert(Subj, Msg, []).
 
 maybe_doc_number_follows(AccountId, Carrier, DocType) ->
-    CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
+    CarrierDoc = zz_util:carrier_doc(Carrier, AccountId),
     kz_json:get_binary_value([<<"docs_numbering">>, DocType, <<"follow_type">>], CarrierDoc, DocType).
 
 maybe__start_number(AccountId, Carrier, DocType, ReserveCandidate) ->
-    CarrierDoc = onbill_util:carrier_doc(Carrier, AccountId),
+    CarrierDoc = zz_util:carrier_doc(Carrier, AccountId),
     MinNumber = kz_json:get_integer_value([<<"docs_numbering">>, DocType, <<"start_number">>], CarrierDoc, 1),
     case kz_term:to_integer(ReserveCandidate) > MinNumber of
         'true' -> ReserveCandidate;

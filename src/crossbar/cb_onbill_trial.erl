@@ -37,9 +37,9 @@ validate(Context) ->
 validate_trial(Context, ?HTTP_DELETE) ->
     ResellerId = cb_context:auth_account_id(Context),
     AccountId = cb_context:account_id(Context),
-    case onbill_util:validate_relationship(AccountId, ResellerId) of
+    case zz_util:validate_relationship(AccountId, ResellerId) of
         'true' ->
-            {'ok', NewDoc} = onbill_util:transit_to_full_subscription_state(AccountId),
+            {'ok', NewDoc} = zz_util:transit_to_full_subscription_state(AccountId),
             Context1 = cb_context:set_doc(Context, NewDoc),
             cb_context:set_resp_status(crossbar_doc:save(Context1), 'success');
         'false' ->
@@ -48,7 +48,7 @@ validate_trial(Context, ?HTTP_DELETE) ->
 validate_trial(Context, ?HTTP_POST) ->
     ResellerId = cb_context:auth_account_id(Context),
     AccountId = cb_context:account_id(Context),
-    case onbill_util:validate_relationship(AccountId, ResellerId) of
+    case zz_util:validate_relationship(AccountId, ResellerId) of
         'true' ->
             case kz_json:get_value(<<"new_expiration_timestamp">>, cb_context:req_data(Context)) of
                 'undefined' ->
@@ -58,7 +58,7 @@ validate_trial(Context, ?HTTP_POST) ->
                     NewDoc = kz_json:set_value(?KEY_TRIAL_EXPIRATION, kz_term:to_integer(NewTS), Doc),
                     Context1 = cb_context:set_doc(Context, NewDoc),
                     RespCtx = cb_context:set_resp_status(crossbar_doc:save(Context1),'success'),
-                    _ = onbill_util:replicate_account_doc(NewDoc),
+                    _ = zz_util:replicate_account_doc(NewDoc),
                     RespCtx
             end;
         'false' ->

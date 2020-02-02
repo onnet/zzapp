@@ -156,7 +156,7 @@ send_account_update(AccountId, TemplateId, DataBag) ->
 
 -spec build_customer_update_payload(kz_term:ne_binary(), kz_term:ne_binary(), kz_json:object()) -> kz_term:proplist().
 build_customer_update_payload(AccountId, TemplateId, DataBag) ->
-    ResellerId = onbill_util:find_reseller_id(AccountId),
+    ResellerId = zz_util:find_reseller_id(AccountId),
     RecipientId =
         case onbill_notification_enabled(AccountId) of
             'true' -> AccountId;
@@ -167,16 +167,16 @@ build_customer_update_payload(AccountId, TemplateId, DataBag) ->
       ,{<<"Recipient-ID">>, RecipientId}
       ,{<<"Template-ID">>, TemplateId}
       ,{<<"DataBag">>, DataBag}
-       | kz_api:default_headers(?OB_APP_NAME, ?OB_APP_VERSION)
+       | kz_api:default_headers(?ZZ_APP_NAME, ?ZZ_APP_VERSION)
       ]).
 
 -spec maybe_send_account_updates(kz_term:ne_binary(), kzd_accounts:doc()) -> 'ok'.
 maybe_send_account_updates(AccountId, AccountJObj) ->
-    case onbill_util:is_trial_account(AccountJObj) of
+    case zz_util:is_trial_account(AccountJObj) of
         'true' ->
             'ok';
         'false' ->
-            case onbill_util:maybe_allow_postpay(AccountId) of
+            case zz_util:maybe_allow_postpay(AccountId) of
                 'false' ->
                     maybe_new_billing_period_approaching(AccountId, AccountJObj);
                 _ -> 'ok'
@@ -187,10 +187,10 @@ maybe_send_account_updates(AccountId, AccountJObj) ->
 maybe_new_billing_period_approaching(AccountId, AccountJObj) ->
     Timestamp = kz_time:current_tstamp(),
     Days_Before_MRC_Update = ?KEY_PERIOD(?MRC_APPROACHING_KEY),
-    case onbill_util:days_left_in_period(AccountId, Timestamp) of
+    case zz_util:days_left_in_period(AccountId, Timestamp) of
         DaysLeft when DaysLeft < Days_Before_MRC_Update ->
             case onbill_bk_util:current_usage_amount_in_units(AccountId)
-                > onbill_util:current_balance(AccountId)
+                > zz_util:current_balance(AccountId)
             of
                 'true' ->
                     maybe_send_new_billing_period_approaching_update(AccountId
@@ -233,7 +233,7 @@ customer_update_databag(AccountId) ->
 
 -spec reseller_info_databag(kz_term:ne_binary()) -> kz_json:object().
 reseller_info_databag(AccountId) ->
-    ResellerId = onbill_util:find_reseller_id(AccountId),
+    ResellerId = zz_util:find_reseller_id(AccountId),
     {'ok', ResellerDoc} = kzd_accounts:fetch(ResellerId),
     Values = [{<<"name">>, kzd_accounts:name(ResellerDoc)}
              ],
@@ -255,10 +255,10 @@ services_info_databag(AccountId) ->
     ItemsCalculatedList = [onbill_bk_util:calc_item(ItemJObj, AccountId) || ItemJObj <- ItemsList],
 
     Timestamp = kz_time:current_tstamp(),
-    DaysLeft =  onbill_util:days_left_in_period(AccountId, Timestamp),
-    {NextPeriodYear, NextPeriodMonth, NextPeriodDay} = onbill_util:next_period_start_date(AccountId, Timestamp),
+    DaysLeft =  zz_util:days_left_in_period(AccountId, Timestamp),
+    {NextPeriodYear, NextPeriodMonth, NextPeriodDay} = zz_util:next_period_start_date(AccountId, Timestamp),
 
-    ResellerVars = onbill_util:reseller_vars(AccountId),
+    ResellerVars = zz_util:reseller_vars(AccountId),
     CurrencySign = kz_json:get_value(<<"currency_sign">>, ResellerVars, <<"£"/utf8>>),
                
     kz_json:from_list([{<<"total_amount">>, currency_sign:add_currency_sign(CurrencySign
@@ -267,8 +267,8 @@ services_info_databag(AccountId) ->
                       ,{<<"account_id">>, AccountId}
                       ,{<<"days_left">>, DaysLeft}
                       ,{<<"current_balance">>, currency_sign:add_currency_sign(CurrencySign
-                                                                              ,onbill_util:current_account_dollars(AccountId))}
-                      ,{<<"next_period_date">>, onbill_util:date_json(NextPeriodYear
+                                                                              ,zz_util:current_account_dollars(AccountId))}
+                      ,{<<"next_period_date">>, zz_util:date_json(NextPeriodYear
                                                                      ,NextPeriodMonth
                                                                      ,NextPeriodDay)}
                       ,{<<"currency_short">>, kz_json:get_value(<<"currency_short">>, ResellerVars, <<"GBP">>)}
@@ -284,7 +284,7 @@ update_account_key_sent(Key, AccountJObj0) ->
 
 -spec onbill_notification_enabled(kz_term:ne_binary()) -> boolean().
 onbill_notification_enabled(AccountId) ->
-    kz_json:is_true(?ONBILL_NOTIFICATION_ENABLED, onbill_util:reseller_vars(AccountId)).
+    kz_json:is_true(?ONBILL_NOTIFICATION_ENABLED, zz_util:reseller_vars(AccountId)).
 
 -spec set_key_sent(kz_term:ne_binary(), kzd_accounts:doc()) -> kzd_accounts:doc().
 set_key_sent(Key, JObj) ->

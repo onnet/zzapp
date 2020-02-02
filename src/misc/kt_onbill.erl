@@ -123,7 +123,7 @@ current_state(_, [SubAccountId | DescendantsIds]) ->
     Realm = kzd_accounts:realm(JObj),
     Services = kz_services:fetch(SubAccountId),
     {AllowPostpay, MaxPostpay} =
-        case onbill_util:maybe_allow_postpay(SubAccountId) of
+        case zz_util:maybe_allow_postpay(SubAccountId) of
             'false' -> {'false', 0};
             {'true', Max} -> {'true', Max}
         end,
@@ -133,11 +133,11 @@ current_state(_, [SubAccountId | DescendantsIds]) ->
      ,kzd_accounts:is_enabled(JObj)
      ,kzd_accounts:is_reseller(JObj)
      ,descendants_count(SubAccountId)
-     ,onbill_util:billing_day(SubAccountId)
-     ,onbill_util:current_service_status(SubAccountId)
+     ,zz_util:billing_day(SubAccountId)
+     ,zz_util:current_service_status(SubAccountId)
      ,AllowPostpay
      ,kz_currency:units_to_dollars(MaxPostpay)
-     ,onbill_util:current_account_dollars(SubAccountId)
+     ,zz_util:current_account_dollars(SubAccountId)
      ,estimated_monthly_total(SubAccountId)
      ,kz_services:category_quantity(<<"users">>, Services)
      ,count_registrations(Realm)
@@ -164,8 +164,8 @@ generate_docs(_, []) -> stop;
 generate_docs(_, [SubAccountId | DescendantsIds]) ->
     {'ok', JObj} = kzd_accounts:fetch(SubAccountId),
     {{Year,Month,Day},{_,_,_}} = calendar:universal_time(),
-    {PSYear,PSMonth,PSDay} = onbill_util:previous_period_start_date(SubAccountId, Year, Month, Day),
-    {PEYear,PEMonth,PEDay} = onbill_util:period_end_date(SubAccountId, PSYear, PSMonth, PSDay),
+    {PSYear,PSMonth,PSDay} = zz_util:previous_period_start_date(SubAccountId, Year, Month, Day),
+    {PEYear,PEMonth,PEDay} = zz_util:period_end_date(SubAccountId, PSYear, PSMonth, PSDay),
     try 
         onbill_docs:generate_docs(SubAccountId, PEYear, PEMonth, PEDay)
     catch
@@ -182,14 +182,14 @@ generate_docs(_, [SubAccountId | DescendantsIds]) ->
 
 -spec sync_onbills(kz_tasks:extra_args(), kz_tasks:iterator()) -> kz_tasks:iterator().
 sync_onbills(#{account_id := AccountId}, init) ->
-    ResellerId = onbill_util:find_reseller_id(AccountId),
+    ResellerId = zz_util:find_reseller_id(AccountId),
     DbName = ?ONBILL_DB(ResellerId),
-    _ = onbill_util:maybe_add_design_doc(DbName, <<"search">>),
+    _ = zz_util:maybe_add_design_doc(DbName, <<"search">>),
     {'ok', get_children(AccountId)};
 sync_onbills(_, []) -> stop;
 sync_onbills(_, [SubAccountId | DescendantsIds]) ->
     {'ok', JObj} = kzd_accounts:fetch(SubAccountId),
-    case onbill_util:replicate_onbill_doc(SubAccountId) of
+    case zz_util:replicate_onbill_doc(SubAccountId) of
         {'ok', _} ->
             {[SubAccountId ,kzd_accounts:name(JObj), <<"exists">>] ,DescendantsIds };
         _ ->
@@ -253,7 +253,7 @@ count_registrations(Realm) ->
   end.
 
 estimated_monthly_total(AccountId) ->
-    case onbill_util:is_service_plan_assigned(AccountId) of
+    case zz_util:is_service_plan_assigned(AccountId) of
         'true' -> onbill_bk_util:current_usage_amount(AccountId);
         'false' -> 'no_service_plan_assigned'
     end.

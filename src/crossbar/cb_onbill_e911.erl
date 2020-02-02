@@ -129,8 +129,8 @@ validate_e911_doc(Context, Id, ?HTTP_DELETE) ->
 e911_addresses_summary(Context) ->
     AccountId = cb_context:account_id(Context),
     DbName = kz_util:format_account_id(AccountId,'encoded'),
-    onbill_util:maybe_add_design_doc(DbName, <<"onbill_e911">>),
-    crossbar_doc:load_view(?CB_E911_ADDRESSES, [], Context, fun onbill_util:normalize_view_results/2).
+    zz_util:maybe_add_design_doc(DbName, <<"onbill_e911">>),
+    crossbar_doc:load_view(?CB_E911_ADDRESSES, [], Context, fun zz_util:normalize_view_results/2).
 
 -spec save_e911_doc(cb_context:context()) -> cb_context:context().
 -spec save_e911_doc(cb_context:context(), kz_term:ne_binary()) -> cb_context:context().
@@ -212,7 +212,7 @@ update_attachment_binary(Context, Id, [{Filename, FileObj}|Files]) ->
 maybe_valid_relationship(Context) ->
     AccountId = cb_context:account_id(Context),
     AuthAccountId = cb_context:auth_account_id(Context),
-    onbill_util:validate_relationship(AccountId, AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId).
+    zz_util:validate_relationship(AccountId, AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId).
 
 -spec delete_e911_doc(cb_context:context(), kz_term:ne_binary()) -> cb_context:context().
 delete_e911_doc(Context0, Id) ->

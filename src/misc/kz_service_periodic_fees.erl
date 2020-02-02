@@ -23,7 +23,7 @@
 reconcile(Services) ->
     AccountId = kz_services:account_id(Services),
     AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
-    _ = onbill_util:maybe_add_design_doc(AccountDb, <<"periodic_fees">>),
+    _ = zz_util:maybe_add_design_doc(AccountDb, <<"periodic_fees">>),
     case kz_datamgr:get_results(AccountDb, <<"periodic_fees/crossbar_listing">>) of
         {'error', _R} ->
             lager:debug("unable to get current fees in service: ~p", [_R]),
@@ -51,7 +51,7 @@ reconcile_fee(JObj, Services) ->
 count_active_fees(LookupTstamp, FeeDocs) ->
     ActiveFees = [kz_json:get_value(<<"value">>, JObj)
                   || JObj <- FeeDocs
-                    ,onbill_util:maybe_fee_active(LookupTstamp, JObj)
+                    ,zz_util:maybe_fee_active(LookupTstamp, JObj)
                  ],
     ServicesList = [kz_json:get_value(<<"service_id">>, Fee) || Fee <- ActiveFees],
     ServicesQtyList = [{kz_json:get_value(<<"service_id">>, Fee), kz_json:get_integer_value(<<"quantity">>, Fee, 1)} || Fee <- ActiveFees],

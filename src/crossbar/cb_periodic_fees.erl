@@ -35,7 +35,7 @@ validate(Context) ->
         'true' ->
             AccountId = cb_context:account_id(Context),
             AccountDb = kz_util:format_account_id(AccountId, 'encoded'),
-            _ = onbill_util:maybe_add_design_doc(AccountDb, <<"periodic_fees">>),
+            _ = zz_util:maybe_add_design_doc(AccountDb, <<"periodic_fees">>),
             validate_periodic_fees(Context, cb_context:req_verb(Context));
         'false' -> cb_context:add_system_error('forbidden', Context)
     end.
@@ -49,9 +49,9 @@ validate(Context, Id) ->
 validate_periodic_fees(Context, ?HTTP_GET) ->
     case cb_context:req_value(Context, <<"active_only">>) of
         <<"true">> ->
-            crossbar_doc:load_view(?CB_PERIODIC_FEES, [], Context, fun onbill_util:normalize_view_active_results/2);
+            crossbar_doc:load_view(?CB_PERIODIC_FEES, [], Context, fun zz_util:normalize_view_active_results/2);
         _ ->
-            crossbar_doc:load_view(?CB_PERIODIC_FEES, [], Context, fun onbill_util:normalize_view_results/2)
+            crossbar_doc:load_view(?CB_PERIODIC_FEES, [], Context, fun zz_util:normalize_view_results/2)
     end;
 validate_periodic_fees(Context, ?HTTP_PUT) ->
     save_periodic_fees(Context).
@@ -92,7 +92,7 @@ save_periodic_fees(Context, Id) ->
 maybe_valid_relationship(Context) ->
     AccountId = cb_context:account_id(Context),
     AuthAccountId = cb_context:auth_account_id(Context),
-    onbill_util:validate_relationship(AccountId, AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId).
+    zz_util:validate_relationship(AccountId, AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId).
 
 -spec mark_periodic_service_deleted(cb_context:context(), kz_term:ne_binary()) -> cb_context:context().
 mark_periodic_service_deleted(Context0, Id) ->

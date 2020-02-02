@@ -108,7 +108,7 @@ maybe_valid_receiver_id(BeneficiaryId, ReqJSON) ->
 maybe_beneficiary_child(BeneficiaryId, ReqJSON) ->
     PayerId = kz_json:get_value(<<"custom">>, ReqJSON),
     lager:info("beneficiary_id: ~p, payer_id: ~p",[BeneficiaryId, PayerId]),
-    BeneficiaryId == onbill_util:find_reseller_id(PayerId).
+    BeneficiaryId == zz_util:find_reseller_id(PayerId).
 
 maybe_valid_currency(BeneficiaryId, ReqJSON) ->
     PaymentCurrency = kz_json:get_value(<<"mc_currency">>, ReqJSON),

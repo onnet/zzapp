@@ -16,5 +16,5 @@ add_currency_sign(CurrencySign, Amount) ->
 
 -spec add_account_currency_sign(kz_term:ne_binary(), number()) -> kz_term:ne_binary().
 add_account_currency_sign(AccountId, Amount) ->
-    ResellerVars = onbill_util:reseller_vars(AccountId),
+    ResellerVars = zz_util:reseller_vars(AccountId),
     add_currency_sign(kz_json:get_value(<<"currency_sign">>, ResellerVars, <<"£"/utf8>>), Amount).

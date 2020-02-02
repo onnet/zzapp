@@ -64,7 +64,7 @@ validate_transaction(Context, <<Year:4/binary, Month:2/binary, _/binary>> = Id, 
 maybe_valid_relationship(Context) ->
     AccountId = cb_context:account_id(Context),
     AuthAccountId = cb_context:auth_account_id(Context),
-    onbill_util:validate_relationship(AccountId, AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId).
+    zz_util:validate_relationship(AccountId, AuthAccountId) orelse cb_context:is_superduper_admin(AuthAccountId).
 
 -spec leak_job_fields(cb_context:context()) -> cb_context:context().
 leak_job_fields(Context) ->

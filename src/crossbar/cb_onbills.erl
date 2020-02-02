@@ -205,14 +205,14 @@ onbills_modb_summary(Context) ->
                 'undefined' -> kz_time:current_tstamp();
                 Ts -> Ts
             end,
-    {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, ?TO_INT(ReqTs)),
-    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, ?TO_INT(ReqTs)),
+    {SYear, SMonth, SDay} = zz_util:period_start_date(AccountId, ?TO_INT(ReqTs)),
+    {EYear, EMonth, EDay} = zz_util:period_end_date(AccountId, ?TO_INT(ReqTs)),
     case SMonth of
         EMonth ->
             Modb = kazoo_modb:get_modb(AccountId, ?TO_INT(SYear), ?TO_INT(SMonth)),
-            onbill_util:maybe_add_design_doc(Modb, <<"onbills">>),
+            zz_util:maybe_add_design_doc(Modb, <<"onbills">>),
             Context1 = cb_context:set_account_db(Context, Modb),
-            crossbar_doc:load_view(?PERIOD_DOCS_VIEW, [], Context1, fun onbill_util:normalize_view_results/2);
+            crossbar_doc:load_view(?PERIOD_DOCS_VIEW, [], Context1, fun zz_util:normalize_view_results/2);
         _ ->
             SViewOpts = [{'startkey', ?BEGIN_DAY_TS(SMonth, SYear, SDay)}
                         ,{'year', SYear}
@@ -261,8 +261,8 @@ validate_billing_status(Context, ?HTTP_GET) ->
     AccountId = cb_context:account_id(Context),
     Vars =
         case kz_services_reseller:is_reseller(AccountId) of
-            'true' -> onbill_util:account_vars(AccountId);
-            'false' -> onbill_util:reseller_vars(AccountId)
+            'true' -> zz_util:account_vars(AccountId);
+            'false' -> zz_util:reseller_vars(AccountId)
         end,
     JObj =
         kz_json:from_list([{<<"display_billing">>, kz_json:get_value(<<"display_billing">> ,Vars, 'true')}
@@ -280,13 +280,13 @@ validate_billing_status(Context, _) ->
 -spec validate_current_billing_period(cb_context:context(), http_method()) -> cb_context:context().
 validate_current_billing_period(Context, ?HTTP_GET) ->
     AccountId = cb_context:account_id(Context),
-    {Year, Month, Day} = onbill_util:period_start_date(AccountId),
-    {EYear, EMonth, EDay} = onbill_util:period_end_date(AccountId, Year, Month, Day),
+    {Year, Month, Day} = zz_util:period_start_date(AccountId),
+    {EYear, EMonth, EDay} = zz_util:period_end_date(AccountId, Year, Month, Day),
     JObj =
         kz_json:from_list([{<<"account_id">>, AccountId}
-                          ,{<<"billing_day">>, onbill_util:billing_day(AccountId)}
-                          ,{<<"period_start">>, onbill_util:date_json(Year, Month, Day)}
-                          ,{<<"period_end">>, onbill_util:date_json(EYear, EMonth, EDay)}
+                          ,{<<"billing_day">>, zz_util:billing_day(AccountId)}
+                          ,{<<"period_start">>, zz_util:date_json(Year, Month, Day)}
+                          ,{<<"period_end">>, zz_util:date_json(EYear, EMonth, EDay)}
                           ]),
     cb_context:setters(Context
                       ,[{fun cb_context:set_resp_status/2, 'success'}
@@ -298,7 +298,7 @@ validate_current_billing_period(Context, _) ->
 -spec validate_billing_periods(cb_context:context(), http_method()) -> cb_context:context().
 validate_billing_periods(Context, ?HTTP_GET) ->
     AccountId = cb_context:account_id(Context),
-    JObjs = onbill_util:list_account_periods(AccountId),
+    JObjs = zz_util:list_account_periods(AccountId),
     cb_context:setters(Context
                       ,[{fun cb_context:set_resp_status/2, 'success'}
                        ,{fun cb_context:set_resp_data/2, JObjs}
@@ -313,16 +313,16 @@ validate_period_balance(Context, ?HTTP_GET) ->
             Context;
         PeriodTS -> 
             AccountId = cb_context:account_id(Context),
-            {SYear, SMonth, SDay} = onbill_util:period_start_date(AccountId, ?TO_INT(PeriodTS)),
-            OpeningBalance = onbill_util:day_start_balance_dollars(AccountId, SYear, SMonth, SDay),
-            {NYear, NMonth, NDay} = onbill_util:next_period_start_date(AccountId, SYear, SMonth, SDay),
-            ClosingBalance = onbill_util:day_start_balance_dollars(AccountId, NYear, NMonth, NDay),
+            {SYear, SMonth, SDay} = zz_util:period_start_date(AccountId, ?TO_INT(PeriodTS)),
+            OpeningBalance = zz_util:day_start_balance_dollars(AccountId, SYear, SMonth, SDay),
+            {NYear, NMonth, NDay} = zz_util:next_period_start_date(AccountId, SYear, SMonth, SDay),
+            ClosingBalance = zz_util:day_start_balance_dollars(AccountId, NYear, NMonth, NDay),
             Balances = [{<<"opening_balance">>, OpeningBalance}
                        ,{<<"closing_balance">>, ClosingBalance}
                        ,{<<"account_id">>, AccountId}
-                       ,{<<"period_start">>, onbill_util:date_json(SYear, SMonth, SDay)}
+                       ,{<<"period_start">>, zz_util:date_json(SYear, SMonth, SDay)}
                        ,{<<"period_end">>
-                        ,onbill_util:date_json(onbill_util:period_end_date(AccountId, ?TO_INT(PeriodTS)))
+                        ,zz_util:date_json(zz_util:period_end_date(AccountId, ?TO_INT(PeriodTS)))
                         }
                        ],
             cb_context:setters(Context

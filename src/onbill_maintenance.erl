@@ -82,8 +82,8 @@ get_database_sort(Db1, Db2) ->
 %        'account' ->
 %            AccountId = kz_util:format_account_id(Database, 'raw'),
 %            EncodedDb = kz_util:format_account_id(Database, 'encoded'),
-%            onbill_util:process_documents([<<"billing_id">>], [], EncodedDb, [AccountId]),
-%            onbill_util:process_documents([<<"billing_id">>], [], <<"accounts">>, [AccountId]),
+%            zz_util:process_documents([<<"billing_id">>], [], EncodedDb, [AccountId]),
+%            zz_util:process_documents([<<"billing_id">>], [], <<"accounts">>, [AccountId]),
 %            case kz_services:set_billing_id(AccountId, AccountId) of
 %                'undefined' ->
 %                    io:format("(~p/~p) skipping account database '~s' (~p) ~n",[length(Databases) + 1, Total, Database, AccountId]);
@@ -109,7 +109,7 @@ set_billing_day(Day) ->
 
 -spec set_billing_day(kz_term:ne_binary(), kz_term:ne_binary()) -> 'ok'.
 set_billing_day(AccountId, Day) ->
-    onbill_util:set_billing_day(?TO_INT(Day), AccountId),
+    zz_util:set_billing_day(?TO_INT(Day), AccountId),
     'ok'.
 
 -spec set_billing_day(kz_term:ne_binary(), kz_term:ne_binaries(), non_neg_integer()) -> 'ok'.
@@ -119,7 +119,7 @@ set_billing_day(Day, [Database|Databases], Total) ->
         'account' ->
             AccountId = kz_util:format_account_id(Database, 'raw'),
             io:format("(~p/~p) updating account database '~s' (~p) ~n",[length(Databases) + 1, Total, Database, AccountId]),
-            onbill_util:set_billing_day(?TO_INT(Day), AccountId),
+            zz_util:set_billing_day(?TO_INT(Day), AccountId),
             timer:sleep(?PAUSE);
         _Else ->
             io:format("(~p/~p) skipping database '~s'~n",[length(Databases) + 1, Total, Database]),
@@ -135,7 +135,7 @@ set_billing_day(Day, [Database|Databases], Total) ->
 set_rate_value(RatedeckDb, SetKey, SetValue, LookupKey, LookupValue) ->
     case kz_datamgr:get_result_ids(RatedeckDb, <<"rates/crossbar_listing">>) of
         {ok,DocIds} ->
-            onbill_util:process_documents_case([], [{SetKey, SetValue}], RatedeckDb, DocIds, {LookupKey, LookupValue});
+            zz_util:process_documents_case([], [{SetKey, SetValue}], RatedeckDb, DocIds, {LookupKey, LookupValue});
         _ ->
             io:format("No rates found ~n"),
             'ok'
@@ -146,7 +146,7 @@ set_rate_list_value(RatedeckDb, SetKey, SetCommaSeparatedValues, LookupKey, Look
     case kz_datamgr:get_result_ids(RatedeckDb, <<"rates/crossbar_listing">>) of
         {ok,DocIds} ->
             Opts = binary:split(SetCommaSeparatedValues, <<",">>),
-            onbill_util:process_documents_case([], [{SetKey, Opts}], RatedeckDb, DocIds, {LookupKey, LookupValue});
+            zz_util:process_documents_case([], [{SetKey, Opts}], RatedeckDb, DocIds, {LookupKey, LookupValue});
         _ ->
             io:format("No rates found ~n"),
             'ok'
