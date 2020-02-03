@@ -1,7 +1,7 @@
 -module(zz_obj).
 
 -export([create_account/3
-        ,create_user/1
+        ,create_user/2
         ,create_default_callflow/1
         ,collect_onbill_data/1
         ]).
@@ -46,8 +46,8 @@ create_account(Ctx, JObj, ResellerId) ->
     Ctx3 = cb_accounts:put(Ctx2),
     case cb_context:resp_status(Ctx3) of
         'success' ->
-            lager:info("account created"),
-            kz_util:spawn(fun create_user/1, [Ctx3]),
+            CreatedAccountId = kz_doc:id(cb_context:resp_data(Ctx3)),
+            kz_util:spawn(fun create_user/2, [JObj, CreatedAccountId]),
             kz_util:spawn(fun create_default_callflow/1, [Ctx3]),
             kz_util:spawn(fun collect_onbill_data/1, [Ctx3]),
             Ctx3;
@@ -56,16 +56,31 @@ create_account(Ctx, JObj, ResellerId) ->
             Ctx3
     end.
 
--spec create_user(cb_context:context()) -> cb_context:context().
-create_user(Context) ->
+-spec create_user(kz_json:object(), kz_term:ne_binary()) -> cb_context:context().
+create_user(JObj, AccountId) ->
     timer:sleep(7000),
-    ReqData = cb_context:req_data(Context),
-    AccountId = kz_json:get_value(<<"id">>, cb_context:resp_data(Context)),
     lager:debug("we are about to create user for: ~p",[AccountId]),
-    Email = kz_term:to_lower_binary(kz_json:get_value([<<"contact">>,<<"signup">>,<<"email">>], ReqData)),
-    Firstname = kz_json:get_value([<<"contact">>,<<"signup">>,<<"first_name">>], ReqData),
-    Surname = kz_json:get_value([<<"contact">>,<<"signup">>,<<"last_name">>], ReqData),
-    Phonenumber = kz_json:get_value([<<"contact">>,<<"signup">>,<<"number">>], ReqData),
+    Email = kz_term:to_lower_binary(
+       kz_json:get_first_defined([[<<"contact">>,<<"signup">>,<<"email">>]
+                                  ,<<"email">>
+                                  ]
+                                  ,JObj
+                                 )
+    ),
+    Firstname =
+       kz_json:get_first_defined([[<<"contact">>,<<"signup">>,<<"first_name">>]
+                                  ,<<"first_name">>
+                                  ]
+                                  ,JObj
+    ),
+    Surname =
+       kz_json:get_first_defined([[<<"contact">>,<<"signup">>,<<"last_name">>]
+                                  ,<<"last_name">>
+                                  ]
+                                  ,JObj
+    ),
+    Phonenumber =
+       kz_json:get_first_defined([[<<"contact">>,<<"signup">>,<<"number">>],<<"number">>], JObj),
     UserPassword = kz_binary:rand_hex(10),
     Props = props:filter_empty([
         {[<<"username">>], Email}
@@ -76,10 +91,11 @@ create_user(Context) ->
         ,{[<<"password">>], UserPassword}
         ,{[<<"priv_level">>], <<"admin">>}
         ]),
-    Ctx1 = cb_context:set_account_id(Context, AccountId),
+    Ctx0 = cb_context:set_account_id(cb_context:new(), AccountId),
+    Ctx1 = cb_context:set_account_db(Ctx0, kz_util:format_account_db(AccountId)),
     Ctx2 = cb_context:set_doc(Ctx1, kz_json:set_values(Props, ?MK_USER)),
     Ctx3 = cb_context:set_req_data(Ctx2, kz_json:set_values(Props, ?MK_USER)),
-    cb_users_v2:create_user(cb_context:set_accepting_charges(Ctx3)).
+    cb_users_v2:create_user(cb_context:set_resp_status(cb_context:set_accepting_charges(Ctx3),'success')).
 
 -spec create_default_callflow(cb_context:context()) -> cb_context:context().
 create_default_callflow(Context) ->
