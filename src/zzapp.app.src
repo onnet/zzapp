@@ -2,7 +2,7 @@
  [
   {description, "Skel - A onbilleton application useful for quickly creating services"},
   {env,[{is_kazoo_app,true}]},
-  {vsn,"0.4.3"},
+  {vsn,"4.3.0"},
   {modules, []},
   {registered, [onbill_listener, onbill_sup]},
   {applications, [ kernel
