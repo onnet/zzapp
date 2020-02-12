@@ -74,6 +74,7 @@
         ,process_documents_case/5
         ,replicate_onbill_doc/1
         ,find_reseller_id/1
+        ,update_zz_doc/5
         ]).
 
 -include("onbill.hrl").
@@ -803,3 +804,37 @@ replicate_onbill_doc(AccountId) ->
 
 -spec find_reseller_id(kz_term:ne_binary()) -> kz_term:ne_binary().
 find_reseller_id(AccountId) -> kz_services_reseller:get_id(AccountId).
+
+-spec update_zz_doc(kz_term:ne_binary()
+                   ,kz_term:ne_binary()
+                   ,kz_term:ne_binary()
+                   ,kz_term:ne_binary()
+                   ,kz_json:object()
+                   ) -> any().
+update_zz_doc(DbName, AccountId, DocId, DocType, JObj) ->
+    Timestamp = kz_time:current_tstamp(),
+    ZZRoutines = [{<<"_id">>, DocId}
+                 ,{<<"pvt_type">>, DocType}
+                 ,{<<"pvt_created">>, Timestamp}
+                 ,{<<"pvt_modified">>, Timestamp}
+                 ,{<<"pvt_account_id">>, AccountId}
+                 ,{<<"pvt_account_db">>, DbName}
+                 ],
+    case kz_datamgr:open_doc(DbName, DocId) of
+        {'error', 'not_found'} ->
+            BrandNewDoc = kz_json:set_values(ZZRoutines, JObj),
+            lager:debug("no doc ~p found in db ~p, creating a new one: ~p", [DocId, DbName, BrandNewDoc]),
+            kz_datamgr:ensure_saved(DbName, BrandNewDoc);
+        {'ok', Doc} ->
+            Rev = kz_doc:revision(Doc),
+            DocHistory = kz_json:get_value(<<"pvt_doc_history">>, Doc, kz_json:new()),
+            Routines = [{[<<"pvt_doc_history">>,?TO_BIN(Timestamp),<<"prev_version">>]
+                        ,kz_json:delete_key([<<"pvt_doc_history">>], Doc)
+                        }
+                       ,{<<"pvt_modified">>, Timestamp}
+                       ],
+            BrandNewDoc = kz_json:set_values(ZZRoutines, kz_json:set_value(<<"pvt_doc_history">>, DocHistory, JObj)),
+            NewDoc = kz_json:set_values(Routines, BrandNewDoc),
+            lager:debug("doc ~p found in db ~p, updating with: ~p", [DocId, DbName, BrandNewDoc]),
+            kz_datamgr:ensure_saved(DbName, kz_doc:set_revision(NewDoc, Rev))
+    end.

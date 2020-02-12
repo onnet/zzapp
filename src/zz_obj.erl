@@ -1,6 +1,8 @@
 -module(zz_obj).
 
--export([create_account/3
+-export([create/3
+        ,create_account/3
+        ,update_account/3
         ,create_user/2
         ,create_default_callflow/1
         ,collect_onbill_data/1
@@ -35,6 +37,21 @@
       {<<"pvt_type">>,<<"callflow">>}
     ]}).
 
+-spec create(cb_context:context(), kz_json:object(), kz_term:ne_binary()) -> cb_context:context().
+create(Context, JObj, ResellerId) ->
+    Ctx = create_account(Context, JObj, ResellerId),
+    case cb_context:resp_status(Ctx) of
+        'success' ->
+            CreatedAccountId = kz_doc:id(cb_context:resp_data(Ctx)),
+            kz_util:spawn(fun create_user/2, [JObj, CreatedAccountId]),
+            kz_util:spawn(fun create_default_callflow/1, [Ctx]),
+            kz_util:spawn(fun collect_onbill_data/1, [Ctx]),
+            Ctx;
+        E ->
+            lager:info("Create failed with reason: ~p",[E]),
+            Ctx
+    end.
+
 -spec create_account(cb_context:context(), kz_json:object(), kz_term:ne_binary()) -> cb_context:context().
 create_account(Ctx, JObj, ResellerId) ->
     Tree = crossbar_util:get_tree(ResellerId) ++ [ResellerId],
@@ -46,15 +63,16 @@ create_account(Ctx, JObj, ResellerId) ->
     Ctx3 = cb_accounts:put(Ctx2),
     case cb_context:resp_status(Ctx3) of
         'success' ->
-            CreatedAccountId = kz_doc:id(cb_context:resp_data(Ctx3)),
-            kz_util:spawn(fun create_user/2, [JObj, CreatedAccountId]),
-            kz_util:spawn(fun create_default_callflow/1, [Ctx3]),
-            kz_util:spawn(fun collect_onbill_data/1, [Ctx3]),
             Ctx3;
         E ->
             lager:info("Create account failed with reason: ~p",[E]),
             Ctx3
     end.
+
+-spec update_account(cb_context:context(), kz_json:object(), kz_term:ne_binary()) -> cb_context:context().
+update_account(Context, JObj, AccountId) ->
+    Ctx = cb_context:set_doc(Context, JObj),
+    cb_accounts:post(Ctx, AccountId).
 
 -spec create_user(kz_json:object(), kz_term:ne_binary()) -> cb_context:context().
 create_user(JObj, AccountId) ->
