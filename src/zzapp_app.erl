@@ -19,6 +19,7 @@
 %%--------------------------------------------------------------------
 -spec start(application:start_type(), any()) -> kz_types:startapp_ret().
 start(_Type, _Args) ->
+    zz_util:check_db(<<"zzapp_anonymous">>),
     _ = declare_exchanges(),
     onbill_sup:start_link().
 

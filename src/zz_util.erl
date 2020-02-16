@@ -75,6 +75,7 @@
         ,replicate_onbill_doc/1
         ,find_reseller_id/1
         ,update_zz_doc/5
+        ,save_anonymous/2
         ]).
 
 -include("onbill.hrl").
@@ -87,6 +88,9 @@ init() ->
 
 -spec db_classify(kz_term:ne_binary()) -> 'ok'.
 db_classify(<<"zzapp-", _/binary>> = DbName) ->
+  lager:info("classifying zzapp db: ~p", [DbName]),
+  'aggregate';
+db_classify(<<"zzapp_anonymous">> = DbName) ->
   lager:info("classifying zzapp db: ~p", [DbName]),
   'aggregate';
 db_classify(_) ->
@@ -812,14 +816,18 @@ find_reseller_id(AccountId) -> kz_services_reseller:get_id(AccountId).
                    ,kz_json:object()
                    ) -> any().
 update_zz_doc(DbName, AccountId, DocId, DocType, JObj) ->
+  update_zz_doc(DbName, AccountId, DocId, DocType, JObj, kz_datamgr:db_exists(DbName)).
+
+update_zz_doc(DbName, AccountId, DocId, DocType, JObj, 'true') ->
     Timestamp = kz_time:current_tstamp(),
-    ZZRoutines = [{<<"_id">>, DocId}
+    ZZRoutines = props:filter_undefined(
+                 [{<<"_id">>, DocId}
                  ,{<<"pvt_type">>, DocType}
                  ,{<<"pvt_created">>, Timestamp}
                  ,{<<"pvt_modified">>, Timestamp}
                  ,{<<"pvt_account_id">>, AccountId}
-                 ,{<<"pvt_account_db">>, DbName}
-                 ],
+                 ,{<<"pvt_account_db">>, kz_util:format_account_db(AccountId)}
+                 ]),
     case kz_datamgr:open_doc(DbName, DocId) of
         {'error', 'not_found'} ->
             BrandNewDoc = kz_json:set_values(ZZRoutines, JObj),
@@ -837,4 +845,16 @@ update_zz_doc(DbName, AccountId, DocId, DocType, JObj) ->
             NewDoc = kz_json:set_values(Routines, BrandNewDoc),
             lager:debug("doc ~p found in db ~p, updating with: ~p", [DocId, DbName, BrandNewDoc]),
             kz_datamgr:ensure_saved(DbName, kz_doc:set_revision(NewDoc, Rev))
-    end.
+    end;
+update_zz_doc(_DbName, _AccountId, _DocId, DocType, JObj, 'false') ->
+    save_anonymous(JObj, DocType).
+
+-spec save_anonymous(kz_json:object(), kz_term:ne_binary()) -> any().
+save_anonymous(JObj, DocType) ->
+    update_zz_doc(<<"zzapp_anonymous">>
+                 ,'undefined'
+                 ,kz_datamgr:get_uuid()
+                 ,DocType
+                 ,JObj
+                 ).
+
