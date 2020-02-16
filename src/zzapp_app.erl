@@ -21,6 +21,9 @@
 start(_Type, _Args) ->
     zz_util:check_db(<<"zzapp_anonymous">>),
     _ = declare_exchanges(),
+    onbill_notifications:init(),
+    zz_util:init(),
+    kt_onbill:init(),
     onbill_sup:start_link().
 
 %%--------------------------------------------------------------------
@@ -34,7 +37,6 @@ stop(_State) ->
 
 -spec declare_exchanges() -> 'ok'.
 declare_exchanges() ->
-lager:debug("IAM start zzapp_app"),
     _ = kapi_resource:declare_exchanges(),
     _ = kapi_conf:declare_exchanges(),
     _ = kapi_notifications:declare_exchanges(),

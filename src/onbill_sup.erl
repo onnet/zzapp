@@ -49,9 +49,6 @@ start_link() ->
 %%--------------------------------------------------------------------
 -spec init(any()) -> kz_types:sup_init_ret().
 init([]) ->
-    onbill_notifications:init(),
-    zz_util:init(),
-    kt_onbill:init(),
     kz_util:set_startup(),
     _ = code:ensure_loaded(kz_service_periodic_fees),
     RestartStrategy = 'one_for_one',
